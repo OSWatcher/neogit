@@ -3,3 +3,4 @@
 /.nox
 /.venv
 __pycache__
+/.coverage_html
