@@ -1,0 +1,99 @@
+"""pytest configuration and fixtures"""
+
+import logging
+import random
+import string
+import subprocess
+import time
+from dataclasses import dataclass
+from typing import Optional, Tuple
+from urllib.error import URLError
+from urllib.request import urlopen
+
+from neo4j import BoltDriver, GraphDatabase
+from pytest import fixture
+
+NEO4J_VERSION = "4.2.4"
+DEFAULT_USERNAME = "neo4j"
+DEFAULT_PASSWORD = "admin"
+
+
+@dataclass
+class Neo4jConnection:
+    protocol: str
+    hostname: str
+    bolt_port: int
+    http_port: int
+    username: str
+    password: str
+    driver: Optional[BoltDriver]
+
+    def to_http(self):
+        return f"http://{self.hostname}:{self.http_port}"
+
+    def to_bolt(self, crendentials=False):
+        if crendentials:
+            return f"bolt://{self.username}:{self.password}@{self.hostname}:{self.bolt_port}"
+        else:
+            return f"bolt://{self.hostname}:{self.bolt_port}"
+
+
+@fixture(scope="session")
+def random_name():
+    length = 8
+    return "".join(random.choices(string.ascii_lowercase, k=length))
+
+
+@fixture(scope="session")
+def start_neo4j_db(random_name: str):
+    """start a neo4j db using Docker"""
+    cmdline = [
+        "docker",
+        "run",
+        "--detach",
+        "--publish=7474:7474",
+        "--publish=7687:7687",
+        "--env",
+        "NEO4J_AUTH=none",
+        f"--name={random_name}",
+        f"neo4j:{NEO4J_VERSION}",
+    ]
+    subprocess.check_call(cmdline)
+    con = Neo4jConnection(
+        protocol="bolt",
+        hostname="localhost",
+        bolt_port=7687,
+        http_port=7474,
+        username=DEFAULT_USERNAME,
+        password=DEFAULT_PASSWORD,
+        driver=None,
+    )
+    yield random_name, con
+    cmdline = ["docker", "rm", "--force", random_name]
+    subprocess.check_call(cmdline)
+
+
+@fixture(scope="session")
+def neo4j_ready(start_neo4j_db: Tuple[str, Neo4jConnection]):
+    """ensure neo4jdb is ready"""
+    container_name, con = start_neo4j_db
+    opened = False
+    while not opened:
+        try:
+            logging.info("attempting to connect to DB %s", con.to_http())
+            with urlopen(con.to_http(), timeout=1) as opened_url:
+                opened_url.read()
+        except (URLError, ConnectionError):
+            time.sleep(0.7)
+        else:
+            opened = True
+    yield con
+
+
+@fixture(scope="session")
+def neo4j_con(neo4j_ready: Neo4jConnection):
+    con = neo4j_ready
+    # start db connection with the most basic driver
+    creds = (con.username, con.password)
+    con.driver = GraphDatabase.driver(con.to_bolt(crendentials=False), auth=creds)
+    yield con
