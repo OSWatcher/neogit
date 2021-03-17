@@ -32,5 +32,11 @@ def test(session):
     session.install("-r", "requirements.txt")
     session.install("pytest==6.0.2", "coverage==5.3")
     session.run("coverage", "run", "-m", "pytest", "-v", *args)
-    session.run("coverage", "combine")
     session.run("coverage", "report")
+
+
+@nox.session
+def coverage_html(session):
+    session.install("coverage==5.3")
+    session.run("coverage", "html", "--dir", ".coverage_html")
+    session.run("xdg-open", ".coverage_html/index.html")
