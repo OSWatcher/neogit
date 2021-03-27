@@ -6,6 +6,7 @@ import string
 import subprocess
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -16,6 +17,8 @@ from pytest import fixture
 NEO4J_VERSION = "4.2.4"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
+TEST_DATA = Path(__file__).parent / "data"
+TEST_DATA_FS = TEST_DATA / "fs"
 
 
 @dataclass
