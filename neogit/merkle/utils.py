@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
-from neogit.model import PathLike, BlobNode, TreeNode
+from neogit.model import BlobNode, PathLike, TreeNode
 
 
 def compute_sha1(filepath: PathLike) -> str:
@@ -56,8 +56,11 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
                 del tree_fs[entry_path]
         # compute final hash for tree
         hashsum = hashlib.sha1()
-        for child_name, child_node in tree.children.items():
-            data = f"{child_name}{child_node.sha1sum}\n".encode()
-            hashsum.update(data)
+        # IMPORTANT: sort the keys before using them
+        sorted_children_filenames = sorted(tree.children.keys())
+        for child_name in sorted_children_filenames:
+            child_node = tree.children[child_name]
+            data = f"{child_name}{child_node.sha1sum}\n"
+            hashsum.update(data.encode())
         tree.sha1sum = hashsum.hexdigest()
         return tree
