@@ -19,6 +19,7 @@ DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
 TEST_DATA_FS = TEST_DATA / "fs"
+ROOT_REPO = Path(__file__).parent.parent
 
 
 @dataclass

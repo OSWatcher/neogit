@@ -8,7 +8,28 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Dict, List, Set
 
-from neogit.model import BlobNode, TreeNode
+from neogit.model import BlobNode, PathLike, TreeNode
+
+
+def compute_sha1(filepath: PathLike) -> str:
+    """Compute SHA1 sum from filepath"""
+    sha1 = hashlib.sha1()
+    buffer = bytearray(65536)
+    view = memoryview(buffer)
+    # no need to buffering, we read the data once
+    with open(filepath, "rb", buffering=0) as f:
+        # readinto avoid temporary buffers
+        for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
+            sha1.update(view[:block_size])
+    return sha1.hexdigest()
+
+
+def merkelize_file(filepath: PathLike) -> BlobNode:
+    """Create a BlobNode from a single file"""
+    blob = BlobNode()
+    sha1sum = compute_sha1(filepath)
+    blob.sha1sum = sha1sum
+    return blob
 
 
 def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
@@ -24,17 +45,10 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
         TreeNode
     """
     with os.scandir(directory) as it:
-        sha1 = hashlib.sha1()
         tree = TreeNode()
         for entry in it:
             if entry.is_file():
-                blob = BlobNode()
-                buffer = bytearray(65536)
-                view = memoryview(buffer)
-                with open(entry, "rb", buffering=0) as f:
-                    for block in iter(lambda: f.readinto(view), 0):  # type: ignore
-                        sha1.update(view[:block])
-                blob.sha1sum = sha1.hexdigest()
+                blob: BlobNode = merkelize_file(entry.path)
                 # add to treenode
                 tree.children[entry.name] = blob
             if entry.is_dir(follow_symlinks=False):

@@ -5,7 +5,7 @@ from multiprocessing import Queue
 from pathlib import Path
 from typing import Dict, Tuple
 
-from neogit.merkleproc import MerkleWorker, merkelize_dir
+from neogit.merkle.proc import MerkleWorker, merkelize_dir
 
 DEFAULT_MAX_WORKERS = 4
 

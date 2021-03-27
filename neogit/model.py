@@ -1,5 +1,8 @@
+import os
 from dataclasses import dataclass
 from typing import Dict, Union
+
+PathLike = Union[str, bytes, os.PathLike]
 
 
 @dataclass(init=False)
