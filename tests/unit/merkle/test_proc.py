@@ -1,4 +1,4 @@
-from neogit.merkle.proc import compute_sha1
+from neogit.merkle.utils import compute_sha1
 from tests.conftest import TEST_DATA
 import pytest
 
