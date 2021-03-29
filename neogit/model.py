@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from typing import Optional
-
 from py2neo.ogm import Model, Property, RelatedTo
 
 
@@ -18,15 +15,17 @@ class TreeNode(Model):
     children_trees = RelatedTo("TreeNode", "HAS_CHILD_TREE")
 
 
-@dataclass(init=False)
-class CommitNode:
-    sha1sum: str
-    name: str
-    filesystem: TreeNode
-    last_commit: Optional["CommitNode"]
+class CommitNode(Model):
+    __primarykey__ = "sha1sum"
+
+    sha1sum = Property()
+    name = Property()
+    filesystem = RelatedTo("TreeNode", "HAS_FILESYSTEM")
+    previous_commit = RelatedTo("CommitNode", "HAS_PREVIOUS_COMMIT")
 
 
-@dataclass(init=False)
-class BranchNode:
-    name: str
-    commit: CommitNode
+class BranchNode(Model):
+    __primarykey__ = "name"
+
+    name = Property()
+    commit = RelatedTo("CommitNode", "TRACKS_COMMIT")
