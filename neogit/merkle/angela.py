@@ -7,6 +7,7 @@ from typing import Dict, Tuple
 
 from neogit.merkle.proc import MerkleWorker
 from neogit.merkle.utils import merkelize_dir
+from neogit.model import TreeNode
 
 DEFAULT_MAX_WORKERS = 4
 
@@ -26,15 +27,14 @@ class MerkleFSTree:
         self._logger = logging.getLogger(f"{MerkleFSTree.__module__}.{MerkleFSTree.__class__.__name__}")
         self._max_workers = max_workers if max_workers is not None else DEFAULT_MAX_WORKERS
         self._root = root_fs
-        self._task_queue: Queue = Queue(maxsize=self._max_workers)
         self._workers: Dict[Path, Tuple[MerkleWorker, Queue]] = {}
 
-    def merkelize(self):
+    def merkelize(self) -> TreeNode:
         with os.scandir(self._root) as it:
             for entry in it:
                 if entry.is_dir(follow_symlinks=False):
                     entry_path = Path(entry.path)
-                    worker_queue = Queue()
+                    worker_queue: Queue = Queue()
                     worker = MerkleWorker(entry_path, worker_queue)
                     worker.start()
                     self._workers[entry_path] = (worker, worker_queue)

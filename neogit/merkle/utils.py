@@ -36,20 +36,26 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
             if entry.is_file():
                 blob: BlobNode = merkelize_file(Path(entry.path))
                 # add to treenode
-                tree.children[entry.name] = blob
+                tree.children_blobs.add(blob, name=entry.name)
             if entry.is_dir(follow_symlinks=False):
                 entry_path = Path(entry.path)
                 assert entry_path in tree_fs
-                tree.children[entry.name] = tree_fs[entry_path]
+                tree.children_trees.add(tree_fs[entry_path], name=entry.name)
                 # remove entry from tree_fs to save RAM
                 del tree_fs[entry_path]
         # compute final hash for tree
         hasher = Hasher()
         # IMPORTANT: sort the keys before using them
-        sorted_children_filenames = sorted(tree.children.keys())
-        for child_name in sorted_children_filenames:
-            child_node = tree.children[child_name]
-            data = f"{child_name}{child_node.sha1sum}\n"
+        # directories first, then files
+        for _parent, (_rel_type, rel_props), child in sorted(
+            tree.children_trees.triples(), key=lambda tup: tup[1][1]["name"]
+        ):
+            data = f"{rel_props['name']}{child.sha1sum}\n"
+            hasher.string(data.encode())
+        for _parent, (_rel_type, rel_props), child in sorted(
+            tree.children_blobs.triples(), key=lambda tup: tup[1][1]["name"]
+        ):
+            data = f"{rel_props['name']}{child.sha1sum}\n"
             hasher.string(data.encode())
         tree.sha1sum = hasher.digest()
         return tree

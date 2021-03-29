@@ -1,19 +1,21 @@
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Optional
+
+from py2neo.ogm import Model, Property, RelatedTo
 
 
-@dataclass(init=False)
-class BlobNode:
-    sha1sum: str
+class BlobNode(Model):
+    __primarykey__ = "sha1sum"
+
+    sha1sum = Property()
 
 
-@dataclass(init=False)
-class TreeNode:
-    sha1sum: str
-    children: Dict[str, Union[BlobNode, "TreeNode"]]
+class TreeNode(Model):
+    __primarykey__ = "sha1sum"
 
-    def __init__(self):
-        self.children = {}
+    sha1sum = Property()
+    children_blobs = RelatedTo("BlobNode", "HAS_CHILD_BLOB")
+    children_trees = RelatedTo("TreeNode", "HAS_CHILD_TREE")
 
 
 @dataclass(init=False)
