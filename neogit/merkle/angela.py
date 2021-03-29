@@ -50,3 +50,4 @@ class MerkleFSTree:
             tree_fs[w_path] = node
         root_node = merkelize_dir(self._root, tree_fs)
         logging.info("📁 %s : %s", self._root, root_node.sha1sum)
+        return root_node

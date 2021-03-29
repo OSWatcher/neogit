@@ -1,30 +1,19 @@
 """This module contains utils functions to build a MerkleTree"""
 
-import hashlib
 import os
 from pathlib import Path
 from typing import Dict
 
-from neogit.model import BlobNode, PathLike, TreeNode
+from neogit.merkle.hasher import Hasher
+from neogit.model import BlobNode, TreeNode
 
 
-def compute_sha1(filepath: PathLike) -> str:
-    """Compute SHA1 sum from filepath"""
-    sha1 = hashlib.sha1()
-    buffer = bytearray(65536)
-    view = memoryview(buffer)
-    # no need to buffering, we read the data once
-    with open(filepath, "rb", buffering=0) as f:
-        # readinto avoid temporary buffers
-        for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
-            sha1.update(view[:block_size])
-    return sha1.hexdigest()
-
-
-def merkelize_file(filepath: PathLike) -> BlobNode:
+def merkelize_file(filepath: Path) -> BlobNode:
     """Create a BlobNode from a single file"""
     blob = BlobNode()
-    sha1sum = compute_sha1(filepath)
+    hasher = Hasher()
+    filepath = Path(filepath)
+    sha1sum = hasher.filepath(filepath).digest()
     blob.sha1sum = sha1sum
     return blob
 
@@ -45,7 +34,7 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
         tree = TreeNode()
         for entry in it:
             if entry.is_file():
-                blob: BlobNode = merkelize_file(entry.path)
+                blob: BlobNode = merkelize_file(Path(entry.path))
                 # add to treenode
                 tree.children[entry.name] = blob
             if entry.is_dir(follow_symlinks=False):
@@ -55,12 +44,12 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
                 # remove entry from tree_fs to save RAM
                 del tree_fs[entry_path]
         # compute final hash for tree
-        hashsum = hashlib.sha1()
+        hasher = Hasher()
         # IMPORTANT: sort the keys before using them
         sorted_children_filenames = sorted(tree.children.keys())
         for child_name in sorted_children_filenames:
             child_node = tree.children[child_name]
             data = f"{child_name}{child_node.sha1sum}\n"
-            hashsum.update(data.encode())
-        tree.sha1sum = hashsum.hexdigest()
+            hasher.string(data.encode())
+        tree.sha1sum = hasher.digest()
         return tree
