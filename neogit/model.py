@@ -1,31 +1,31 @@
 from py2neo.ogm import Model, Property, RelatedTo
 
 
-class BlobNode(Model):
+class Blob(Model):
     __primarykey__ = "sha1sum"
 
     sha1sum = Property()
 
 
-class TreeNode(Model):
+class Tree(Model):
     __primarykey__ = "sha1sum"
 
     sha1sum = Property()
-    children_blobs = RelatedTo("BlobNode", "HAS_CHILD_BLOB")
-    children_trees = RelatedTo("TreeNode", "HAS_CHILD_TREE")
+    children_blobs = RelatedTo("Blob", "HAS_CHILD_BLOB")
+    children_trees = RelatedTo("Tree", "HAS_CHILD_TREE")
 
 
-class CommitNode(Model):
+class Commit(Model):
     __primarykey__ = "sha1sum"
 
     sha1sum = Property()
     name = Property()
-    filesystem = RelatedTo("TreeNode", "HAS_FILESYSTEM")
-    previous_commit = RelatedTo("CommitNode", "HAS_PREVIOUS_COMMIT")
+    filesystem = RelatedTo("Tree", "HAS_FILESYSTEM")
+    previous_commit = RelatedTo("Commit", "HAS_PREVIOUS_COMMIT")
 
 
-class BranchNode(Model):
+class Branch(Model):
     __primarykey__ = "name"
 
     name = Property()
-    commit = RelatedTo("CommitNode", "TRACKS_COMMIT")
+    commit = RelatedTo("Commit", "TRACKS_COMMIT")

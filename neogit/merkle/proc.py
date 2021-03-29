@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile
 from typing import Dict, List, Set
 
 from neogit.merkle.utils import merkelize_dir
-from neogit.model import TreeNode
+from neogit.model import Tree
 
 
 class MerkleWorker(Process):
@@ -19,13 +19,13 @@ class MerkleWorker(Process):
         self._queue: Queue = queue
         self._visited: Set[Path] = set()
         self._stack: List[Path] = []
-        self._tree_fs: Dict[Path, TreeNode] = {}
+        self._tree_fs: Dict[Path, Tree] = {}
         self._logger = logging.getLogger(f"{MerkleWorker.__class__.__module__}.{MerkleWorker.__class__.__name__}")
         super().__init__(**kwargs)
 
     def run(self):
         try:
-            root_node: TreeNode = self.dfs_iter()
+            root_node: Tree = self.dfs_iter()
         except Exception:
             f = traceback.format_exc()
             self._logger.warning("[%s] %s", self.name, f)
@@ -37,7 +37,7 @@ class MerkleWorker(Process):
                 self._queue.put(f.name)
                 self._logger.debug("[%s] QUIT !", self.name)
 
-    def dfs_iter(self) -> TreeNode:
+    def dfs_iter(self) -> Tree:
         self._stack.append(self._root)
         while self._stack:
             cur_dir = self._stack.pop()
@@ -53,7 +53,7 @@ class MerkleWorker(Process):
                         self._stack.append(path_entry)
                 self._visited.add(cur_dir)
             else:
-                tree_node: TreeNode = merkelize_dir(cur_dir, self._tree_fs)
+                tree_node: Tree = merkelize_dir(cur_dir, self._tree_fs)
                 # add to fs
                 self._tree_fs[cur_dir] = tree_node
                 self._logger.debug("[%s] 📁 %s : %s", self.name, cur_dir, tree_node.sha1sum)

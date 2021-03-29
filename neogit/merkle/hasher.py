@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 from typing import Union
 
-from neogit.model import CommitNode
+from neogit.model import Commit
 
 COMMIT_STRING = """
 {name}
@@ -30,7 +30,7 @@ class Hasher:
         self._hash.update(string)
         return self
 
-    def commit(self, node: CommitNode) -> "Hasher":
+    def commit(self, node: Commit) -> "Hasher":
         commit_string_formatted = COMMIT_STRING.format(name=node.name, tree_sha1=node.filesystem.sha1sum)
         self._hash.update(commit_string_formatted)
         return self

@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import Dict
 
 from neogit.merkle.hasher import Hasher
-from neogit.model import BlobNode, TreeNode
+from neogit.model import Blob, Tree
 
 
-def merkelize_file(filepath: Path) -> BlobNode:
+def merkelize_file(filepath: Path) -> Blob:
     """Create a BlobNode from a single file"""
-    blob = BlobNode()
+    blob = Blob()
     hasher = Hasher()
     filepath = Path(filepath)
     sha1sum = hasher.filepath(filepath).digest()
@@ -18,7 +18,7 @@ def merkelize_file(filepath: Path) -> BlobNode:
     return blob
 
 
-def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
+def merkelize_dir(directory: Path, tree_fs: Dict[Path, Tree]) -> Tree:
     """
     Convert a directory to a Merkel TreeNode object, given its subdirectories associated
     TreeNodes in tree_fs
@@ -31,10 +31,10 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, TreeNode]) -> TreeNode:
         TreeNode
     """
     with os.scandir(directory) as it:
-        tree = TreeNode()
+        tree = Tree()
         for entry in it:
             if entry.is_file():
-                blob: BlobNode = merkelize_file(Path(entry.path))
+                blob: Blob = merkelize_file(Path(entry.path))
                 # add to treenode
                 tree.children_blobs.add(blob, name=entry.name)
             if entry.is_dir(follow_symlinks=False):
