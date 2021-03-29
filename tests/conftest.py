@@ -14,6 +14,8 @@ from urllib.request import urlopen
 from neo4j import BoltDriver, GraphDatabase
 from pytest import fixture
 
+from neogit.repo.py2neo import Py2NeoRepository
+
 NEO4J_VERSION = "4.2.4"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
@@ -92,6 +94,22 @@ def neo4j_ready(start_neo4j_db: Tuple[str, Neo4jConnection]):
         else:
             opened = True
     yield con
+
+
+@fixture(scope="function")
+def driver_con(neo4j_con: Neo4jConnection):
+    repo = Py2NeoRepository(neo4j_con.to_bolt(crendentials=True))
+    neo_drv = neo4j_con.driver
+    yield repo, neo_drv
+    s = neo_drv.session()
+    s.run("MATCH (n) DETACH DELETE n")
+
+
+@fixture(scope="function")
+def py2neo_repo(driver_con):
+    repo, neo4j_drv = driver_con
+    yield repo
+
 
 
 @fixture(scope="session")
