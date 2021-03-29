@@ -1,12 +1,20 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Type
 
 from py2neo.ogm import Model
+
+DEFAULT_URL = "bolt://localhost:7687"
 
 
 class AbstractGraphRepository(ABC):
     """
     Abstract repository pattern for graph databases
     """
+
+    def __init__(self, url: Optional[str]):
+        self._url = url
+        if url is None:
+            self._url = DEFAULT_URL
 
     @abstractmethod
     def delete(self, obj: Model):
@@ -17,11 +25,11 @@ class AbstractGraphRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, obj: Model):
+    def get(self, obj: Type[Model]):
         raise NotImplementedError
 
     @abstractmethod
-    def match(self, obj: Model):
+    def match(self, obj: Type[Model]):
         raise NotImplementedError
 
     @abstractmethod

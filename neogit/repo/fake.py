@@ -1,11 +1,13 @@
+from typing import Optional, Type
+
 from py2neo.ogm import Model
 
 from .abstract import AbstractGraphRepository
 
 
 class FakeRepository(AbstractGraphRepository):
-    def __init__(self, url: str):
-        pass
+    def __init__(self, url: Optional[str] = None):
+        super().__init__(url)
 
     def delete(self, obj: Model):
         pass
@@ -13,10 +15,10 @@ class FakeRepository(AbstractGraphRepository):
     def exists(self, obj: Model):
         pass
 
-    def get(self, obj: Model):
+    def get(self, obj: Type[Model]):
         pass
 
-    def match(self, obj: Model):
+    def match(self, obj: Type[Model]):
         pass
 
     def reload(self, obj: Model):
