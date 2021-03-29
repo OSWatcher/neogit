@@ -31,8 +31,9 @@ class Hasher:
         return self
 
     def commit(self, node: Commit) -> "Hasher":
-        commit_string_formatted = COMMIT_STRING.format(name=node.name, tree_sha1=node.filesystem.sha1sum)
-        self._hash.update(commit_string_formatted)
+        _commit_node, (_rel_type, _rel_props), tree_node = next(node.filesystem.triples())
+        commit_string_formatted = COMMIT_STRING.format(name=node.name, tree_sha1=tree_node.sha1sum)
+        self._hash.update(commit_string_formatted.encode())
         return self
 
     def digest(self) -> str:
