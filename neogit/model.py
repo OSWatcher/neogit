@@ -1,8 +1,5 @@
-import os
 from dataclasses import dataclass
-from typing import Dict, Union
-
-PathLike = Union[str, bytes, os.PathLike]
+from typing import Dict, Optional, Union
 
 
 @dataclass(init=False)
@@ -17,3 +14,17 @@ class TreeNode:
 
     def __init__(self):
         self.children = {}
+
+
+@dataclass(init=False)
+class CommitNode:
+    sha1sum: str
+    name: str
+    filesystem: TreeNode
+    last_commit: Optional["CommitNode"]
+
+
+@dataclass(init=False)
+class BranchNode:
+    name: str
+    commit: CommitNode
