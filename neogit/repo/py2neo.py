@@ -16,11 +16,11 @@ class Py2NeoRepository(AbstractGraphRepository):
     def exists(self, obj: Model):
         return self._repo.exists(obj)
 
-    def get(self, obj: Type[Model]):
-        return self._repo.get(obj)
+    def get(self, obj: Type[Model], primary_value=None):
+        return self._repo.get(obj, primary_value)
 
-    def match(self, obj: Type[Model]):
-        return self._repo.match(obj)
+    def match(self, obj: Type[Model], primary_value=None):
+        return self._repo.match(obj, primary_value)
 
     def reload(self, obj: Model):
         return self._repo.reload(obj)

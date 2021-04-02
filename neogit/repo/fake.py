@@ -15,10 +15,10 @@ class FakeRepository(AbstractGraphRepository):
     def exists(self, obj: Model):
         pass
 
-    def get(self, obj: Type[Model]):
+    def get(self, obj: Type[Model], primary_value=None):
         pass
 
-    def match(self, obj: Type[Model]):
+    def match(self, obj: Type[Model], primary_value=None):
         pass
 
     def reload(self, obj: Model):

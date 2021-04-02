@@ -25,11 +25,11 @@ class AbstractGraphRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, obj: Type[Model]):
+    def get(self, obj: Type[Model], primary_value=None):
         raise NotImplementedError
 
     @abstractmethod
-    def match(self, obj: Type[Model]):
+    def match(self, obj: Type[Model], primary_value=None):
         raise NotImplementedError
 
     @abstractmethod
