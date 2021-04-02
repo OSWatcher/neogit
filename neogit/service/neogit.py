@@ -21,16 +21,17 @@ class Neogit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         builder = MerkleFSTree(self._root)
         root_tree: Tree = builder.merkelize()
-        # get master branch, if it exists
-        master_branch = Branch()
-        master_branch.name = DEFAULT_BRANCH_NAME
         prev_commit: Optional[Commit] = None
-        if self._repo.exists(master_branch):
+        master_branch = self._repo.get(Branch, DEFAULT_BRANCH_NAME)
+        if master_branch:
             try:
                 prev_commit = list(master_branch.commit)[0]
             except IndexError:
                 raise RuntimeError("Branch has no commit")
         else:
+            # create branch
+            master_branch = Branch()
+            master_branch.name = DEFAULT_BRANCH_NAME
             # if already has commits, inconsistent state
             # safety check
             assert not self._repo.match(Commit).exists(), "Inconsistent repo state detected. Branch node is missing"
