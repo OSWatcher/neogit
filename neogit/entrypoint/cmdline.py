@@ -10,11 +10,13 @@ Options:
   -d --debug            Toogle debug output
 """
 
-from docopt import docopt
-from neogit.service import Neogit
-from pathlib import Path
-from neogit.repo import Py2NeoRepository
 import logging
+from pathlib import Path
+
+from docopt import docopt
+
+from neogit.repo import Py2NeoRepository
+from neogit.service import Neogit
 
 
 def handle_cmdline():

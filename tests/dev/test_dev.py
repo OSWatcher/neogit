@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from py2neo.ogm import Repository
 
-from tests.conftest import Neo4jConnection
 from neogit.service import Neogit
+from tests.conftest import Neo4jConnection
 
 
 @pytest.mark.dev

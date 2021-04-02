@@ -111,7 +111,6 @@ def py2neo_repo(driver_con):
     yield repo
 
 
-
 @fixture(scope="session")
 def neo4j_con(neo4j_ready: Neo4jConnection):
     con = neo4j_ready
