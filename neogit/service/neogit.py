@@ -1,10 +1,11 @@
 """Contains main Neogit class"""
 import logging
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Optional
 
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Transaction
 
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
@@ -14,16 +15,37 @@ DEFAULT_BRANCH_NAME = "master"
 DEFAULT_URL = "bolt://localhost:7687"
 
 
+def measure_time(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        start = datetime.now()
+        res = method(self, *args, **kwargs)
+        end = datetime.now()
+        self._log.debug("%s execution time: %s", method.__name__, end - start)
+        return res
+
+    return wrapper
+
+
 class Neogit:
     def __init__(self, root: Path):
+        self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
         self._driver = GraphDatabase.driver(DEFAULT_URL)
         if not self._root.exists():
             raise ValueError(f"Root directory {self._root} does not exist")
 
-    def _commit_transaction(self, name: str, tx):
+    @measure_time
+    def _build_merkle_tree(self) -> Tree:
         builder = MerkleFSTree(self._root)
-        root_tree: Tree = builder.merkelize()
+        return builder.merkelize()
+
+    @measure_time
+    def _insert_fileystem(self, root: Tree, transaction: Transaction):
+        root.create(transaction)
+
+    def _commit_transaction(self, name: str, tx):
+        root_tree: Tree = self._build_merkle_tree()
         # test branch
         branch = Branch(tx, DEFAULT_BRANCH_NAME)
         if not branch:
@@ -39,7 +61,7 @@ class Neogit:
         new_commit: Commit = Commit(tx, name, new_commit_sha1sum, commit_date)
         new_commit.create()
         # create filesystem tree
-        root_tree.create(tx)
+        self._insert_fileystem(root_tree, tx)
         # add filesystem
         new_commit.add_filesystem(root_tree)
         # add previous if exists
@@ -48,6 +70,7 @@ class Neogit:
         # update branch
         branch.set_os_commit(new_commit)
 
+    @measure_time
     def commit(self, name: str):
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         with self._driver.session() as session:
