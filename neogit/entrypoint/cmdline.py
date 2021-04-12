@@ -18,14 +18,18 @@ from docopt import docopt
 from neogit.service import Neogit
 
 
-def handle_cmdline():
-    args = docopt(__doc__)
+def setup_logging(debug_enabled: bool):
     log_lvl = logging.INFO
-    if args["--debug"]:
+    if debug_enabled:
         log_lvl = logging.DEBUG
     logging.basicConfig(level=log_lvl)
-    # silence py2neo
-    logging.getLogger("py2neo.client").setLevel(logging.WARNING)
+    # silence neo4j
+    logging.getLogger("neo4j").setLevel(logging.WARNING)
+
+
+def handle_cmdline():
+    args = docopt(__doc__)
+    setup_logging(args["--debug"])
     # handle root
     root_repo: Path = Path.cwd()
     if args["--root"]:
