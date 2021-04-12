@@ -15,7 +15,6 @@ from pathlib import Path
 
 from docopt import docopt
 
-from neogit.repo import Py2NeoRepository
 from neogit.service import Neogit
 
 
@@ -31,8 +30,7 @@ def handle_cmdline():
     root_repo: Path = Path.cwd()
     if args["--root"]:
         root_repo = Path(args["--root"])
-    repo = Py2NeoRepository()
-    git = Neogit(root_repo, repo)
+    git = Neogit(root_repo)
     if args["commit"]:
         commit_name = args["<name>"]
         git.commit(commit_name)
