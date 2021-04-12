@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Optional
 
 from neo4j import GraphDatabase, Transaction
+from neo4j.exceptions import ClientError
 
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
+
 
 DEFAULT_BRANCH_NAME = "master"
 DEFAULT_URL = "bolt://localhost:7687"
@@ -28,6 +30,7 @@ def measure_time(method):
 
 
 class Neogit:
+
     def __init__(self, root: Path):
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
@@ -69,6 +72,22 @@ class Neogit:
             new_commit.add_previous(prev_commit)
         # update branch
         branch.set_os_commit(new_commit)
+
+    def init(self):
+        """Initialize a neogit repository by creating indexes and constraints"""
+        with self._driver.session() as session:
+            constraints = {
+                'Blob': 'sha1sum',
+                'Tree': 'sha1sum',
+                'Commit': 'sha1sum',
+                'Branch': 'name'
+            }
+            for label, unique_prop in constraints.items():
+                try:
+                    session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
+                except ClientError as e:
+                    if e.code == 'Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists':
+                        continue
 
     @measure_time
     def commit(self, name: str):

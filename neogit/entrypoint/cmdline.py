@@ -1,6 +1,7 @@
 """Neogit
 
 Usage:
+  neogit [options] init
   neogit [options] commit <name>
 
 Options:
@@ -35,6 +36,8 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     git = Neogit(root_repo)
+    if args['init']:
+        git.init()
     if args["commit"]:
         commit_name = args["<name>"]
         git.commit(commit_name)
