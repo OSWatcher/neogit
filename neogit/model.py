@@ -1,18 +1,23 @@
+from dataclasses import dataclass
+from typing import Dict
+
 from py2neo.ogm import Model, Property, RelatedTo
 
 
-class Blob(Model):
-    __primarykey__ = "sha1sum"
+@dataclass(init=False)
+class Blob:
+    sha1sum: str
 
-    sha1sum = Property()
 
+@dataclass(init=False)
+class Tree:
+    sha1sum: str
+    children_blob: Dict[str, Blob]
+    children_tree: Dict[str, "Tree"]
 
-class Tree(Model):
-    __primarykey__ = "sha1sum"
-
-    sha1sum = Property()
-    children_blobs = RelatedTo("Blob", "HAS_CHILD_BLOB")
-    children_trees = RelatedTo("Tree", "HAS_CHILD_TREE")
+    def __init__(self):
+        self.children_tree = {}
+        self.children_blob = {}
 
 
 class Commit(Model):

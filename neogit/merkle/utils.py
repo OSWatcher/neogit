@@ -1,5 +1,6 @@
 """This module contains utils functions to build a MerkleTree"""
 
+import logging
 import os
 from pathlib import Path
 from typing import Dict
@@ -36,26 +37,27 @@ def merkelize_dir(directory: Path, tree_fs: Dict[Path, Tree]) -> Tree:
             if entry.is_file():
                 blob: Blob = merkelize_file(Path(entry.path))
                 # add to treenode
-                tree.children_blobs.add(blob, name=entry.name)
+                tree.children_blob[entry.name] = blob
             if entry.is_dir(follow_symlinks=False):
                 entry_path = Path(entry.path)
                 assert entry_path in tree_fs
-                tree.children_trees.add(tree_fs[entry_path], name=entry.name)
+                tree.children_tree[entry.name] = tree_fs[entry_path]
                 # remove entry from tree_fs to save RAM
                 del tree_fs[entry_path]
         # compute final hash for tree
         hasher = Hasher()
         # IMPORTANT: sort the keys before using them
-        # directories first, then files
-        for _parent, (_rel_type, rel_props), child in sorted(
-            tree.children_trees.triples(), key=lambda tup: tup[1][1]["name"]
-        ):
-            data = f"{rel_props['name']}{child.sha1sum}\n"
+        # directories first
+        for entry_name in sorted(tree.children_tree):
+            child_sha1sum = tree.children_tree[entry_name].sha1sum
+            logging.debug(child_sha1sum)
+            data = f"{entry_name}{child_sha1sum}\n"
             hasher.string(data.encode())
-        for _parent, (_rel_type, rel_props), child in sorted(
-            tree.children_blobs.triples(), key=lambda tup: tup[1][1]["name"]
-        ):
-            data = f"{rel_props['name']}{child.sha1sum}\n"
+        logging.debug(hasher.digest())
+        # then files
+        for entry_name in sorted(tree.children_blob):
+            child_sha1sum = tree.children_blob[entry_name].sha1sum
+            data = f"{entry_name}{child_sha1sum}\n"
             hasher.string(data.encode())
         tree.sha1sum = hasher.digest()
         return tree
