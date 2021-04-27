@@ -56,3 +56,7 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+#
+
+# Ignore dynaconf secret files
+neogit/config/.secrets.toml

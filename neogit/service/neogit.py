@@ -11,10 +11,7 @@ from neo4j.exceptions import ClientError
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
-
-
-DEFAULT_BRANCH_NAME = "master"
-DEFAULT_URL = "bolt://localhost:7687"
+from neogit.config import settings
 
 
 def measure_time(method):
@@ -30,11 +27,10 @@ def measure_time(method):
 
 
 class Neogit:
-
     def __init__(self, root: Path):
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
-        self._driver = GraphDatabase.driver(DEFAULT_URL)
+        self._driver = GraphDatabase.driver(settings.neo4j.url)
         if not self._root.exists():
             raise ValueError(f"Root directory {self._root} does not exist")
 
@@ -50,7 +46,7 @@ class Neogit:
     def _commit_transaction(self, name: str, tx):
         root_tree: Tree = self._build_merkle_tree()
         # test branch
-        branch = Branch(tx, DEFAULT_BRANCH_NAME)
+        branch = Branch(tx, settings.branch)
         if not branch:
             logging.debug("Creating branch: %s", branch.name)
             branch.create()
@@ -76,17 +72,12 @@ class Neogit:
     def init(self):
         """Initialize a neogit repository by creating indexes and constraints"""
         with self._driver.session() as session:
-            constraints = {
-                'Blob': 'sha1sum',
-                'Tree': 'sha1sum',
-                'Commit': 'sha1sum',
-                'Branch': 'name'
-            }
+            constraints = {"Blob": "sha1sum", "Tree": "sha1sum", "Commit": "sha1sum", "Branch": "name"}
             for label, unique_prop in constraints.items():
                 try:
                     session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
                 except ClientError as e:
-                    if e.code == 'Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists':
+                    if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
                         continue
 
     @measure_time

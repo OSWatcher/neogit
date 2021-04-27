@@ -36,7 +36,7 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     git = Neogit(root_repo)
-    if args['init']:
+    if args["init"]:
         git.init()
     if args["commit"]:
         commit_name = args["<name>"]
