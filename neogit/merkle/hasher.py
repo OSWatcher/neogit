@@ -1,6 +1,7 @@
 import hashlib
 from pathlib import Path
 from typing import Union
+import os
 
 from neogit.model import Tree
 
@@ -16,13 +17,17 @@ class Hasher:
         self._hash = hashlib.sha1()
 
     def filepath(self, filepath: Path) -> "Hasher":
-        buffer = bytearray(65536)
-        view = memoryview(buffer)
-        # no need to buffering, we read the data once
-        with open(filepath, "rb") as f:
-            # readinto avoid temporary buffers
-            for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
-                self._hash.update(view[:block_size])
+        if filepath.is_symlink():
+            data = os.readlink(str(filepath)).encode()
+            self._hash.update(data)
+        else:
+            buffer = bytearray(65536)
+            view = memoryview(buffer)
+            # no need to buffering, we read the data once
+            with open(filepath, "rb") as f:
+                # readinto avoid temporary buffers
+                for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
+                    self._hash.update(view[:block_size])
         return self
 
     def string(self, string: Union[str, bytes]) -> "Hasher":
