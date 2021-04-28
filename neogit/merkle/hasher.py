@@ -19,7 +19,7 @@ class Hasher:
         buffer = bytearray(65536)
         view = memoryview(buffer)
         # no need to buffering, we read the data once
-        with open(filepath, "rb", buffering=0) as f:
+        with open(filepath, "rb") as f:
             # readinto avoid temporary buffers
             for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
                 self._hash.update(view[:block_size])
