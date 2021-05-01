@@ -3,6 +3,7 @@
 Each file goes through this pipeline to do all the necessary operations
 """
 import logging
+import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -16,7 +17,7 @@ from neogit.merkle.hasher import Hasher
 class MerklePipeline:
     def __init__(self):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
-        self._max_workers: Optional[int] = settings.get("max_workers")
+        self._max_workers: Optional[int] = settings.get("max_workers", os.cpu_count())
         # build thread pool to compute SHA1s
         self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
         # pipeline results
