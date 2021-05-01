@@ -84,3 +84,11 @@ def dev(session):
 def install_test_req(session):
     session.install("-r", "requirements.txt")
     session.install("pytest==6.0.2", "coverage==5.3", "ipdb")
+
+
+@nox.session
+def run(session):
+    """install neogit and run it"""
+    args = session.posargs
+    session.install(".")
+    session.run("neogit", *args)
