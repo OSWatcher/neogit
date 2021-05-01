@@ -7,6 +7,7 @@ import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
+from pprint import pformat
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -24,32 +25,33 @@ class MerklePipeline:
         # pipeline results
         self._result: Dict[str, Future] = {}
 
-    def _merkelize_file_list(self, filepath_list: List[Path]):
-        """merkelize a list of files. executed in a thread"""
+    def _merkelize_file_list(self, dir: Path, filename_list: List[str]):
+        """merkelize a list of files."""
         tid = threading.get_ident()
-        result: Dict[Path, str] = {}
-        for filepath in filepath_list:
+        filename_to_sha1: Dict[str, str] = {}
+        for filename in filename_list:
             hash = Hasher()
+            filepath = dir / filename
             hash.filepath(filepath)
             sha1 = hash.digest()
-            self._logger.debug("[%s]📄 %s: %s", tid, filepath, sha1)
-            result[filepath] = sha1
-        return result
+            filename_to_sha1[filename] = sha1
+        self._logger.debug("[%s] %s: %s", tid, dir, pformat(filename_to_sha1))
+        return filename_to_sha1
 
-    def submit(self, filepath_list: List[Path]) -> str:
-        """submit a list of filepath to the pipeline
+    def submit(self, dir: Path, filename_list: List[str]) -> str:
+        """submit a list of filename to the pipeline, from a directory
 
         Returns:
             str: the task uuid to get the results
         """
-        future = self._sha1_pool.submit(self._merkelize_file_list, filepath_list)
+        future = self._sha1_pool.submit(self._merkelize_file_list, dir, filename_list)
         task_id = str(uuid4())
         # task -> future
         self._result[task_id] = future
         return task_id
 
-    def get_task_result(self, task_id: str) -> Dict[Path, str]:
+    def get_task_result(self, task_id: str) -> Dict[str, str]:
         future = self._result[task_id]
-        res: Dict[Path, str] = future.result()
+        res: Dict[str, str] = future.result()
         del self._result[task_id]
         return res
