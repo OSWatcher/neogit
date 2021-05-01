@@ -15,7 +15,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    package_data={"neogit": ["logging.yaml"]},
+    package_data={"neogit": ["logging.yaml", "config/*.toml"]},
     install_requires=requirements,
     entry_points={
         "console_scripts": ["neogit = neogit.__main__:main"],
