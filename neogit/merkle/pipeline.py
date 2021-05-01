@@ -19,6 +19,7 @@ class MerklePipeline:
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._max_workers: Optional[int] = settings.get("max_workers", os.cpu_count())
         # build thread pool to compute SHA1s
+        # hashlib: the Python GIL is released for data larger than 2047 bytes at object creation or on update
         self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
         # pipeline results
         self._result: Dict[str, Future] = {}
