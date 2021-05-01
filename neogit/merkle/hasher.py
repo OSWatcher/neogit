@@ -20,7 +20,7 @@ class Hasher:
         if filepath.is_symlink():
             data = os.readlink(str(filepath)).encode()
             self._hash.update(data)
-        else:
+        elif filepath.is_file():
             buffer = bytearray(65536)
             view = memoryview(buffer)
             # no need to buffering, we read the data once
@@ -28,6 +28,9 @@ class Hasher:
                 # readinto avoid temporary buffers
                 for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
                     self._hash.update(view[:block_size])
+        else:
+            # FIFO, socket, etc
+            pass
         return self
 
     def string(self, string: Union[str, bytes]) -> "Hasher":
