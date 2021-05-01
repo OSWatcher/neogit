@@ -11,21 +11,21 @@ Options:
   -d --debug            Toogle debug output
 """
 
-import logging
+from logging.config import dictConfig
 from pathlib import Path
 
+import yaml
 from docopt import docopt
 
 from neogit.service import Neogit
 
 
 def setup_logging(debug_enabled: bool):
-    log_lvl = logging.INFO
-    if debug_enabled:
-        log_lvl = logging.DEBUG
-    logging.basicConfig(level=log_lvl)
-    # silence neo4j
-    logging.getLogger("neo4j").setLevel(logging.WARNING)
+    log_config_path = Path(__file__).parent.parent / "logging.yaml"
+    with open(log_config_path) as f:
+        config = yaml.safe_load(f)
+
+    dictConfig(config)
 
 
 def handle_cmdline():
