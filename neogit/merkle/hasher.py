@@ -1,7 +1,7 @@
 import hashlib
+import os
 from pathlib import Path
 from typing import Union
-import os
 
 from neogit.model import Tree
 

@@ -1,15 +1,16 @@
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Tuple, Optional, List
-from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from queue import Queue
 from threading import Thread
+from typing import Dict, List, Optional, Tuple
 
+from more_itertools import partition
 
-from neogit.model import Tree
 from neogit.config import settings
-from neogit.merkle.utils import merkelize_file, merkelize_dir
+from neogit.merkle.pipeline import MerklePipeline
+from neogit.merkle.utils import merkelize_dir
+from neogit.model import Tree
 
 
 class MerkleFSTree:
@@ -21,7 +22,7 @@ class MerkleFSTree:
         self._root: Path = root_fs
 
         self._expl_thread = Thread(target=self._explore_dfs, args=(self._root,), name="explore")
-        self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
+        self._pipeline = MerklePipeline()
         self._task_queue: Queue = Queue()
         self._tree_fs: Dict[Path, Tree] = {}
 
@@ -31,13 +32,10 @@ class MerkleFSTree:
             task = self._task_queue.get()
             if task is None:
                 break
-            cur_dir, filename_to_future, subdir_list = task
-            # wait for futures completion
-            filename_to_sha1: Dict[str, str] = {}
-            for file_sha1_fut in as_completed(list(filename_to_future.keys())):
-                filename: str = filename_to_future[file_sha1_fut]
-                filename_to_sha1[filename] = file_sha1_fut.result()
-            tree: Tree = merkelize_dir(cur_dir, filename_to_sha1, subdir_list, self._tree_fs)
+            cur_dir, pipeline_task = task
+            result: Dict[Path, str] = self._pipeline.get_task_result(pipeline_task)
+            filename_to_sha1 = {filepath.name: sha1 for filepath, sha1 in result.items()}
+            tree: Tree = merkelize_dir(cur_dir, filename_to_sha1, self._tree_fs)
             self._logger.debug("📁 %s: %s", cur_dir, tree.sha1sum)
             # update tree_fs
             self._tree_fs[cur_dir] = tree
@@ -52,17 +50,14 @@ class MerkleFSTree:
 
     def _explore_dfs_rec(self, cur_dir: Path):
         with os.scandir(cur_dir) as it:
-            # process dirs first
-            entries = list(it)
-            subdir_list = []
-            for subdir in [entry for entry in entries if entry.is_dir(follow_symlinks=False)]:
-                subdir_list.append(subdir.name)
-                subdir_path = Path(subdir.path)
+            files, dirs = partition(lambda item: item.is_dir(follow_symlinks=False), it)
+            # start by exploring DFS
+            for d in dirs:
+                subdir_path = Path(d.path)
                 self._explore_dfs_rec(subdir_path)
-            future_to_filename: Dict[Future, str] = {}
-            for file in [entry for entry in entries if not entry.is_dir(follow_symlinks=False)]:
-                filepath = Path(file.path)
-                future = self._sha1_pool.submit(merkelize_file, filepath)
-                future_to_filename[future] = filepath.name
-            task: Tuple[Path, Dict[Future, str], List[str]] = (cur_dir, future_to_filename, subdir_list)
+            # submit the files to the pipeline
+            filepath_list: List[Path] = [Path(f.path) for f in files]
+            pipeline_task: str = self._pipeline.submit(filepath_list)
+            # create new task and put it to the queue
+            task: Tuple[Path, str] = (cur_dir, pipeline_task)
             self._task_queue.put(task)
