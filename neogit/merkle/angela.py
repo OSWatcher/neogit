@@ -1,53 +1,62 @@
 import logging
 import os
-import pickle
-from multiprocessing import Queue
 from pathlib import Path
-from typing import Dict, Tuple
+from queue import Queue
+from threading import Thread
+from typing import Dict, Optional, Tuple
 
-from neogit.merkle.proc import MerkleWorker
+from more_itertools import partition
+
+from neogit.config import settings
+from neogit.merkle.pipeline import MerklePipeline
 from neogit.merkle.utils import merkelize_dir
 from neogit.model import Tree
 
-DEFAULT_MAX_WORKERS = 4
-
-
-def iterable_queue(queue: Queue):
-    while True:
-        item = queue.get()
-        if item is None:
-            return
-        yield item
-
 
 class MerkleFSTree:
-    def __init__(self, root_fs: Path, max_workers: int = None):
+    def __init__(self, root_fs: Path):
         if not root_fs.exists():
             raise ValueError(f"root {root_fs} does not exists")
-        self._logger = logging.getLogger(f"{MerkleFSTree.__module__}.{MerkleFSTree.__class__.__name__}")
-        self._max_workers = max_workers if max_workers is not None else DEFAULT_MAX_WORKERS
-        self._root = root_fs
-        self._workers: Dict[Path, Tuple[MerkleWorker, Queue]] = {}
+        self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
+        self._max_workers: Optional[int] = settings.get("max_workers")
+        self._root: Path = root_fs
+
+        self._expl_thread = Thread(target=self._explore_dfs, args=(self._root,), name="explore")
+        self._pipeline = MerklePipeline()
+        self._task_queue: Queue = Queue()
+        self._tree_fs: Dict[Path, Tree] = {}
 
     def merkelize(self) -> Tree:
-        with os.scandir(self._root) as it:
-            for entry in it:
-                if entry.is_dir(follow_symlinks=False):
-                    entry_path = Path(entry.path)
-                    worker_queue: Queue = Queue()
-                    worker = MerkleWorker(entry_path, worker_queue)
-                    worker.start()
-                    self._workers[entry_path] = (worker, worker_queue)
-        tree_fs = {}
-        for w_path, (worker, w_queue) in self._workers.items():
-            worker.join()
-            logging.debug("waiting for results from %s", worker.name)
-            serial_path = w_queue.get()
-            with open(serial_path, mode="rb") as f:
-                node = pickle.load(f)
-            os.remove(serial_path)
-            logging.debug("results from %s", worker.name)
-            tree_fs[w_path] = node
-        root_node = merkelize_dir(self._root, tree_fs)
-        logging.info("📁 %s : %s", self._root, root_node.sha1sum)
-        return root_node
+        self._expl_thread.start()
+        while True:
+            task = self._task_queue.get()
+            if task is None:
+                break
+            cur_dir, pipeline_task = task
+            filename_to_sha1: Dict[str, str] = self._pipeline.get_task_result(pipeline_task)
+            tree: Tree = merkelize_dir(cur_dir, filename_to_sha1, self._tree_fs)
+            self._logger.debug("📁 %s: %s", cur_dir, tree.sha1sum)
+            # update tree_fs
+            self._tree_fs[cur_dir] = tree
+        self._expl_thread.join()
+        # return root tree
+        return self._tree_fs[self._root]
+
+    def _explore_dfs(self, cur_dir: Path):
+        self._explore_dfs_rec(cur_dir)
+        # stop consuming tasks
+        self._task_queue.put(None)
+
+    def _explore_dfs_rec(self, cur_dir: Path):
+        with os.scandir(cur_dir) as it:
+            files, dirs = partition(lambda item: item.is_dir(follow_symlinks=False), it)
+            # start by exploring DFS
+            for d in dirs:
+                subdir_path = Path(d.path)
+                self._explore_dfs_rec(subdir_path)
+            # submit the files to the pipeline
+            filename_list = [e.name for e in files]
+            pipeline_task: str = self._pipeline.submit(cur_dir, filename_list)
+            # create new task and put it to the queue
+            task: Tuple[Path, str] = (cur_dir, pipeline_task)
+            self._task_queue.put(task)

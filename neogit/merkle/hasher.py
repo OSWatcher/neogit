@@ -1,4 +1,5 @@
 import hashlib
+import os
 from pathlib import Path
 from typing import Union
 
@@ -16,13 +17,20 @@ class Hasher:
         self._hash = hashlib.sha1()
 
     def filepath(self, filepath: Path) -> "Hasher":
-        buffer = bytearray(65536)
-        view = memoryview(buffer)
-        # no need to buffering, we read the data once
-        with open(filepath, "rb", buffering=0) as f:
-            # readinto avoid temporary buffers
-            for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
-                self._hash.update(view[:block_size])
+        if filepath.is_symlink():
+            data = os.readlink(str(filepath)).encode()
+            self._hash.update(data)
+        elif filepath.is_file():
+            buffer = bytearray(65536)
+            view = memoryview(buffer)
+            # no need to buffering, we read the data once
+            with open(filepath, "rb") as f:
+                # readinto avoid temporary buffers
+                for block_size in iter(lambda: f.readinto(view), 0):  # type: ignore
+                    self._hash.update(view[:block_size])
+        else:
+            # FIFO, socket, etc
+            pass
         return self
 
     def string(self, string: Union[str, bytes]) -> "Hasher":
