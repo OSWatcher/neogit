@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from typing import Dict, Optional, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 
 from more_itertools import partition
 
@@ -26,7 +26,11 @@ class MerkleFSTree:
         self._task_queue: Queue = Queue()
         self._tree_fs: Dict[Path, Tree] = {}
 
-    def merkelize(self) -> Tree:
+    @property
+    def root_tree(self):
+        return self._tree_fs[self._root]
+
+    def merkelize(self) -> Iterator[Tree]:
         self._expl_thread.start()
         while True:
             task = self._task_queue.get()
@@ -36,11 +40,10 @@ class MerkleFSTree:
             filename_to_sha1: Dict[str, str] = self._pipeline.get_task_result(pipeline_task)
             tree: Tree = merkelize_dir(cur_dir, filename_to_sha1, self._tree_fs)
             self._logger.debug("📁 %s: %s", cur_dir, tree.sha1sum)
+            yield tree
             # update tree_fs
             self._tree_fs[cur_dir] = tree
         self._expl_thread.join()
-        # return root tree
-        return self._tree_fs[self._root]
 
     def _explore_dfs(self, cur_dir: Path):
         self._explore_dfs_rec(cur_dir)

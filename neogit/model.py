@@ -19,10 +19,14 @@ class Tree:
         self.children_tree = {}
         self.children_blob = {}
 
-    def create(self, session: Union[Session, Transaction]):
-        # explore dfs tree
+    def create_rec(self, session: Union[Session, Transaction]):
+        """Create the Tree recursively"""
+        # explore
         for tree in self.children_tree.values():
-            tree.create(session)
+            tree.create_partial(session)
+
+    def create_partial(self, session: Union[Session, Transaction]):
+        """Create the Tree partially"""
         # create child blobs
         query = """
         UNWIND $unwind_param as blob
