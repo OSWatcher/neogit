@@ -16,6 +16,7 @@ settings = Dynaconf(
     ],
     validators=[
         Validator("branch", must_exist=True),
+        Validator("log_fmt", must_exist=True),
         Validator("neo4j.proto", "neo4j.host", "neo4j.port", must_exist=True),
         # compute the URL from the settings if not provided by env var NEOGIT_NEO4J__URL
         Validator(

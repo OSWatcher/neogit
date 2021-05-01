@@ -14,9 +14,11 @@ Options:
 from logging.config import dictConfig
 from pathlib import Path
 
+import coloredlogs
 import yaml
 from docopt import docopt
 
+from neogit.config import settings
 from neogit.service import Neogit
 
 
@@ -25,7 +27,16 @@ def setup_logging(debug_enabled: bool):
     with open(log_config_path) as f:
         config = yaml.safe_load(f)
 
+    try:
+        if debug_enabled:
+            config["root"]["level"] = "DEBUG"
+    except KeyError:
+        root_level = "INFO"
+    else:
+        root_level = config["root"]["level"]
+
     dictConfig(config)
+    coloredlogs.install(level=root_level, fmt=settings.log_fmt)
 
 
 def handle_cmdline():
