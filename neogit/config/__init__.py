@@ -1,5 +1,6 @@
-from dynaconf import Dynaconf, Validator
 from pathlib import Path
+
+from dynaconf import Dynaconf, Validator
 
 CUR_DIR = Path(__file__).parent
 

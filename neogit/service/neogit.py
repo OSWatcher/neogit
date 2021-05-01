@@ -8,10 +8,10 @@ from typing import Optional
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 
+from neogit.config import settings
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
-from neogit.config import settings
 
 
 def measure_time(method):
