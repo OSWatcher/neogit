@@ -35,16 +35,14 @@ class Neogit:
             raise ValueError(f"Root directory {self._root} does not exist")
 
     @measure_time
-    def _build_merkle_tree(self) -> Tree:
+    def _build_tree_and_insert(self, transaction: Transaction):
         builder = MerkleFSTree(self._root)
-        return builder.merkelize()
-
-    @measure_time
-    def _insert_fileystem(self, root: Tree, transaction: Transaction):
-        root.create(transaction)
+        for tree in builder.merkelize():
+            tree.create_partial(transaction)
+        return builder.root_tree
 
     def _commit_transaction(self, name: str, tx):
-        root_tree: Tree = self._build_merkle_tree()
+        root_tree: Tree = self._build_tree_and_insert(tx)
         # test branch
         branch = Branch(tx, settings.branch)
         if not branch:
@@ -59,8 +57,6 @@ class Neogit:
         # create OS commit
         new_commit: Commit = Commit(tx, name, new_commit_sha1sum, commit_date)
         new_commit.create()
-        # create filesystem tree
-        self._insert_fileystem(root_tree, tx)
         # add filesystem
         new_commit.add_filesystem(root_tree)
         # add previous if exists
