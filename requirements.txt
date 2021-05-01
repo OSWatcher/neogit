@@ -2,3 +2,5 @@ neo4j==4.2.1
 py2neo==2021.0.1
 docopt==0.6.2
 dynaconf==3.1.4
+PyYAML==5.4.1
+coloredlogs==15.0

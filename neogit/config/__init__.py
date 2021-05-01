@@ -3,6 +3,7 @@ from pathlib import Path
 from dynaconf import Dynaconf, Validator
 
 CUR_DIR = Path(__file__).parent
+LOG_FMT = "%(asctime)s:%(name)s:%(levelname)s:%(message)s"
 
 settings = Dynaconf(
     envvar_prefix="NEOGIT",
@@ -16,6 +17,7 @@ settings = Dynaconf(
     ],
     validators=[
         Validator("branch", must_exist=True),
+        Validator("log_fmt", default=LOG_FMT),
         Validator("neo4j.proto", "neo4j.host", "neo4j.port", must_exist=True),
         # compute the URL from the settings if not provided by env var NEOGIT_NEO4J__URL
         Validator(

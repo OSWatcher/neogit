@@ -1,0 +1,15 @@
+version: 1
+disable_existing_loggers: false
+# formatters: log format is handled via coloredlogs
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: NOTSET
+    stream: ext://sys.stderr
+root:
+  level: INFO
+  handlers: [console]
+loggers:
+  # silence noisy third party libs
+  neo4j:
+    level: WARNING
