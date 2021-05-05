@@ -5,3 +5,4 @@ dynaconf==3.1.4
 PyYAML==5.4.1
 coloredlogs==15.0
 more-itertools==8.7.0
+apache-libcloud==3.3.1
