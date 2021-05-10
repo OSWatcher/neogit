@@ -83,6 +83,7 @@ def dev(session):
 
 def install_test_req(session):
     session.install("-r", "requirements.txt")
+    session.install("-r", "dev-requirements.txt")
     session.install("pytest==6.0.2", "coverage==5.3", "ipdb")
 
 
