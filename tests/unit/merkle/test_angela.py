@@ -4,7 +4,7 @@ from more_itertools import consume
 from pytest import fixture
 
 from neogit.merkle.angela import MerkleFSTree
-from neogit.model import Tree
+from neogit.model import Blob, Tree
 
 
 @fixture
@@ -61,6 +61,27 @@ def multiple_subdirs_fs(root_fs):
 
 def test_merkelize_multiple_subdirs(multiple_subdirs_fs):
     root, expected = multiple_subdirs_fs
+    builder = MerkleFSTree(root)
+    consume(builder.merkelize())
+    tree = builder.root_tree
+
+    assert expected, tree
+
+
+@fixture
+def one_file_fs(root_fs):
+    root, expected = root_fs
+    one_file = root / "file1.txt"
+    one_file.touch()
+    file_blob = Blob()
+    file_blob.sha1sum = "4c4e3587ef717dff0d533394483cd5d5feaa983a"
+    expected.children_blob["file1.txt"] = file_blob
+    expected.sha1sum = "0032782e6f3381866532878f1bd3c1405203fff7"
+    return root, expected
+
+
+def test_merkelize_one_file(one_file_fs):
+    root, expected = one_file_fs
     builder = MerkleFSTree(root)
     consume(builder.merkelize())
     tree = builder.root_tree
