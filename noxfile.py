@@ -30,20 +30,7 @@ def unit_test(session):
     # run unit tests
     args = session.posargs
     install_test_req(session)
-    session.run(
-        "coverage",
-        "run",
-        "-m",
-        "pytest",
-        "--pdb",
-        "--pdbcls=IPython.terminal.debugger:TerminalPdb",
-        "-m",
-        "not dev",
-        "-k",
-        "unit",
-        "-v",
-        *args
-    )
+    session.run("coverage", "run", "-m", "pytest", "--pdb", "-m", "not dev", "-k", "unit", "-v", *args)
     session.run("coverage", "report")
 
 
@@ -52,24 +39,13 @@ def test(session):
     # run unit tests
     args = session.posargs
     install_test_req(session)
-    session.run(
-        "coverage",
-        "run",
-        "-m",
-        "pytest",
-        "--pdb",
-        "--pdbcls=IPython.terminal.debugger:TerminalPdb",
-        "-m",
-        "not dev",
-        "-v",
-        *args
-    )
+    session.run("coverage", "run", "-m", "pytest", "--pdb", "-m", "not dev", "-v", *args)
     session.run("coverage", "report")
 
 
 @nox.session
 def coverage_html(session):
-    session.install("coverage==5.3")
+    session.install("-r", "dev-requirements.txt")
     session.run("coverage", "html", "--dir", ".coverage_html")
     session.run("xdg-open", ".coverage_html/index.html")
 
@@ -78,12 +54,12 @@ def coverage_html(session):
 def dev(session):
     args = session.posargs
     install_test_req(session)
-    session.run("python", "-m", "pytest", "-k", "dev", "--pdb", "--pdbcls=IPython.terminal.debugger:TerminalPdb", *args)
+    session.run("python", "-m", "pytest", "-k", "dev", "--pdb", *args)
 
 
 def install_test_req(session):
     session.install("-r", "requirements.txt")
-    session.install("pytest==6.0.2", "coverage==5.3", "ipdb")
+    session.install("-r", "dev-requirements.txt")
 
 
 @nox.session
