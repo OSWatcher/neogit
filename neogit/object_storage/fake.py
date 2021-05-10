@@ -27,6 +27,8 @@ class FakeObjectStorage(AbstractObjectStorage):
             raise ContainerDoesNotExistError
 
     def upload_object(self, filepath: str, container: Container, object_name: str, extra: dict = None) -> Object:
+        if extra is None:
+            extra = {}
         with open(filepath, "rb") as f:
             data: bytes = f.read()
             size = os.stat(f.fileno()).st_size
