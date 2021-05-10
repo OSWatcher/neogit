@@ -1,7 +1,9 @@
+import typing
+from dataclasses import dataclass
 from pathlib import Path
 
 from appdirs import user_data_dir
-from dynaconf import Dynaconf, Validator
+from dynaconf import Dynaconf, LazySettings, Validator
 
 APPNAME = "Neogit"
 CUR_DIR = Path(__file__).parent
@@ -32,3 +34,14 @@ settings = Dynaconf(
         Validator("object.container_name", default=CONTAINER_NAME),
     ],
 )
+
+
+@dataclass
+class ObjectConfig:
+    provider: str
+    key: str
+    container_name: str
+
+    @staticmethod
+    def from_settings(settings: LazySettings) -> "ObjectConfig":
+        return ObjectConfig(settings.object.provider, settings.object.key, settings.object.container_name)

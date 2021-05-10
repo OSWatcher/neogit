@@ -7,14 +7,15 @@ from libcloud.storage.providers import get_driver
 from libcloud.storage.types import ContainerAlreadyExistsError as LibCloudContainerAlreadyExistsError
 from libcloud.storage.types import ContainerDoesNotExistError as LibCloudContainerDoesNotExistError
 
+from neogit.config import ObjectConfig
 from neogit.object_storage.abstract import (AbstractObjectStorage, Container, ContainerAlreadyExists,
                                             ContainerDoesNotExistError, Object)
 
 
 class LibcloudObjectStorage(AbstractObjectStorage):
-    def __init__(self, provider: str, key: str):
-        cls = get_driver(provider)
-        self._driver = cls(key)
+    def __init__(self, config: ObjectConfig):
+        cls = get_driver(config.provider)
+        self._driver = cls(config.key)
 
     def create_container(self, name: str) -> Container:
         try:
@@ -55,9 +56,8 @@ class TSLibCloudObjectStorage:
     Return a per-thread instance
     """
 
-    def __init__(self, provider: str, key: str):
-        self._provder = provider
-        self._key = key
+    def __init__(self, config: ObjectConfig):
+        self._config = config
         self._instances: Dict[int, LibcloudObjectStorage] = {}
 
     @property
@@ -66,6 +66,6 @@ class TSLibCloudObjectStorage:
         try:
             inst = self._instances[tid]
         except KeyError:
-            inst = LibcloudObjectStorage(self._provder, self._key)
+            inst = LibcloudObjectStorage(self._config)
             self._instances[tid] = inst
         return inst
