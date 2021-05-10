@@ -30,19 +30,7 @@ def unit_test(session):
     # run unit tests
     args = session.posargs
     install_test_req(session)
-    session.run(
-        "coverage",
-        "run",
-        "-m",
-        "pytest",
-        "--pdb",
-        "-m",
-        "not dev",
-        "-k",
-        "unit",
-        "-v",
-        *args
-    )
+    session.run("coverage", "run", "-m", "pytest", "--pdb", "-m", "not dev", "-k", "unit", "-v", *args)
     session.run("coverage", "report")
 
 
@@ -51,17 +39,7 @@ def test(session):
     # run unit tests
     args = session.posargs
     install_test_req(session)
-    session.run(
-        "coverage",
-        "run",
-        "-m",
-        "pytest",
-        "--pdb",
-        "-m",
-        "not dev",
-        "-v",
-        *args
-    )
+    session.run("coverage", "run", "-m", "pytest", "--pdb", "-m", "not dev", "-v", *args)
     session.run("coverage", "report")
 
 
