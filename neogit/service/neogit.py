@@ -12,8 +12,7 @@ from neogit.config import ObjectConfig, settings
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
-from neogit.object_storage import ContainerAlreadyExists
-from neogit.object_storage.lib_cloud import TSLibCloudObjectStorage
+from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
 
 
 def measure_time(method):
@@ -34,7 +33,7 @@ class Neogit:
         self._root: Path = root
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url)
         object_config = ObjectConfig.from_settings(settings)
-        self._object_driver_ts = TSLibCloudObjectStorage(object_config)
+        self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
         self._object_driver = self._object_driver_ts.instance
         if not self._root.exists():
             raise ValueError(f"Root directory {self._root} does not exist")
@@ -81,6 +80,7 @@ class Neogit:
                 except ClientError as e:
                     if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
                         continue
+        self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name
         try:
@@ -88,6 +88,7 @@ class Neogit:
             self._object_driver.create_container(container_name)
         except ContainerAlreadyExists:
             pass
+        self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
     def commit(self, name: str):
