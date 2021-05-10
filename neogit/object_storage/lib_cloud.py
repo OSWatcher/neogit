@@ -1,3 +1,6 @@
+import threading
+from typing import Dict
+
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
 from libcloud.storage.providers import get_driver
@@ -44,3 +47,25 @@ class LibcloudObjectStorage(AbstractObjectStorage):
     def get_object(self, container: Container, name: str) -> Object:
         obj: LibCloudObject = self._driver.get_object(container.name, name)
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
+
+class TSLibCloudObjectStorage:
+    """Thread safe provider for Libcloud object storage.
+
+    Return a per-thread instance
+    """
+
+    def __init__(self, provider: str, key: str):
+        self._provder = provider
+        self._key = key
+        self._instances: Dict[int, LibcloudObjectStorage] = {}
+
+    @property
+    def instance(self) -> LibcloudObjectStorage:
+        tid = threading.get_ident()
+        try:
+            inst = self._instances[tid]
+        except KeyError:
+            inst = LibcloudObjectStorage(self._provder, self._key)
+            self._instances[tid] = inst
+        return inst
