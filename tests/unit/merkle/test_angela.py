@@ -1,9 +1,10 @@
 from pathlib import Path
-from pytest import fixture, set_trace
+
+from more_itertools import consume
+from pytest import fixture
 
 from neogit.merkle.angela import MerkleFSTree
 from neogit.model import Tree
-from more_itertools import consume
 
 
 @fixture
@@ -22,6 +23,7 @@ def test_merkelize_empty_dir(root_fs):
     tree = builder.root_tree
 
     assert expected, tree
+
 
 @fixture
 def one_subdir_fs(root_fs):
@@ -42,6 +44,29 @@ def test_merkelize_one_subdir(one_subdir_fs):
     tree = builder.root_tree
 
     assert expected, tree
+
+
+@fixture
+def multiple_subdirs_fs(root_fs):
+    root, expected = root_fs
+    for subdir_name in ["subdir1", "subdir2", "subdir3"]:
+        subdir = root / subdir_name
+        subdir.mkdir(parents=True)
+        subdir_tree = Tree()
+        subdir_tree.sha1sum = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        expected.children_tree[subdir_name] = subdir_tree
+    expected.sha1sum = "0dc6fc1493c0c6a9d56007b436ac6a3613e5e346"
+    return root, expected
+
+
+def test_merkelize_multiple_subdirs(multiple_subdirs_fs):
+    root, expected = multiple_subdirs_fs
+    builder = MerkleFSTree(root)
+    consume(builder.merkelize())
+    tree = builder.root_tree
+
+    assert expected, tree
+
 
 # def test_merkelize_current_neogit_repo():
 #     root = Path("/home/wenzel/Projets/neogit")
