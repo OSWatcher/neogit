@@ -36,7 +36,6 @@ def unit_test(session):
         "-m",
         "pytest",
         "--pdb",
-        "--pdbcls=IPython.terminal.debugger:TerminalPdb",
         "-m",
         "not dev",
         "-k",
@@ -58,7 +57,6 @@ def test(session):
         "-m",
         "pytest",
         "--pdb",
-        "--pdbcls=IPython.terminal.debugger:TerminalPdb",
         "-m",
         "not dev",
         "-v",
@@ -78,7 +76,7 @@ def coverage_html(session):
 def dev(session):
     args = session.posargs
     install_test_req(session)
-    session.run("python", "-m", "pytest", "-k", "dev", "--pdb", "--pdbcls=IPython.terminal.debugger:TerminalPdb", *args)
+    session.run("python", "-m", "pytest", "-k", "dev", "--pdb", *args)
 
 
 def install_test_req(session):
