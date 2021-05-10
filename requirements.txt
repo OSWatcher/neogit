@@ -7,3 +7,4 @@ coloredlogs==15.0
 more-itertools==8.7.0
 apache-libcloud==3.3.1
 fasteners==0.16
+appdirs==1.4.4
