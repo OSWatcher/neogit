@@ -6,3 +6,6 @@ branch = "master"
 proto = "bolt"
 host = "localhost"
 port = 7687
+
+[default.object]
+provider = "local"
