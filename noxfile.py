@@ -67,7 +67,7 @@ def test(session):
 
 @nox.session
 def coverage_html(session):
-    session.install("coverage==5.3")
+    session.install("-r", "dev-requirements.txt")
     session.run("coverage", "html", "--dir", ".coverage_html")
     session.run("xdg-open", ".coverage_html/index.html")
 
@@ -82,7 +82,6 @@ def dev(session):
 def install_test_req(session):
     session.install("-r", "requirements.txt")
     session.install("-r", "dev-requirements.txt")
-    session.install("pytest==6.2.4", "coverage==5.3", "ipdb")
 
 
 @nox.session
