@@ -1,9 +1,12 @@
 from pathlib import Path
 
+from appdirs import user_data_dir
 from dynaconf import Dynaconf, Validator
 
+APPNAME = "Neogit"
 CUR_DIR = Path(__file__).parent
 LOG_FMT = "%(asctime)s:%(name)s:%(levelname)s:%(message)s"
+USER_DATA_DIR = Path(user_data_dir(APPNAME))
 
 settings = Dynaconf(
     envvar_prefix="NEOGIT",
@@ -24,5 +27,6 @@ settings = Dynaconf(
             "neo4j.url",
             default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",
         ),
+        Validator("object.key", default=USER_DATA_DIR),
     ],
 )
