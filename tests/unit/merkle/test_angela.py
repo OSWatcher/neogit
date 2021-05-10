@@ -89,6 +89,33 @@ def test_merkelize_one_file(one_file_fs):
     assert expected, tree
 
 
+@fixture
+def multiple_files_fs(root_fs):
+    root, expected = root_fs
+    for filename, content, sha1 in [
+        ("file1.raw", b"abcd", "81fe8bfe87576c3ecb22426f8e57847382917acf"),
+        ("file2.raw", b"defg", "107ecb6890eeee99d9ccc06e711631349a7dd72b"),
+        ("file3.raw", b"ijkl", "604ebdeb8d3be5303c0fc891773f69fc3a3720fa"),
+    ]:
+        filepath = root / filename
+        with open(filepath, "wb") as f:
+            f.write(content)
+        file_blob = Blob()
+        file_blob.sha1sum = sha1
+        expected.children_blob[filename] = file_blob
+    expected.sha1sum = "04b0e76cbd0a1f82470bf923da8d85aa343c110f"
+    return root, expected
+
+
+def test_merkelize_multiple_files(multiple_files_fs):
+    root, expected = multiple_files_fs
+    builder = MerkleFSTree(root)
+    consume(builder.merkelize())
+    tree = builder.root_tree
+
+    assert expected, tree
+
+
 # def test_merkelize_current_neogit_repo():
 #     root = Path("/home/wenzel/Projets/neogit")
 #     tree = MerkleFSTree(root)
