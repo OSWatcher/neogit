@@ -11,10 +11,7 @@ from neogit.object_storage.lib_cloud import LibcloudObjectStorage
 @fixture(
     params=[
         (FakeObjectStorage, ()),
-        (
-            LibcloudObjectStorage,
-            (ObjectConfig("local", "/neogit", "objects"),)
-        ),
+        (LibcloudObjectStorage, (ObjectConfig("local", "/neogit"),)),
     ]
 )
 def storage(fs, request):

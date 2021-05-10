@@ -40,8 +40,7 @@ settings = Dynaconf(
 class ObjectConfig:
     provider: str
     key: str
-    container_name: str
 
     @staticmethod
     def from_settings(settings: LazySettings) -> "ObjectConfig":
-        return ObjectConfig(settings.object.provider, settings.object.key, settings.object.container_name)
+        return ObjectConfig(settings.object.provider, settings.object.key)
