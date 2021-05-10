@@ -1,5 +1,4 @@
 """Defines the interface to the Object Storage"""
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 

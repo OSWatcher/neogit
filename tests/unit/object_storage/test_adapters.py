@@ -3,6 +3,7 @@ from pathlib import Path
 from pytest import fixture, raises
 
 from neogit.config import ObjectConfig
+from neogit.object_storage import TSObjectStorage
 from neogit.object_storage.abstract import ContainerAlreadyExists, ContainerDoesNotExistError
 from neogit.object_storage.fake import FakeObjectStorage
 from neogit.object_storage.lib_cloud import LibcloudObjectStorage
@@ -10,15 +11,16 @@ from neogit.object_storage.lib_cloud import LibcloudObjectStorage
 
 @fixture(
     params=[
-        (FakeObjectStorage, ()),
-        (LibcloudObjectStorage, (ObjectConfig("local", "/neogit"),)),
+        (FakeObjectStorage, None),
+        (LibcloudObjectStorage, ObjectConfig("local", "/neogit")),
     ]
 )
 def storage(fs, request):
-    cls, cls_params = request.param
+    cls, object_config = request.param
     # create directory for Libcloud object storage
     Path("/neogit").mkdir()
-    adapter = cls(*cls_params)
+    ts = TSObjectStorage(cls, object_config)
+    adapter = ts.instance
     yield adapter
 
 

@@ -8,7 +8,7 @@ from .abstract import (AbstractObjectStorage, Container, ContainerAlreadyExists,
 
 
 class FakeObjectStorage(AbstractObjectStorage):
-    def __init__(self):
+    def __init__(self, *args):
         self._storage_driver = StorageDriver()
         # obj name -> (data, metadata)
         self._containers: Dict[Container, Dict[str, Tuple[bytes, Object]]] = {}
