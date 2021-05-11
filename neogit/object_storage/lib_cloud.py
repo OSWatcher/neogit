@@ -1,7 +1,9 @@
+from pathlib import Path
 from typing import Iterator
 
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
+from libcloud.storage.drivers.local import LocalStorageDriver
 from libcloud.storage.providers import get_driver
 from libcloud.storage.types import ContainerAlreadyExistsError as LibCloudContainerAlreadyExistsError
 from libcloud.storage.types import ContainerDoesNotExistError as LibCloudContainerDoesNotExistError
@@ -21,6 +23,9 @@ from neogit.object_storage.abstract import (
 class LibcloudObjectStorage(AbstractObjectStorage):
     def __init__(self, config: ObjectConfig):
         cls = get_driver(config.provider)
+        # local provider: ensure directory is created
+        if cls == LocalStorageDriver:
+            Path(config.key).mkdir(parents=True, exist_ok=True)
         self._driver = cls(config.key)
 
     def create_container(self, name: str) -> Container:
