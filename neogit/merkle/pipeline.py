@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from neogit.config import settings
 from neogit.merkle.hasher import Hasher
+from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
 
 
 class MerklePipeline:
@@ -30,9 +31,10 @@ class MerklePipeline:
         tid = threading.get_ident()
         filename_to_sha1: Dict[str, str] = {}
         for filename in filename_list:
-            hash = Hasher()
             filepath = dir / filename
-            hash.filepath(filepath)
+            with filepath_merkle_ctx(filepath) as io:
+                hash = Hasher()
+                [hash.string(chunk) for chunk in iter_chunk(io)]
             sha1 = hash.digest()
             filename_to_sha1[filename] = sha1
         self._logger.debug("[%s] %s: %s", tid, dir, pformat(filename_to_sha1))
