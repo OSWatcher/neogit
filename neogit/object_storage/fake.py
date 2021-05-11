@@ -11,7 +11,7 @@ lock = threading.Lock()
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: Dict = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -33,6 +33,9 @@ class ContainerSingleton(metaclass=Singleton):
     def __setitem__(self, key, value):
         self._containers[key] = value
 
+    def __delitem__(self, key):
+        del self._containers[key]
+
     def keys(self):
         return self._containers.keys()
 
@@ -50,6 +53,10 @@ class FakeObjectStorage(AbstractObjectStorage):
         c = Container(name)
         self._container_singleton[c] = {}
         return c
+
+    def delete_container(self, container: Container) -> bool:
+        del self._container_singleton[container]
+        return True
 
     def get_container(self, name: str) -> Container:
         try:
