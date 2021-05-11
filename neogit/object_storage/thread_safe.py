@@ -1,5 +1,5 @@
 import threading
-from typing import Dict
+from typing import Dict, Optional
 
 from neogit.config import ObjectConfig
 from neogit.object_storage.abstract import AbstractObjectStorage
@@ -11,7 +11,7 @@ class TSObjectStorage:
     Return a per-thread instance
     """
 
-    def __init__(self, cls, config: ObjectConfig):
+    def __init__(self, cls, config: Optional[ObjectConfig]):
         self._config = config
         self._cls = cls
         self._instances: Dict[int, AbstractObjectStorage] = {}
