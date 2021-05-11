@@ -6,6 +6,7 @@ import logging
 import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
+from itertools import tee
 from pathlib import Path
 from pprint import pformat
 from typing import Dict, List, Optional
@@ -47,13 +48,14 @@ class MerklePipeline:
             # compute the SHA1
             filepath = dir / filename
             with filepath_merkle_ctx(filepath) as io:
+                chunk_gen_sha1, chunk_gen_upload = tee(iter_chunk(io))
                 hash = Hasher()
-                [hash.string(chunk) for chunk in iter_chunk(io)]
-            sha1 = hash.digest()
-            filename_to_sha1[filename] = sha1
-            # upload to object storage
-            obj_name = sha1
-            obj_adapter.upload_object(filepath, container, obj_name)
+                [hash.string(chunk) for chunk in chunk_gen_sha1]
+                sha1 = hash.digest()
+                filename_to_sha1[filename] = sha1
+                # upload to object storage
+                obj_name = sha1
+                obj_adapter.upload_object_via_stream(chunk_gen_upload, container, obj_name)
         self._logger.debug("[%s] %s: %s", tid, dir, pformat(filename_to_sha1))
         return filename_to_sha1
 
