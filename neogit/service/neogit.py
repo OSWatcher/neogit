@@ -8,10 +8,11 @@ from typing import Optional
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 
-from neogit.config import settings
+from neogit.config import ObjectConfig, settings
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
+from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
 
 
 def measure_time(method):
@@ -30,13 +31,16 @@ class Neogit:
     def __init__(self, root: Path):
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
-        self._driver = GraphDatabase.driver(settings.neo4j.url)
+        self._graph_driver = GraphDatabase.driver(settings.neo4j.url)
+        object_config = ObjectConfig.from_settings(settings)
+        self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
+        self._object_driver = self._object_driver_ts.instance
         if not self._root.exists():
             raise ValueError(f"Root directory {self._root} does not exist")
 
     @measure_time
     def _build_tree_and_insert(self, transaction: Transaction):
-        builder = MerkleFSTree(self._root)
+        builder = MerkleFSTree(self._root, self._object_driver_ts)
         for tree in builder.merkelize():
             tree.create_partial(transaction)
         return builder.root_tree
@@ -67,19 +71,29 @@ class Neogit:
 
     def init(self):
         """Initialize a neogit repository by creating indexes and constraints"""
-        with self._driver.session() as session:
+        with self._graph_driver.session() as session:
             constraints = {"Blob": "sha1sum", "Tree": "sha1sum", "Commit": "sha1sum", "Branch": "name"}
             for label, unique_prop in constraints.items():
                 try:
+                    self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
                     session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
                 except ClientError as e:
                     if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
                         continue
+        self._log.info("Graph: created unique constraints")
+        # init object storage container
+        container_name = settings.object.container_name
+        try:
+            self._log.debug("Object: creating container '%s'", container_name)
+            self._object_driver.create_container(container_name)
+        except ContainerAlreadyExists:
+            pass
+        self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
     def commit(self, name: str):
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
-        with self._driver.session() as session:
+        with self._graph_driver.session() as session:
             tx = session.begin_transaction()
             try:
                 self._commit_transaction(name, tx)
