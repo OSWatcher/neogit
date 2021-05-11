@@ -1,6 +1,6 @@
 import nox
 
-nox.options.sessions = ["fmt", "lint", "type", "unit_test"]
+nox.options.sessions = ["fmt", "lint", "type", "vermin", "unit_test"]
 
 
 @nox.session
@@ -23,6 +23,14 @@ def type(session):
     session.install("-r", "requirements.txt")
     session.install("mypy")
     session.run("mypy", "-p", "neogit")
+
+
+@nox.session
+def vermin(session):
+    """Check for a maximum Python version"""
+    session.install("-r", "dev-requirements.txt")
+    # we want to be compatible with PyPy, so 3.7 max
+    session.run("vermin", "--no-tips", "--target=3.7-", "neogit")
 
 
 @nox.session
