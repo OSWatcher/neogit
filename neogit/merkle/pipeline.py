@@ -15,7 +15,7 @@ from uuid import uuid4
 from neogit.config import settings
 from neogit.merkle.hasher import Hasher
 from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
-from neogit.object_storage import TSObjectStorage
+from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
 
 class MerklePipeline:
@@ -53,9 +53,12 @@ class MerklePipeline:
                 [hash.string(chunk) for chunk in chunk_gen_sha1]
                 sha1 = hash.digest()
                 filename_to_sha1[filename] = sha1
-                # upload to object storage
+                # upload to object storage if necessary
                 obj_name = sha1
-                obj_adapter.upload_object_via_stream(chunk_gen_upload, container, obj_name)
+                try:
+                    obj_adapter.get_object(container, obj_name)
+                except ObjectDoesNotExistError:
+                    obj_adapter.upload_object_via_stream(chunk_gen_upload, container, obj_name)
         self._logger.debug("[%s] %s: %s", tid, dir, pformat(filename_to_sha1))
         return filename_to_sha1
 
