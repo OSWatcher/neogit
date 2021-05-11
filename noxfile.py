@@ -14,7 +14,6 @@ def fmt(session):
 @nox.session
 def lint(session):
     session.install("-r", "dev-requirements.txt")
-    session.install("flake8", "flake8-bugbear")
     session.run("flake8", "--show-source", "--statistics")
     session.run("isort", "--line-length", "120", ".")
 
