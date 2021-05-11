@@ -1,8 +1,8 @@
 import pytest
 
 from neogit.merkle.hasher import Hasher
-from tests.conftest import TEST_DATA
 from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
+from tests.conftest import TEST_DATA
 
 TEST_DATA_SHA = TEST_DATA / "sha1"
 

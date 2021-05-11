@@ -5,7 +5,7 @@ from pytest import fixture
 
 from neogit.merkle.angela import MerkleFSTree
 from neogit.model import Blob, Tree
-from neogit.object_storage import TSObjectStorage, FakeObjectStorage
+from neogit.object_storage import FakeObjectStorage, TSObjectStorage
 
 
 @fixture
@@ -23,7 +23,7 @@ def ts_storage():
     driver = ts_object.instance
     # init container
     # TODO: based on settings
-    driver.create_container('objects')
+    driver.create_container("objects")
     yield ts_object
     # cleanup
     for c in driver.iterate_containers():

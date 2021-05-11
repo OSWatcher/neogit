@@ -62,7 +62,7 @@ class FakeObjectStorage(AbstractObjectStorage):
     ) -> Object:
         if extra is None:
             extra = {}
-        data = reduce(lambda a, b: a + b, iterator, b'')
+        data = reduce(lambda a, b: a + b, iterator, b"")
         size = len(data)
         obj = Object(object_name, size, "", container, extra, {})
         self._containers[container][object_name] = (data, obj)
