@@ -21,7 +21,7 @@ def lint(session):
 @nox.session
 def type(session):
     session.install("-r", "requirements.txt")
-    session.install("mypy")
+    session.install("-r", "dev-requirements.txt")
     session.run("mypy", "-p", "neogit")
 
 
