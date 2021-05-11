@@ -55,6 +55,13 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         obj: LibCloudObject = self._driver.upload_object(filepath, libcloud_container, object_name, extra, True)
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
 
+    def upload_object_via_stream(
+        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: dict = None
+    ) -> Object:
+        libcloud_container = LibCloudContainer(container.name, {}, self._driver)
+        obj: LibCloudObject = self._driver.upload_object_via_stream(iterator, libcloud_container, object_name, extra)
+        return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
     def download_object(self, obj: Object, destination_path: str, overwrite_existing: bool = False) -> bool:
         libcloud_container = LibCloudContainer(obj.container.name, {}, self._driver)
         libcloud_object = LibCloudObject(
