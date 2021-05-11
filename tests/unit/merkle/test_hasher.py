@@ -2,6 +2,7 @@ import pytest
 
 from neogit.merkle.hasher import Hasher
 from tests.conftest import TEST_DATA
+from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
 
 TEST_DATA_SHA = TEST_DATA / "sha1"
 
@@ -17,6 +18,8 @@ TEST_DATA_SHA = TEST_DATA / "sha1"
 )
 def test_hasher_filepath(filename, expected_sha1):
     filepath = TEST_DATA_SHA / filename
-    hasher = Hasher()
-    sha1 = hasher.filepath(filepath).digest()
+    with filepath_merkle_ctx(filepath) as io:
+        hasher = Hasher()
+        [hasher.string(chunk) for chunk in iter_chunk(io)]
+    sha1 = hasher.digest()
     assert expected_sha1 == sha1
