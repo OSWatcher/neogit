@@ -2,3 +2,4 @@ coverage==5.5
 pytest==6.2.4
 pyfakefs==4.4.0
 pdbpp==0.10.2
+vermin==1.2.0
