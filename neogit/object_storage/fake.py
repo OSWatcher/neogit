@@ -1,6 +1,7 @@
 """In-memory object storage adapter for testing"""
 
 import os
+from functools import reduce
 from typing import Dict, Iterator, Tuple
 
 from .abstract import (
@@ -56,6 +57,17 @@ class FakeObjectStorage(AbstractObjectStorage):
             obj = Object(object_name, size, "", container, extra, {})
             self._containers[container][object_name] = (data, obj)
             return obj
+
+    def upload_object_via_stream(
+        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: dict = None
+    ) -> Object:
+        if extra is None:
+            extra = {}
+        data = reduce(lambda a, b: a + b, iterator, b'')
+        size = len(data)
+        obj = Object(object_name, size, "", container, extra, {})
+        self._containers[container][object_name] = (data, obj)
+        return obj
 
     def download_object(self, obj: Object, destination_path: str, overwrite_existing: bool = False) -> bool:
         with open(destination_path, "wb") as f:
