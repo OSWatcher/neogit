@@ -5,6 +5,7 @@ from libcloud.storage.base import Object as LibCloudObject
 from libcloud.storage.providers import get_driver
 from libcloud.storage.types import ContainerAlreadyExistsError as LibCloudContainerAlreadyExistsError
 from libcloud.storage.types import ContainerDoesNotExistError as LibCloudContainerDoesNotExistError
+from libcloud.storage.types import ObjectDoesNotExistError as LibCloudObjectDoesNotExistError
 
 from neogit.config import ObjectConfig
 from neogit.object_storage.abstract import (
@@ -13,6 +14,7 @@ from neogit.object_storage.abstract import (
     ContainerAlreadyExists,
     ContainerDoesNotExistError,
     Object,
+    ObjectDoesNotExistError,
 )
 
 
@@ -70,5 +72,8 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         return self._driver.download_object(libcloud_object, destination_path, overwrite_existing)
 
     def get_object(self, container: Container, name: str) -> Object:
-        obj: LibCloudObject = self._driver.get_object(container.name, name)
+        try:
+            obj: LibCloudObject = self._driver.get_object(container.name, name)
+        except LibCloudObjectDoesNotExistError:
+            raise ObjectDoesNotExistError
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)

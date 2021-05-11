@@ -10,6 +10,7 @@ from .abstract import (
     ContainerAlreadyExists,
     ContainerDoesNotExistError,
     Object,
+    ObjectDoesNotExistError,
     StorageDriver,
 )
 
@@ -75,5 +76,8 @@ class FakeObjectStorage(AbstractObjectStorage):
             return True
 
     def get_object(self, container: Container, name: str) -> Object:
-        _, obj = self._containers[container][name]
+        try:
+            _, obj = self._containers[container][name]
+        except KeyError:
+            raise ObjectDoesNotExistError
         return obj

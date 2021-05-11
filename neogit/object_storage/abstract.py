@@ -36,6 +36,14 @@ class ContainerDoesNotExistError(ContainerError):
     pass
 
 
+class ObjectError(Exception):
+    pass
+
+
+class ObjectDoesNotExistError(ObjectError):
+    pass
+
+
 class AbstractObjectStorage(ABC):
     @abstractmethod
     def create_container(self, name: str) -> Container:
