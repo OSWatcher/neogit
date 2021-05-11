@@ -40,7 +40,7 @@ class Neogit:
 
     @measure_time
     def _build_tree_and_insert(self, transaction: Transaction):
-        builder = MerkleFSTree(self._root)
+        builder = MerkleFSTree(self._root, self._object_driver_ts)
         for tree in builder.merkelize():
             tree.create_partial(transaction)
         return builder.root_tree
