@@ -1,3 +1,5 @@
+from typing import Iterator
+
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
 from libcloud.storage.providers import get_driver
@@ -35,6 +37,10 @@ class LibcloudObjectStorage(AbstractObjectStorage):
             return False
         else:
             return True
+
+    def iterate_containers(self) -> Iterator[Container]:
+        gen_containers = (Container(c.name) for c in self._driver.iterate_containers())
+        yield from gen_containers
 
     def get_container(self, name: str) -> Container:
         try:
