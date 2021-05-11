@@ -20,7 +20,6 @@ CONTAINERS: Dict[Container, Dict[str, Tuple[bytes, Object]]] = {}
 
 class FakeObjectStorage(AbstractObjectStorage):
     def __init__(self, *args):
-        print("here")
         self._storage_driver = StorageDriver()
         # obj name -> (data, metadata)
         global CONTAINERS
