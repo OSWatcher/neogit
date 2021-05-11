@@ -1,6 +1,7 @@
 """Defines the interface to the Object Storage"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Iterator
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,10 @@ class AbstractObjectStorage(ABC):
 
     @abstractmethod
     def get_container(self, name: str) -> Container:
+        pass
+
+    @abstractmethod
+    def iterate_containers(self) -> Iterator[Container]:
         pass
 
     @abstractmethod
