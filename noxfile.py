@@ -76,3 +76,11 @@ def run(session):
     args = session.posargs
     session.install(".")
     session.run("neogit", *args)
+
+
+@nox.session(python="pypy3")
+def run_pypy(session):
+    """install neogit and run it with pypy"""
+    args = session.posargs
+    session.install(".")
+    session.run("neogit", *args)
