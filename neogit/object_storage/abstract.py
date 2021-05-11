@@ -58,6 +58,12 @@ class AbstractObjectStorage(ABC):
         pass
 
     @abstractmethod
+    def upload_object_via_stream(
+        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: dict = None
+    ) -> Object:
+        pass
+
+    @abstractmethod
     def download_object(self, obj: Object, destination_path: str, overwrite_existing: bool = False) -> bool:
         pass
 
