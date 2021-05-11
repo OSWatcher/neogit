@@ -5,7 +5,7 @@ nox.options.sessions = ["fmt", "lint", "type", "vermin", "unit_test"]
 
 @nox.session
 def fmt(session):
-    session.install("black==20.8b1")
+    session.install("-r", "dev-requirements.txt")
     # note: black doesn't support setup.cfg
     # so we hardcode the config here
     session.run("black", "--line-length", "120", ".")
@@ -13,7 +13,7 @@ def fmt(session):
 
 @nox.session
 def lint(session):
-    session.install("flake8", "flake8-bugbear", "isort")
+    session.install("-r", "dev-requirements.txt")
     session.run("flake8", "--show-source", "--statistics")
     session.run("isort", "--line-length", "120", ".")
 
@@ -21,7 +21,7 @@ def lint(session):
 @nox.session
 def type(session):
     session.install("-r", "requirements.txt")
-    session.install("mypy")
+    session.install("-r", "dev-requirements.txt")
     session.run("mypy", "-p", "neogit")
 
 
