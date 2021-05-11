@@ -5,8 +5,13 @@ from libcloud.storage.types import ContainerAlreadyExistsError as LibCloudContai
 from libcloud.storage.types import ContainerDoesNotExistError as LibCloudContainerDoesNotExistError
 
 from neogit.config import ObjectConfig
-from neogit.object_storage.abstract import (AbstractObjectStorage, Container, ContainerAlreadyExists,
-                                            ContainerDoesNotExistError, Object)
+from neogit.object_storage.abstract import (
+    AbstractObjectStorage,
+    Container,
+    ContainerAlreadyExists,
+    ContainerDoesNotExistError,
+    Object,
+)
 
 
 class LibcloudObjectStorage(AbstractObjectStorage):

@@ -3,8 +3,14 @@
 import os
 from typing import Dict, Iterator, Tuple
 
-from .abstract import (AbstractObjectStorage, Container, ContainerAlreadyExists, ContainerDoesNotExistError, Object,
-                       StorageDriver)
+from .abstract import (
+    AbstractObjectStorage,
+    Container,
+    ContainerAlreadyExists,
+    ContainerDoesNotExistError,
+    Object,
+    StorageDriver,
+)
 
 # shared containers for all instances of FakeObjectStorage
 # so that all thread will share the same objects
