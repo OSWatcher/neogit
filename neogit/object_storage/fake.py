@@ -30,6 +30,11 @@ class FakeObjectStorage(AbstractObjectStorage):
         del self._containers[container]
         return True
 
+    def iterate_containers(self) -> Iterator[Container]:
+        # note: use list to avoid "dictionary changed size during iteration"
+        # since we use this api to iterate and possibly remove containers
+        yield from list(self._containers.keys())
+
     def get_container(self, name: str) -> Container:
         try:
             return [c for c in self._containers.keys() if c.name == name][0]
