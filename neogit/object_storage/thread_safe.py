@@ -9,6 +9,9 @@ class TSObjectStorage:
     """Thread safe provider for object storage.
 
     Return a per-thread instance
+
+    Created to bypass libcloud limitations around thread safety:
+    https://libcloud.readthedocs.io/en/stable/other/using-libcloud-in-multithreaded-and-async-environments.html#libcloud-and-thread-safety
     """
 
     def __init__(self, cls, config: Optional[ObjectConfig]):
