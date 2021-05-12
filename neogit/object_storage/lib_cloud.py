@@ -37,7 +37,12 @@ class LibcloudObjectStorage(AbstractObjectStorage):
             return Container(c.name)
 
     def delete_container(self, container: Container) -> bool:
+        """Delete a container and all it's objects"""
         libcloud_container = LibCloudContainer(container.name, {}, self._driver)
+        # 1. ensure all objects are deleted
+        for obj in self._driver.iterate_container_objects(libcloud_container):
+            self._driver.delete_object(obj)
+        # 2. delete container
         try:
             self._driver.delete_container(libcloud_container)
         except LibCloudContainerDoesNotExistError:
