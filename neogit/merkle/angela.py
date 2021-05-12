@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from typing import Dict, Iterator, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from more_itertools import partition
 
@@ -34,11 +34,14 @@ class MerkleFSTree:
     def merkelize(self) -> Iterator[Tree]:
         self._expl_thread.start()
         while True:
-            task = self._task_queue.get()
-            if task is None:
+            dir_task = self._task_queue.get()
+            if dir_task is None:
                 break
-            cur_dir, pipeline_task = task
-            filename_to_sha1: Dict[str, str] = self._pipeline.get_task_result(pipeline_task)
+            cur_dir, pipe_task_list = dir_task
+            filename_to_sha1: Dict[str, str] = {}
+            for task in pipe_task_list:
+                filepath, sha1sum = self._pipeline.result(task)
+                filename_to_sha1[filepath.name] = sha1sum
             tree: Tree = merkelize_dir(cur_dir, filename_to_sha1, self._tree_fs)
             self._logger.debug("📁 %s: %s", cur_dir, tree.sha1sum)
             yield tree
@@ -59,8 +62,11 @@ class MerkleFSTree:
                 subdir_path = Path(d.path)
                 self._explore_dfs_rec(subdir_path)
             # submit the files to the pipeline
-            filename_list = [e.name for e in files]
-            pipeline_task: str = self._pipeline.submit(cur_dir, filename_list)
-            # create new task and put it to the queue
-            task: Tuple[Path, str] = (cur_dir, pipeline_task)
-            self._task_queue.put(task)
+            pipe_task_list: List[str] = []
+            for f in files:
+                filepath = cur_dir / f.name
+                task_id: str = self._pipeline.submit(filepath)
+                pipe_task_list.append(task_id)
+            # create new dir_task and put it in the queue
+            dir_task: Tuple[Path, List[str]] = cur_dir, pipe_task_list
+            self._task_queue.put(dir_task)
