@@ -7,13 +7,16 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from tempfile import TemporaryDirectory
+from typing import Iterator, Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from neo4j import BoltDriver, GraphDatabase
 from pytest import fixture
 
+from neogit.config import ObjectConfig
+from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
 from neogit.repo.py2neo import Py2NeoRepository
 
 NEO4J_VERSION = "4.2.4"
@@ -22,6 +25,7 @@ DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
 TEST_DATA_FS = TEST_DATA / "fs"
 ROOT_REPO = Path(__file__).parent.parent
+
 
 
 @dataclass
@@ -118,3 +122,56 @@ def neo4j_con(neo4j_ready: Neo4jConnection):
     creds = (con.username, con.password)
     con.driver = GraphDatabase.driver(con.to_bolt(crendentials=False), auth=creds)
     yield con
+
+
+# object storage fixtures
+
+
+@fixture(
+    params=[
+        {"cls": FakeObjectStorage, "config": None},
+        {"cls": LibcloudObjectStorage, "config": ObjectConfig(provider="local", key="to_change")},
+    ],
+    ids=("Fake", "Libcloud"),
+)
+def init_object_storage(tmp_path, request):
+    param = request.param
+    cls = param["cls"]
+    config = param["config"]
+    if cls == LibcloudObjectStorage:
+        config.key = str(tmp_path)
+    ts_object = TSObjectStorage(cls, config)
+    yield from container_ctx_and_yield(ts_object)
+
+
+@fixture
+def init_fake_object_storage():
+    ts_object = TSObjectStorage(FakeObjectStorage, None)
+    yield from container_ctx_and_yield(ts_object)
+
+
+@fixture(scope="function")
+def init_libcloud_object_storage_per_func():
+    with TemporaryDirectory() as tmp_path:
+        yield from init_libcloud(tmp_path)
+
+
+@fixture(scope="module")
+def init_libcloud_object_storage_per_module():
+    with TemporaryDirectory() as tmp_path:
+        yield from init_libcloud(tmp_path)
+
+
+def init_libcloud(tmppath):
+    config = ObjectConfig(provider="local", key=str(tmppath))
+    ts_object = TSObjectStorage(LibcloudObjectStorage, config)
+    yield from container_ctx_and_yield(ts_object)
+
+
+def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
+    driver = ts_object.instance
+    driver.create_container("objects")
+    yield ts_object
+    # cleanup
+    for cont in driver.iterate_containers():
+        driver.delete_container(cont)
