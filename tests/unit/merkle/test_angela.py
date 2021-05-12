@@ -5,7 +5,6 @@ from pytest import fixture
 
 from neogit.merkle.angela import MerkleFSTree
 from neogit.model import Blob, Tree
-from neogit.object_storage import FakeObjectStorage, TSObjectStorage
 
 
 @fixture
@@ -17,22 +16,9 @@ def root_fs(fs):
     return r, tree
 
 
-@fixture
-def ts_storage():
-    ts_object = TSObjectStorage(FakeObjectStorage, None)
-    driver = ts_object.instance
-    # init container
-    # TODO: based on settings
-    driver.create_container("objects")
-    yield ts_object
-    # cleanup
-    for c in driver.iterate_containers():
-        driver.delete_container(c)
-
-
-def test_merkelize_empty_dir(root_fs, ts_storage):
+def test_merkelize_empty_dir(root_fs, init_fake_object_storage):
     root, expected = root_fs
-    builder = MerkleFSTree(root, ts_storage)
+    builder = MerkleFSTree(root, init_fake_object_storage)
     consume(builder.merkelize())
     tree = builder.root_tree
 
@@ -51,9 +37,9 @@ def one_subdir_fs(root_fs):
     return root, expected
 
 
-def test_merkelize_one_subdir(one_subdir_fs, ts_storage):
+def test_merkelize_one_subdir(one_subdir_fs, init_fake_object_storage):
     root, expected = one_subdir_fs
-    builder = MerkleFSTree(root, ts_storage)
+    builder = MerkleFSTree(root, init_fake_object_storage)
     consume(builder.merkelize())
     tree = builder.root_tree
 
@@ -73,9 +59,9 @@ def multiple_subdirs_fs(root_fs):
     return root, expected
 
 
-def test_merkelize_multiple_subdirs(multiple_subdirs_fs, ts_storage):
+def test_merkelize_multiple_subdirs(multiple_subdirs_fs, init_fake_object_storage):
     root, expected = multiple_subdirs_fs
-    builder = MerkleFSTree(root, ts_storage)
+    builder = MerkleFSTree(root, init_fake_object_storage)
     consume(builder.merkelize())
     tree = builder.root_tree
 
@@ -94,9 +80,9 @@ def one_file_fs(root_fs):
     return root, expected
 
 
-def test_merkelize_one_file(one_file_fs, ts_storage):
+def test_merkelize_one_file(one_file_fs, init_fake_object_storage):
     root, expected = one_file_fs
-    builder = MerkleFSTree(root, ts_storage)
+    builder = MerkleFSTree(root, init_fake_object_storage)
     consume(builder.merkelize())
     tree = builder.root_tree
 
@@ -121,9 +107,9 @@ def multiple_files_fs(root_fs):
     return root, expected
 
 
-def test_merkelize_multiple_files(multiple_files_fs, ts_storage):
+def test_merkelize_multiple_files(multiple_files_fs, init_fake_object_storage):
     root, expected = multiple_files_fs
-    builder = MerkleFSTree(root, ts_storage)
+    builder = MerkleFSTree(root, init_fake_object_storage)
     consume(builder.merkelize())
     tree = builder.root_tree
 
