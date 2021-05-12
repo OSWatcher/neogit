@@ -27,6 +27,15 @@ TEST_DATA_FS = TEST_DATA / "fs"
 ROOT_REPO = Path(__file__).parent.parent
 
 
+def pytest_addoption(parser):
+    """add a new option to pass a specific directory to be merkelized"""
+    parser.addoption("--repo", action="store", help="root directory to be indexed")
+
+
+@fixture
+def arg_repo_root(pytestconfig):
+    return pytestconfig.getoption("repo")
+
 
 @dataclass
 class Neo4jConnection:
