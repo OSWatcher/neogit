@@ -34,6 +34,15 @@ def vermin(session):
 
 
 @nox.session
+def cclean(session):
+    """A quick code cleanup without running the unit tests"""
+    fmt(session)
+    lint(session)
+    type(session)
+    vermin(session)
+
+
+@nox.session
 def unit_test(session):
     # run unit tests
     args = session.posargs
