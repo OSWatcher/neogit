@@ -6,22 +6,25 @@ import logging
 import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
+from io import SEEK_END, SEEK_SET
 from pathlib import Path
 from threading import Condition, local
 from typing import Dict, Optional, Tuple
 from uuid import uuid4
 
 from neogit.config import settings
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter
 from neogit.merkle.hasher import Hasher
 from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
 from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
 
 class MerklePipeline:
-    def __init__(self, ts_object: TSObjectStorage):
+    def __init__(self, ts_object: TSObjectStorage, console: AbstractConsoleAdapter = DEFAULT_ADAPTER):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._max_workers: Optional[int] = settings.get("max_workers", os.cpu_count())
         self._ts_object = ts_object
+        self._console = console
         # build thread pool to compute SHA1s
         # hashlib: the Python GIL is released for data larger than 2047 bytes at object creation or on update
         self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
@@ -49,8 +52,13 @@ class MerklePipeline:
     def _merkelize_file(self, task_id: str, filepath: Path):
         """pipeline stage to merkelize a given file"""
         with filepath_merkle_ctx(filepath) as io:
+            file_size = io.seek(0, SEEK_END)
+            io.seek(0, SEEK_SET)
+            self._console.set_sha1_task(filepath, file_size)
             hash = Hasher()
-            [hash.string(chunk) for chunk in iter_chunk(io)]
+            for chunk in iter_chunk(io):
+                hash.string(chunk)
+                self._console.update_sha1_task(len(chunk))
             sha1 = hash.digest()
             result = filepath, sha1
             return task_id, result

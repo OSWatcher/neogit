@@ -9,6 +9,7 @@ from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 
 from neogit.config import ObjectConfig, settings
+from neogit.console import RichConsoleAdapter
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
@@ -40,10 +41,11 @@ class Neogit:
 
     @measure_time
     def _build_tree_and_insert(self, transaction: Transaction):
-        builder = MerkleFSTree(self._root, self._object_driver_ts)
-        for tree in builder.merkelize():
-            tree.create_partial(transaction)
-        return builder.root_tree
+        with RichConsoleAdapter() as console:
+            builder = MerkleFSTree(self._root, self._object_driver_ts, console)
+            for tree in builder.merkelize():
+                tree.create_partial(transaction)
+            return builder.root_tree
 
     def _commit_transaction(self, name: str, tx):
         root_tree: Tree = self._build_tree_and_insert(tx)
