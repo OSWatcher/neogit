@@ -19,8 +19,8 @@ class EmptyConsoleAdapter(AbstractConsoleAdapter):
     def advance_main_bar_progress(self):
         pass
 
-    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int = None, start: bool = True):
+    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
         pass
 
-    def update_pool_task(self, pool: TaskPool, advance: int, total: float = None):
+    def update_pool_task(self, pool: TaskPool, advance: int):
         pass
