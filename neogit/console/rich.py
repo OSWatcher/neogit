@@ -29,7 +29,6 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             "{task.completed} / {task.total}",
             "[progress.percentage]{task.percentage:>3.0f}%",
             TimeElapsedColumn(),
-            expand=True,
         )
         self._main_progress_total = 0
         self._main_task = self._main_progress.add_task("Neogit commit ", total=self._main_progress_total)
@@ -46,7 +45,7 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._storage_progress = Progress(
             SpinnerColumn(),
             "{task.description}",
-            BarColumn(),
+            BarColumn(bar_width=None),
             TransferSpeedColumn(),
             TotalFileSizeColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
