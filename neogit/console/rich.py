@@ -72,7 +72,10 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             Layout(self._main_progress, name="main_progress", size=1),
             self._pipeline_layout,
         )
-        self._live = Live(self._app_layout, refresh_per_second=10)
+        self._live = Live(
+            self._app_layout,
+            refresh_per_second=10,
+        )
         # thread-local tasks
         self._local = local()
 
