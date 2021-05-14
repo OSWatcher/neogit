@@ -15,6 +15,9 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 from rich.table import Column
+from rich.tree import Tree
+
+from neogit.model import DirInfo
 
 from .abstract import AbstractConsoleAdapter, TaskPool
 
@@ -39,8 +42,8 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             SpinnerColumn(),
             TextColumn("{task.description}", table_column=Column(ratio=10)),
             BarColumn(bar_width=None, table_column=Column(ratio=7)),
-            FileSizeColumn(table_column=Column(ratio=1)),
-            TotalFileSizeColumn(table_column=Column(ratio=1)),
+            FileSizeColumn(table_column=Column(ratio=2)),
+            TotalFileSizeColumn(table_column=Column(ratio=2)),
             "[progress.percentage]{task.percentage:>3.0f}%",
             expand=True,
         )
@@ -49,8 +52,8 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             SpinnerColumn(),
             TextColumn("{task.description}", table_column=Column(ratio=10)),
             BarColumn(bar_width=None, table_column=Column(ratio=7)),
-            TransferSpeedColumn(table_column=Column(ratio=1)),
-            TotalFileSizeColumn(table_column=Column(ratio=1)),
+            TransferSpeedColumn(table_column=Column(ratio=2)),
+            TotalFileSizeColumn(table_column=Column(ratio=2)),
             "[progress.percentage]{task.percentage:>3.0f}%",
             expand=True,
         )
@@ -62,17 +65,23 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._sha1_panel = Panel(self._sha1_progress, title="SHA1 Pool")
         self._storage_panel = Panel(self._storage_progress, title="Object Storage Pool")
         # pipeline layout
-        self._pipeline_layout = Layout(name="pipeline")
+        self._pipeline_layout = Layout(name="pipeline", ratio=2)
         self._pipeline_layout.split_column(
             self._sha1_panel,
             self._storage_panel,
         )
+        # tree view layout
+        self._tree = Tree("tree")
+        self._tree_panel = Panel(self._tree, title="Tree View")
+        self._tree_layout = Layout(self._tree_panel, name="tree", ratio=1)
         # build main
         self._app_layout = Layout(name="main")
+        center_layout = Layout(name="center")
+        center_layout.split_row(self._tree_layout, self._pipeline_layout)
         self._app_layout.split_column(
             # progress bar is only 1 row
             Layout(self._main_progress, name="main_progress", size=1),
-            self._pipeline_layout,
+            center_layout,
         )
         self._live = Live(
             self._app_layout,
@@ -94,6 +103,14 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
 
     def advance_main_bar_progress(self):
         self._main_progress.update(self._main_task, advance=1)
+
+    def set_cur_tree(self, dir_info: DirInfo):
+        self._tree.label = f"📁 {dir_info.dir.name}"
+        self._tree.children.clear()
+        for filename in dir_info.files:
+            self._tree.add(f"📄 {filename}")
+        for subdir in dir_info.subdirs:
+            self._tree.add(f"📁 {subdir}")
 
     def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
         progress = self._pool_to_progress[pool]

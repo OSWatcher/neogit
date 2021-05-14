@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from neo4j import Record, Result, Session, Transaction
@@ -169,3 +170,10 @@ class Branch:
         """
         params = {"name": self.name, "sha1sum": commit.sha1sum}
         self.session.run(query, params)
+
+
+@dataclass
+class DirInfo:
+    dir: Path
+    files: List[str]
+    subdirs: List[str]

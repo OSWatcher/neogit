@@ -1,3 +1,5 @@
+from neogit.model import DirInfo
+
 from . import TaskPool
 from .abstract import AbstractConsoleAdapter
 
@@ -15,6 +17,9 @@ class EmptyConsoleAdapter(AbstractConsoleAdapter):
         pass
 
     def advance_main_bar_progress(self):
+        pass
+
+    def set_cur_tree(self, dir_info: DirInfo):
         pass
 
     def set_pool_task(self, pool: TaskPool, task_name: str, size: int):

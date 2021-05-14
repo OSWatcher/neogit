@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 
+from neogit.model import DirInfo
+
 
 class TaskPool(Enum):
     SHA1 = auto()
@@ -24,6 +26,10 @@ class AbstractConsoleAdapter(ABC):
     @abstractmethod
     def advance_main_bar_progress(self):
         """Advance the main progress bar by 1 unit"""
+        pass
+
+    @abstractmethod
+    def set_cur_tree(self, dir_info: DirInfo):
         pass
 
     @abstractmethod
