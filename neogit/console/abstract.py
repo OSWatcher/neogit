@@ -1,5 +1,11 @@
 from abc import ABC, abstractmethod
+from enum import Enum, auto
 from pathlib import Path
+
+
+class TaskPool(Enum):
+    SHA1 = auto()
+    Storage = auto()
 
 
 class AbstractConsoleAdapter(ABC):
@@ -12,11 +18,11 @@ class AbstractConsoleAdapter(ABC):
         pass
 
     @abstractmethod
-    def set_sha1_task(self, filepath: Path, size: int):
-        """Update the per-thread task information associated with the SHA1 pool. Create the task if necessary"""
+    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
+        """Update the per-thread task information associated with the pool. Create the task if necessary"""
         pass
 
     @abstractmethod
-    def update_sha1_task(self, advance: int):
-        """Advance the per-thread task associated with the SHA1 pool"""
+    def update_pool_task(self, pool: TaskPool, advance: int):
+        """Advance the per-thread task associated with the pool"""
         pass

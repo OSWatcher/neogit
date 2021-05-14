@@ -8,6 +8,7 @@ from typing import Dict, Iterator, List, Optional, Tuple
 from more_itertools import partition
 
 from neogit.config import settings
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter
 from neogit.merkle.pipeline import MerklePipeline
 from neogit.merkle.utils import merkelize_dir
 from neogit.model import Tree
@@ -15,7 +16,7 @@ from neogit.object_storage import TSObjectStorage
 
 
 class MerkleFSTree:
-    def __init__(self, root_fs: Path, ts_object: TSObjectStorage):
+    def __init__(self, root_fs: Path, ts_object: TSObjectStorage, console: AbstractConsoleAdapter = DEFAULT_ADAPTER):
         if not root_fs.exists():
             raise ValueError(f"root {root_fs} does not exists")
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
@@ -23,7 +24,7 @@ class MerkleFSTree:
         self._root: Path = root_fs
 
         self._expl_thread = Thread(target=self._explore_dfs, args=(self._root,), name="explore")
-        self._pipeline = MerklePipeline(ts_object)
+        self._pipeline = MerklePipeline(ts_object, console)
         self._task_queue: Queue = Queue()
         self._tree_fs: Dict[Path, Tree] = {}
 

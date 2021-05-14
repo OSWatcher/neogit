@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from . import TaskPool
 from .abstract import AbstractConsoleAdapter
 
 
@@ -12,8 +13,8 @@ class EmptyConsoleAdapter(AbstractConsoleAdapter):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def set_sha1_task(self, filepath: Path, size: int):
+    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int = None, start: bool = True):
         pass
 
-    def update_sha1_task(self, advance: int):
+    def update_pool_task(self, pool: TaskPool, advance: int, total: float = None):
         pass

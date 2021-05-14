@@ -9,11 +9,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from io import SEEK_END, SEEK_SET
 from pathlib import Path
 from threading import Condition, local
-from typing import Dict, Optional, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 from uuid import uuid4
 
 from neogit.config import settings
-from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter, TaskPool
 from neogit.merkle.hasher import Hasher
 from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
 from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
@@ -54,11 +54,11 @@ class MerklePipeline:
         with filepath_merkle_ctx(filepath) as io:
             file_size = io.seek(0, SEEK_END)
             io.seek(0, SEEK_SET)
-            self._console.set_sha1_task(filepath, file_size)
+            self._console.set_pool_task(TaskPool.SHA1, filepath, file_size)
             hash = Hasher()
             for chunk in iter_chunk(io):
                 hash.string(chunk)
-                self._console.update_sha1_task(len(chunk))
+                self._console.update_pool_task(TaskPool.SHA1, len(chunk))
             sha1 = hash.digest()
             result = filepath, sha1
             return task_id, result
@@ -82,7 +82,17 @@ class MerklePipeline:
             obj_adapter.get_object(container, obj_name)
         except ObjectDoesNotExistError:
             with filepath_merkle_ctx(filepath) as io:
-                obj_adapter.upload_object_via_stream(iter_chunk(io), container, obj_name)
+                size = io.seek(0, SEEK_END)
+                self._console.set_pool_task(TaskPool.Storage, filepath, size)
+                io.seek(0, SEEK_SET)
+
+                def iter_chunk_progress() -> Iterator[bytes]:
+                    for chunk in iter_chunk(io):
+                        yield chunk
+                        self._console.update_pool_task(TaskPool.Storage, len(chunk))
+
+                obj_adapter.upload_object_via_stream(iter_chunk_progress(), container, obj_name)
+
         result = filepath, sha1sum
         return task_id, result
 
