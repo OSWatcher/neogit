@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from . import TaskPool
 from .abstract import AbstractConsoleAdapter
 
@@ -19,7 +17,7 @@ class EmptyConsoleAdapter(AbstractConsoleAdapter):
     def advance_main_bar_progress(self):
         pass
 
-    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
+    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
         pass
 
     def update_pool_task(self, pool: TaskPool, advance: int):

@@ -20,9 +20,10 @@ from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
 
 class MerklePipeline:
-    def __init__(self, ts_object: TSObjectStorage, console: AbstractConsoleAdapter = DEFAULT_ADAPTER):
+    def __init__(self, root: Path, ts_object: TSObjectStorage, console: AbstractConsoleAdapter = DEFAULT_ADAPTER):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._max_workers: Optional[int] = settings.get("max_workers", os.cpu_count())
+        self._root = root
         self._ts_object = ts_object
         self._console = console
         # build thread pool to compute SHA1s
@@ -54,7 +55,8 @@ class MerklePipeline:
         with filepath_merkle_ctx(filepath) as io:
             file_size = io.seek(0, SEEK_END)
             io.seek(0, SEEK_SET)
-            self._console.set_pool_task(TaskPool.SHA1, filepath, file_size)
+            task_name = str(filepath.relative_to(self._root))
+            self._console.set_pool_task(TaskPool.SHA1, task_name, file_size)
             hash = Hasher()
             for chunk in iter_chunk(io):
                 hash.string(chunk)
@@ -83,7 +85,8 @@ class MerklePipeline:
         except ObjectDoesNotExistError:
             with filepath_merkle_ctx(filepath) as io:
                 size = io.seek(0, SEEK_END)
-                self._console.set_pool_task(TaskPool.Storage, filepath, size)
+                task_name = str(filepath.relative_to(self._root))
+                self._console.set_pool_task(TaskPool.Storage, task_name, size)
                 io.seek(0, SEEK_SET)
 
                 def iter_chunk_progress() -> Iterator[bytes]:

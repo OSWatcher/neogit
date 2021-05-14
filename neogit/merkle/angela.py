@@ -25,7 +25,7 @@ class MerkleFSTree:
         self._console = console
 
         self._expl_thread = Thread(target=self._explore_dfs, args=(self._root,), name="explore")
-        self._pipeline = MerklePipeline(ts_object, console)
+        self._pipeline = MerklePipeline(self._root, ts_object, console)
         self._task_queue: Queue = Queue()
         self._tree_fs: Dict[Path, Tree] = {}
 

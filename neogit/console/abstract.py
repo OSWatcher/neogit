@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from pathlib import Path
 
 
 class TaskPool(Enum):
@@ -28,7 +27,7 @@ class AbstractConsoleAdapter(ABC):
         pass
 
     @abstractmethod
-    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
+    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
         """Update the per-thread task information associated with the pool. Create the task if necessary"""
         pass
 

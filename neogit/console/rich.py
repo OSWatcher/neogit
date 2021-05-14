@@ -1,4 +1,3 @@
-from pathlib import Path
 from threading import local
 from typing import Dict
 
@@ -93,17 +92,17 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
     def advance_main_bar_progress(self):
         self._main_progress.update(self._main_task, advance=1)
 
-    def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
+    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
         progress = self._pool_to_progress[pool]
         try:
             task = getattr(self._local, f"{pool.name.lower()}_task")
         except AttributeError:
             # create new task for this thread
-            task = progress.add_task(description=str(filepath), total=size)
+            task = progress.add_task(description=task_name, total=size)
             setattr(self._local, f"{pool.name.lower()}_task", task)
         else:
             # set description and total, and reset completion
-            progress.update(task, description=str(filepath), total=size, completed=0)
+            progress.update(task, description=task_name, total=size, completed=0)
 
     def update_pool_task(self, pool: TaskPool, advance: int):
         try:
