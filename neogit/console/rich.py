@@ -5,7 +5,15 @@ from typing import Dict
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import BarColumn, FileSizeColumn, Progress, SpinnerColumn, TotalFileSizeColumn, TransferSpeedColumn
+from rich.progress import (
+    BarColumn,
+    FileSizeColumn,
+    Progress,
+    SpinnerColumn,
+    TimeElapsedColumn,
+    TotalFileSizeColumn,
+    TransferSpeedColumn,
+)
 
 from .abstract import AbstractConsoleAdapter, TaskPool
 
@@ -14,6 +22,18 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
     """This adapter will use Rich library for console output"""
 
     def __init__(self):
+        # main progress bar
+        self._main_progress = Progress(
+            SpinnerColumn(),
+            "{task.description}",
+            BarColumn(bar_width=None),
+            "{task.completed} / {task.total}",
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            TimeElapsedColumn(),
+            expand=True,
+        )
+        self._main_progress_total = 0
+        self._main_task = self._main_progress.add_task("Neogit commit ", total=self._main_progress_total)
         # sha1 computation progress bar
         self._sha1_progress = Progress(
             SpinnerColumn(),
@@ -27,7 +47,7 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._storage_progress = Progress(
             SpinnerColumn(),
             "{task.description}",
-            BarColumn(bar_width=None),
+            BarColumn(),
             TransferSpeedColumn(),
             TotalFileSizeColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -36,16 +56,23 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             TaskPool.SHA1: self._sha1_progress,
             TaskPool.Storage: self._storage_progress,
         }
-        # panels
+        # add progress bar into panels
         self._sha1_panel = Panel(self._sha1_progress, title="SHA1 Pool")
         self._storage_panel = Panel(self._storage_progress, title="Object Storage Pool")
-        # build layout
-        self._main_layout = Layout(name="main")
-        self._main_layout.split_column(
+        # pipeline layout
+        self._pipeline_layout = Layout(name="pipeline")
+        self._pipeline_layout.split_column(
             self._sha1_panel,
             self._storage_panel,
         )
-        self._live = Live(self._main_layout, refresh_per_second=10)
+        # build main
+        self._app_layout = Layout(name="main")
+        self._app_layout.split_column(
+            # progress bar is only 1 row
+            Layout(self._main_progress, name="main_progress", size=1),
+            self._pipeline_layout,
+        )
+        self._live = Live(self._app_layout, refresh_per_second=10)
         # thread-local tasks
         self._local = local()
 
@@ -55,6 +82,13 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._live.stop()
+
+    def increase_main_bar_total(self):
+        self._main_progress_total += 1
+        self._main_progress.update(self._main_task, total=self._main_progress_total)
+
+    def advance_main_bar_progress(self):
+        self._main_progress.update(self._main_task, advance=1)
 
     def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
         progress = self._pool_to_progress[pool]

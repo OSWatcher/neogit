@@ -18,6 +18,16 @@ class AbstractConsoleAdapter(ABC):
         pass
 
     @abstractmethod
+    def increase_main_bar_total(self):
+        """Increases the main bar progress bar total"""
+        pass
+
+    @abstractmethod
+    def advance_main_bar_progress(self):
+        """Advance the main progress bar by 1 unit"""
+        pass
+
+    @abstractmethod
     def set_pool_task(self, pool: TaskPool, filepath: Path, size: int):
         """Update the per-thread task information associated with the pool. Create the task if necessary"""
         pass
