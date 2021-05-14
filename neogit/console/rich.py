@@ -9,10 +9,12 @@ from rich.progress import (
     FileSizeColumn,
     Progress,
     SpinnerColumn,
+    TextColumn,
     TimeElapsedColumn,
     TotalFileSizeColumn,
     TransferSpeedColumn,
 )
+from rich.table import Column
 
 from .abstract import AbstractConsoleAdapter, TaskPool
 
@@ -35,20 +37,22 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         # sha1 computation progress bar
         self._sha1_progress = Progress(
             SpinnerColumn(),
-            "{task.description}",
-            BarColumn(bar_width=None),
-            FileSizeColumn(),
-            TotalFileSizeColumn(),
+            TextColumn("{task.description}", table_column=Column(ratio=10)),
+            BarColumn(bar_width=None, table_column=Column(ratio=7)),
+            FileSizeColumn(table_column=Column(ratio=1)),
+            TotalFileSizeColumn(table_column=Column(ratio=1)),
             "[progress.percentage]{task.percentage:>3.0f}%",
+            expand=True,
         )
         # object storage upload progress bar
         self._storage_progress = Progress(
             SpinnerColumn(),
-            "{task.description}",
-            BarColumn(bar_width=None),
-            TransferSpeedColumn(),
-            TotalFileSizeColumn(),
+            TextColumn("{task.description}", table_column=Column(ratio=10)),
+            BarColumn(bar_width=None, table_column=Column(ratio=7)),
+            TransferSpeedColumn(table_column=Column(ratio=1)),
+            TotalFileSizeColumn(table_column=Column(ratio=1)),
             "[progress.percentage]{task.percentage:>3.0f}%",
+            expand=True,
         )
         self._pool_to_progress: Dict[TaskPool, Progress] = {
             TaskPool.SHA1: self._sha1_progress,
