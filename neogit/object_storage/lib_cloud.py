@@ -26,7 +26,7 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         # local provider: ensure directory is created
         if cls == LocalStorageDriver:
             Path(config.key).mkdir(parents=True, exist_ok=True)
-        self._driver = cls(config.key)
+        self._driver = cls(config.key, config.secret_key, host=config.host, port=config.port, secure=config.secure)
 
     def create_container(self, name: str) -> Container:
         try:
