@@ -1,6 +1,6 @@
-import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from appdirs import user_data_dir
 from dynaconf import Dynaconf, LazySettings, Validator
@@ -31,6 +31,10 @@ settings = Dynaconf(
             default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",
         ),
         Validator("object.key", default=USER_DATA_DIR),
+        Validator("object.secret_key", default=None),
+        Validator("object.host", default=None),
+        Validator("object.port", default=None),
+        Validator("object.secure", default=None),
         Validator("object.container_name", default=CONTAINER_NAME),
     ],
 )
@@ -40,7 +44,18 @@ settings = Dynaconf(
 class ObjectConfig:
     provider: str
     key: str
+    secret_key: Optional[str] = field(default=None)
+    host: Optional[str] = field(default=None)
+    port: Optional[int] = field(default=None)
+    secure: Optional[bool] = field(default=None)
 
     @staticmethod
     def from_settings(settings: LazySettings) -> "ObjectConfig":
-        return ObjectConfig(settings.object.provider, settings.object.key)
+        return ObjectConfig(
+            settings.object.provider,
+            settings.object.key,
+            settings.object.secret_key,
+            settings.object.host,
+            settings.object.port,
+            settings.object.secure,
+        )

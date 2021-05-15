@@ -1,7 +1,5 @@
-# commented due to bug in pyfakefs:
-# https://github.com/jmcgeheeiv/pyfakefs/issues/595
-
 from pathlib import Path
+
 from pytest import fixture, raises
 
 from neogit.config import ObjectConfig

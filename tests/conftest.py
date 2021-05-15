@@ -11,15 +11,17 @@ from tempfile import TemporaryDirectory
 from typing import Iterator, Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen
+from socket import socket
 
 from neo4j import BoltDriver, GraphDatabase
 from pytest import fixture
 
-from neogit.config import ObjectConfig
+from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
 from neogit.repo.py2neo import Py2NeoRepository
 
 NEO4J_VERSION = "4.2.4"
+MINIO_VERSION = "RELEASE.2021-05-11T23-27-41Z"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
@@ -184,3 +186,40 @@ def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
     # cleanup
     for cont in driver.iterate_containers():
         driver.delete_container(cont)
+
+
+# Minio object storage
+
+
+@fixture(scope="session")
+def minio_db(random_name: str):
+    """start a MinIO db using Docker"""
+    provider = "minio"
+    key = "minioadmin"
+    secret_key = "minioadmin"
+    port = 9000
+    host = "127.0.0.1"
+    secure = False
+    cmdline = [
+        "docker",
+        "run",
+        "--detach",
+        f"--publish=9000:{port}",
+        f"--name={random_name}",
+        f"minio/minio:{MINIO_VERSION}",
+        "server",
+        "/data",
+    ]
+    subprocess.check_call(cmdline)
+    # update settings
+    settings.object.provider = provider
+    settings.object.key = key
+    settings.object.secret_key = secret_key
+    settings.object.host = host
+    settings.object.port = port
+    settings.object.secure = secure
+    # ensure ready to receive connections
+    time.sleep(2)
+    yield
+    cmdline = ["docker", "rm", "--force", random_name]
+    subprocess.check_call(cmdline)
