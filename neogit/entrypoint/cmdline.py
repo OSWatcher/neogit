@@ -8,6 +8,7 @@ Options:
   -h --help             Show this screen.
   --version             Show version.
   -r ROOT --root=ROOT   Specify repo root directory
+  -g --gui              Toggle the console interface
   -d --debug            Toogle debug output
 """
 
@@ -46,7 +47,8 @@ def handle_cmdline():
     root_repo: Path = Path.cwd()
     if args["--root"]:
         root_repo = Path(args["--root"])
-    git = Neogit(root_repo)
+    gui_enabled = args["--gui"]
+    git = Neogit(root_repo, gui_enabled)
     if args["init"]:
         git.init()
     if args["commit"]:

@@ -3,12 +3,13 @@ import logging
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type, Union
 
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 
 from neogit.config import ObjectConfig, settings
+from neogit.console import EmptyConsoleAdapter, RichConsoleAdapter
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
@@ -28,9 +29,10 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, gui_enabled: bool = False):
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
+        self._gui_enabled = gui_enabled
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url)
         object_config = ObjectConfig.from_settings(settings)
         self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
@@ -40,10 +42,14 @@ class Neogit:
 
     @measure_time
     def _build_tree_and_insert(self, transaction: Transaction):
-        builder = MerkleFSTree(self._root, self._object_driver_ts)
-        for tree in builder.merkelize():
-            tree.create_partial(transaction)
-        return builder.root_tree
+        console_cls: Union[Type[EmptyConsoleAdapter], Type[RichConsoleAdapter]] = EmptyConsoleAdapter
+        if self._gui_enabled:
+            console_cls = RichConsoleAdapter
+        with console_cls() as console:
+            builder = MerkleFSTree(self._root, self._object_driver_ts, console)
+            for tree in builder.merkelize():
+                tree.create_partial(transaction)
+            return builder.root_tree
 
     def _commit_transaction(self, name: str, tx):
         root_tree: Tree = self._build_tree_and_insert(tx)

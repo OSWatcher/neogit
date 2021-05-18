@@ -6,22 +6,26 @@ import logging
 import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
+from io import SEEK_END, SEEK_SET
 from pathlib import Path
 from threading import Condition, local
-from typing import Dict, Optional, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 from uuid import uuid4
 
 from neogit.config import settings
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter, TaskPool
 from neogit.merkle.hasher import Hasher
 from neogit.merkle.utils import filepath_merkle_ctx, iter_chunk
 from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
 
 class MerklePipeline:
-    def __init__(self, ts_object: TSObjectStorage):
+    def __init__(self, root: Path, ts_object: TSObjectStorage, console: AbstractConsoleAdapter = DEFAULT_ADAPTER):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._max_workers: Optional[int] = settings.get("max_workers", os.cpu_count())
+        self._root = root
         self._ts_object = ts_object
+        self._console = console
         # build thread pool to compute SHA1s
         # hashlib: the Python GIL is released for data larger than 2047 bytes at object creation or on update
         self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
@@ -49,8 +53,14 @@ class MerklePipeline:
     def _merkelize_file(self, task_id: str, filepath: Path):
         """pipeline stage to merkelize a given file"""
         with filepath_merkle_ctx(filepath) as io:
+            file_size = io.seek(0, SEEK_END)
+            io.seek(0, SEEK_SET)
+            task_name = str(filepath.relative_to(self._root))
+            self._console.set_pool_task(TaskPool.SHA1, task_name, file_size)
             hash = Hasher()
-            [hash.string(chunk) for chunk in iter_chunk(io)]
+            for chunk in iter_chunk(io):
+                hash.string(chunk)
+                self._console.update_pool_task(TaskPool.SHA1, len(chunk))
             sha1 = hash.digest()
             result = filepath, sha1
             return task_id, result
@@ -74,7 +84,18 @@ class MerklePipeline:
             obj_adapter.get_object(container, obj_name)
         except ObjectDoesNotExistError:
             with filepath_merkle_ctx(filepath) as io:
-                obj_adapter.upload_object_via_stream(iter_chunk(io), container, obj_name)
+                size = io.seek(0, SEEK_END)
+                task_name = str(filepath.relative_to(self._root))
+                self._console.set_pool_task(TaskPool.Storage, task_name, size)
+                io.seek(0, SEEK_SET)
+
+                def iter_chunk_progress() -> Iterator[bytes]:
+                    for chunk in iter_chunk(io):
+                        yield chunk
+                        self._console.update_pool_task(TaskPool.Storage, len(chunk))
+
+                obj_adapter.upload_object_via_stream(iter_chunk_progress(), container, obj_name)
+
         result = filepath, sha1sum
         return task_id, result
 

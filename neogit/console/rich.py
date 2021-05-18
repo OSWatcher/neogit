@@ -1,0 +1,134 @@
+from threading import local
+from typing import Dict
+
+from rich.layout import Layout
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    FileSizeColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TotalFileSizeColumn,
+    TransferSpeedColumn,
+)
+from rich.table import Column
+from rich.tree import Tree
+
+from neogit.model import DirInfo
+
+from .abstract import AbstractConsoleAdapter, TaskPool
+
+
+class RichConsoleAdapter(AbstractConsoleAdapter):
+    """This adapter will use Rich library for console output"""
+
+    def __init__(self):
+        # main progress bar
+        self._main_progress = Progress(
+            SpinnerColumn(),
+            "{task.description}",
+            BarColumn(bar_width=None),
+            "{task.completed} / {task.total}",
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            TimeElapsedColumn(),
+        )
+        self._main_progress_total = 0
+        self._main_task = self._main_progress.add_task("Neogit commit ", total=self._main_progress_total)
+        # sha1 computation progress bar
+        self._sha1_progress = Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}", table_column=Column(ratio=10)),
+            BarColumn(bar_width=None, table_column=Column(ratio=7)),
+            FileSizeColumn(table_column=Column(ratio=2)),
+            TotalFileSizeColumn(table_column=Column(ratio=2)),
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            expand=True,
+        )
+        # object storage upload progress bar
+        self._storage_progress = Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}", table_column=Column(ratio=10)),
+            BarColumn(bar_width=None, table_column=Column(ratio=7)),
+            TransferSpeedColumn(table_column=Column(ratio=2)),
+            TotalFileSizeColumn(table_column=Column(ratio=2)),
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            expand=True,
+        )
+        self._pool_to_progress: Dict[TaskPool, Progress] = {
+            TaskPool.SHA1: self._sha1_progress,
+            TaskPool.Storage: self._storage_progress,
+        }
+        # add progress bar into panels
+        self._sha1_panel = Panel(self._sha1_progress, title="SHA1 Pool")
+        self._storage_panel = Panel(self._storage_progress, title="Object Storage Pool")
+        # pipeline layout
+        self._pipeline_layout = Layout(name="pipeline", ratio=2)
+        self._pipeline_layout.split_column(
+            self._sha1_panel,
+            self._storage_panel,
+        )
+        # tree view layout
+        self._tree = Tree("tree")
+        self._tree_panel = Panel(self._tree, title="Tree View")
+        self._tree_layout = Layout(self._tree_panel, name="tree", ratio=1)
+        # build main
+        self._app_layout = Layout(name="main")
+        center_layout = Layout(name="center")
+        center_layout.split_row(self._tree_layout, self._pipeline_layout)
+        self._app_layout.split_column(
+            # progress bar is only 1 row
+            Layout(self._main_progress, name="main_progress", size=1),
+            center_layout,
+        )
+        self._live = Live(
+            self._app_layout,
+            refresh_per_second=10,
+        )
+        # thread-local tasks
+        self._local = local()
+
+    def __enter__(self):
+        self._live.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._live.stop()
+
+    def increase_main_bar_total(self):
+        self._main_progress_total += 1
+        self._main_progress.update(self._main_task, total=self._main_progress_total)
+
+    def advance_main_bar_progress(self):
+        self._main_progress.update(self._main_task, advance=1)
+
+    def set_cur_tree(self, dir_info: DirInfo):
+        self._tree.label = f"📁 {dir_info.dir.name}"
+        self._tree.children.clear()
+        for filename in dir_info.files:
+            self._tree.add(f"📄 {filename}")
+        for subdir in dir_info.subdirs:
+            self._tree.add(f"📁 {subdir}")
+
+    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
+        progress = self._pool_to_progress[pool]
+        try:
+            task = getattr(self._local, f"{pool.name.lower()}_task")
+        except AttributeError:
+            # create new task for this thread
+            task = progress.add_task(description=task_name, total=size)
+            setattr(self._local, f"{pool.name.lower()}_task", task)
+        else:
+            # set description and total, and reset completion
+            progress.update(task, description=task_name, total=size, completed=0)
+
+    def update_pool_task(self, pool: TaskPool, advance: int):
+        try:
+            task = getattr(self._local, f"{pool.name.lower()}_task")
+        except AttributeError:
+            raise RuntimeError(f"task not created for pool {pool}")
+        else:
+            progress = self._pool_to_progress[pool]
+            progress.update(task, advance=advance)
