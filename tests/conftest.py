@@ -11,7 +11,6 @@ from tempfile import TemporaryDirectory
 from typing import Iterator, Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlopen
-from socket import socket
 
 from neo4j import BoltDriver, GraphDatabase
 from pytest import fixture
@@ -59,15 +58,15 @@ class Neo4jConnection:
             return f"bolt://{self.hostname}:{self.bolt_port}"
 
 
-@fixture(scope="session")
 def random_name():
     length = 8
     return "".join(random.choices(string.ascii_lowercase, k=length))
 
 
 @fixture(scope="session")
-def start_neo4j_db(random_name: str):
+def start_neo4j_db():
     """start a neo4j db using Docker"""
+    cont_name = random_name()
     cmdline = [
         "docker",
         "run",
@@ -76,7 +75,7 @@ def start_neo4j_db(random_name: str):
         "--publish=7687:7687",
         "--env",
         "NEO4J_AUTH=none",
-        f"--name={random_name}",
+        f"--name={cont_name}",
         f"neo4j:{NEO4J_VERSION}",
     ]
     subprocess.check_call(cmdline)
@@ -89,8 +88,8 @@ def start_neo4j_db(random_name: str):
         password=DEFAULT_PASSWORD,
         driver=None,
     )
-    yield random_name, con
-    cmdline = ["docker", "rm", "--force", random_name]
+    yield cont_name, con
+    cmdline = ["docker", "rm", "--force", cont_name]
     subprocess.check_call(cmdline)
 
 
@@ -192,8 +191,9 @@ def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
 
 
 @fixture(scope="session")
-def minio_db(random_name: str):
+def minio_db():
     """start a MinIO db using Docker"""
+    cont_name = random_name()
     provider = "minio"
     key = "minioadmin"
     secret_key = "minioadmin"
@@ -205,7 +205,7 @@ def minio_db(random_name: str):
         "run",
         "--detach",
         f"--publish=9000:{port}",
-        f"--name={random_name}",
+        f"--name={cont_name}",
         f"minio/minio:{MINIO_VERSION}",
         "server",
         "/data",
@@ -221,5 +221,5 @@ def minio_db(random_name: str):
     # ensure ready to receive connections
     time.sleep(2)
     yield
-    cmdline = ["docker", "rm", "--force", random_name]
+    cmdline = ["docker", "rm", "--force", cont_name]
     subprocess.check_call(cmdline)
