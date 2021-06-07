@@ -142,6 +142,16 @@ class Neogit:
             else:
                 tx.commit()
 
+    def log(self):
+        branch_name: str = settings.branch
+        with self._graph_driver.session() as session:
+            branch = Branch(session, branch_name)
+            if not branch:
+                raise RuntimeError(f"Branch {branch_name} not found")
+
+            # get last commit
+            commit: Optional[Commit] = branch.os_commit
+
     def diff(self, ref1: str, ref2: str):
         # check if both refs exists
         with self._graph_driver.session() as session:

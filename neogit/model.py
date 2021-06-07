@@ -200,6 +200,27 @@ class Commit:
         params = {"current_sha1": self.sha1sum, "previous_sha1": previous_node.sha1sum}
         self.session.run(query, params)
 
+    def __iter__(self):
+        yield self
+        current: Commit = self
+        while True:
+            # get next commit
+            query = """
+            MATCH (a:Commit)-[:HAS_PREVIOUS]->(b:Commit)
+            WHERE a.sha1sum = $current_sha1sum
+            RETURN b
+            """
+            result: Result = self.session.run(query, parameters={"current_sha1sum": current.sha1sum})
+            cursors = list(result)
+            previous = cursors[0]
+            if not previous:
+                break
+            previous_commit = previous["b"]
+            name = previous_commit["name"]
+            sha1sum = previous_commit["sha1sum"]
+            date = previous_commit["date"]
+            yield Commit(self.session, name, sha1sum, date)
+
 
 @dataclass(init=False)
 class Branch:
