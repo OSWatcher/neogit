@@ -24,3 +24,7 @@ def auth_to_netloc(netloc: str, auth: Tuple[str, str] = None) -> str:
     if auth:
         auth_str = f"{auth[0]}:{auth[1]}@"
     return f"{auth_str}{netloc}"
+
+
+def cypher_unescape(string: str) -> str:
+    return string.strip("`")

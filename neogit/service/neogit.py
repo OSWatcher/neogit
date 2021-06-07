@@ -10,6 +10,7 @@ from neo4j.exceptions import ClientError
 
 from neogit.config import ObjectConfig, settings
 from neogit.console import EmptyConsoleAdapter, RichConsoleAdapter
+from neogit.diff import diff_trees
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, Tree
@@ -140,3 +141,10 @@ class Neogit:
                 raise
             else:
                 tx.commit()
+
+    def diff(self, ref1: str, ref2: str):
+        # check if both refs exists
+        with self._graph_driver.session() as session:
+            ref1_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref1)
+            ref2_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref2)
+            yield from diff_trees(session, ref1_tree_sha1, ref2_tree_sha1)

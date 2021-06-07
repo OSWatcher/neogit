@@ -3,6 +3,7 @@
 Usage:
   neogit [options] init
   neogit [options] commit <name>
+  neogit [options] diff <ref1> <ref2>
 
 Options:
   -h --help             Show this screen.
@@ -54,3 +55,8 @@ def handle_cmdline():
     if args["commit"]:
         commit_name = args["<name>"]
         git.commit(commit_name, root_repo)
+    if args["diff"]:
+        ref1 = args["<ref1>"]
+        ref2 = args["<ref2>"]
+        for diff_obj in git.diff(ref1, ref2):
+            print(diff_obj)

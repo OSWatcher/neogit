@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
@@ -166,6 +167,14 @@ class Commit:
         t.sha1sum = record["t"]["sha1sum"]
         return t
 
+    def get_tree_sha1_from_commit_sha1(session: Union[Session, Transaction], sha1: str):
+        query = """
+        MATCH (c:Commit {sha1sum: $sha1sum})-[:OWNS_FILESYSTEM]->(t:Tree)
+        RETURN t
+        """
+        cursor = session.run(query, {"sha1sum": sha1})
+        return list(cursor)[0]["t"]["sha1sum"]
+
     def create(self):
         query = """
         MERGE (o:Commit {sha1sum: $sha1sum, name: $name, date: $date})
@@ -257,3 +266,17 @@ class DirInfo:
     dir: Path
     files: List[str]
     subdirs: List[str]
+
+
+class DiffStatus(Enum):
+    NEW = auto()
+    # filetype change
+    TYP = auto()
+    MOD = auto()
+    DEL = auto()
+
+
+@dataclass
+class DiffObject:
+    status: DiffStatus
+    path: Path
