@@ -223,3 +223,58 @@ def minio_db():
     yield
     cmdline = ["docker", "rm", "--force", cont_name]
     subprocess.check_call(cmdline)
+
+
+# fake filesystem fixtures
+SHA1_EMPTY = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+
+
+@fixture
+def fakefs_one_empty_file(fs):
+    empty_file = Path("/") / "empty_file.txt"
+    empty_file.touch(exist_ok=False)
+
+
+@fixture
+def persistent_minio_db():
+    """start a MinIO db using Docker, persistent, for convience"""
+    cont_name = random_name()
+    provider = "minio"
+    key = "minioadmin"
+    secret_key = "minioadmin"
+    port = 9000
+    host = "127.0.0.1"
+    secure = False
+    cmdline = [
+        "docker",
+        "run",
+        "--detach",
+        f"--publish=9000:{port}",
+        f"--name=neogit_miniodb",
+        f"minio/minio:{MINIO_VERSION}",
+        "server",
+        "/data",
+    ]
+    subprocess.check_call(cmdline)
+    # ensure ready to receive connections
+    time.sleep(2)
+
+
+@fixture(scope="session")
+def persistent_neo4j_db():
+    """start a neo4j db using Docker"""
+    cmdline = [
+        "docker",
+        "run",
+        "--detach",
+        "--publish=7474:7474",
+        "--publish=7687:7687",
+        "--env",
+        "NEO4J_AUTH=none",
+        "--env",
+        'NEO4JLABS_PLUGINS=["apoc"]',
+        f"--name=neogit_neo4jdb",
+        f"neo4j:{NEO4J_VERSION}",
+    ]
+    subprocess.check_call(cmdline)
+    time.sleep(2)

@@ -9,3 +9,10 @@ port = 7687
 
 [default.object]
 provider = "local"
+# for MinIO
+#provider = "minio"
+#key = "minioadmin"
+#secret_key = "minioadmin"
+#host = "127.0.0.1"
+#port = 9000
+#secure = false

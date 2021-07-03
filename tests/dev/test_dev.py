@@ -20,3 +20,8 @@ def test_commit_dir(py2neo_repo):
 
     neogit.commit("first commit")
     raise AssertionError()
+
+
+@pytest.mark.dev
+def test_persistent(persistent_neo4j_db, persistent_minio_db):
+    raise AssertionError()
