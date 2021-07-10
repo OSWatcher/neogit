@@ -238,19 +238,13 @@ def fakefs_one_empty_file(fs):
 @fixture
 def persistent_minio_db():
     """start a MinIO db using Docker, persistent, for convience"""
-    cont_name = random_name()
-    provider = "minio"
-    key = "minioadmin"
-    secret_key = "minioadmin"
     port = 9000
-    host = "127.0.0.1"
-    secure = False
     cmdline = [
         "docker",
         "run",
         "--detach",
         f"--publish=9000:{port}",
-        f"--name=neogit_miniodb",
+        "--name=neogit_miniodb",
         f"minio/minio:{MINIO_VERSION}",
         "server",
         "/data",
@@ -273,7 +267,7 @@ def persistent_neo4j_db():
         "NEO4J_AUTH=none",
         "--env",
         'NEO4JLABS_PLUGINS=["apoc"]',
-        f"--name=neogit_neo4jdb",
+        "--name=neogit_neo4jdb",
         f"neo4j:{NEO4J_VERSION}",
     ]
     subprocess.check_call(cmdline)
