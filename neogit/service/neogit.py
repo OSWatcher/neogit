@@ -33,7 +33,7 @@ class Neogit:
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._root: Path = root
         self._gui_enabled = gui_enabled
-        self._graph_driver = GraphDatabase.driver(settings.neo4j.url)
+        self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=settings.neo4j.creds)
         object_config = ObjectConfig.from_settings(settings)
         self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
         self._object_driver = self._object_driver_ts.instance

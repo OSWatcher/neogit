@@ -25,6 +25,14 @@ settings = Dynaconf(
         Validator("branch", must_exist=True),
         Validator("log_fmt", default=LOG_FMT),
         Validator("neo4j.proto", "neo4j.host", "neo4j.port", must_exist=True),
+        Validator("neo4j.user", default=None),
+        Validator("neo4j.password", default=None),
+        Validator(
+            "neo4j.creds",
+            default=lambda _settings, _creds: (_settings.neo4j.user, _settings.neo4j.password)
+            if _settings.neo4j.user or _settings.neo4j.password
+            else None,
+        ),
         # compute the URL from the settings if not provided by env var NEOGIT_NEO4J__URL
         Validator(
             "neo4j.url",
