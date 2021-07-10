@@ -48,9 +48,9 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     gui_enabled = args["--gui"]
-    git = Neogit(root_repo, gui_enabled)
+    git = Neogit(gui_enabled)
     if args["init"]:
         git.init()
     if args["commit"]:
         commit_name = args["<name>"]
-        git.commit(commit_name)
+        git.commit(commit_name, root_repo)

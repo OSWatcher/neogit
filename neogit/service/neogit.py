@@ -29,30 +29,28 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, root: Path, gui_enabled: bool = False):
+    def __init__(self, gui_enabled: bool = False):
+        """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
-        self._root: Path = root
         self._gui_enabled = gui_enabled
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=settings.neo4j.creds)
         object_config = ObjectConfig.from_settings(settings)
         self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
         self._object_driver = self._object_driver_ts.instance
-        if not self._root.exists():
-            raise ValueError(f"Root directory {self._root} does not exist")
 
     @measure_time
-    def _build_tree_and_insert(self, transaction: Transaction):
+    def _build_tree_and_insert(self, root: Path, transaction: Transaction):
         console_cls: Union[Type[EmptyConsoleAdapter], Type[RichConsoleAdapter]] = EmptyConsoleAdapter
         if self._gui_enabled:
             console_cls = RichConsoleAdapter
         with console_cls() as console:
-            builder = MerkleFSTree(self._root, self._object_driver_ts, console)
+            builder = MerkleFSTree(root, self._object_driver_ts, console)
             for tree in builder.merkelize():
                 tree.create_partial(transaction)
             return builder.root_tree
 
-    def _commit_transaction(self, name: str, tx):
-        root_tree: Tree = self._build_tree_and_insert(tx)
+    def _commit_transaction(self, name: str, root: Path, tx):
+        root_tree: Tree = self._build_tree_and_insert(root, tx)
         # test branch
         branch = Branch(tx, settings.branch)
         if not branch:
@@ -97,12 +95,14 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str):
+    def commit(self, name: str, root: Path):
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
+        if not root.exists():
+            raise ValueError(f"Root directory {root} does not exist")
         with self._graph_driver.session() as session:
             tx = session.begin_transaction()
             try:
-                self._commit_transaction(name, tx)
+                self._commit_transaction(name, root, tx)
             except Exception:
                 # rollback transaction
                 tx.rollback()
