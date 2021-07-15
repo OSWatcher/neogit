@@ -74,8 +74,8 @@ class Tree:
 
 @dataclass(init=False)
 class Commit:
-    sha1sum: str
     name: str
+    sha1sum: str
     date: str
     filesystem: Tree
     previous_commit: "Commit"
@@ -97,7 +97,7 @@ class Commit:
             sha1sum = record["o"]["sha1sum"]
             name = record["o"]["name"]
             date = record["o"]["date"]
-            commit = Commit(session, sha1sum, name, date)
+            commit = Commit(session, name, sha1sum, date)
             yield commit
 
     @staticmethod
@@ -107,13 +107,14 @@ class Commit:
         RETURN o
         """
         cursor = session.run(query, {"sha1sum": sha1sum})
-        if cursor.single() is None:
+        record_list = list(cursor)
+        if not record_list:
             return None
-        record: Record = list(cursor)[0]
+        record: Record = record_list[0]
         sha1sum = record["o"]["sha1sum"]
         name = record["o"]["name"]
         date = record["o"]["date"]
-        commit = Commit(session, sha1sum, name, date)
+        commit = Commit(session, name, sha1sum, date)
         return commit
 
     def create(self):

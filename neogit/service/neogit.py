@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Optional, Type, Union
+from typing import Iterator, Optional, Type, Union
 
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
@@ -37,6 +37,16 @@ class Neogit:
         object_config = ObjectConfig.from_settings(settings)
         self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
         self._object_driver = self._object_driver_ts.instance
+
+    def iter_commit(self) -> Iterator[Commit]:
+        """Enumerate all commits in the database"""
+        with self._graph_driver.session() as session:
+            yield from Commit.iter(session)
+
+    def get_commit(self, sha1sum: str) -> Optional[Commit]:
+        """Retrieve a specific commit from the database"""
+        with self._graph_driver.session() as session:
+            return Commit.get(session, sha1sum)
 
     @measure_time
     def _build_tree_and_insert(self, root: Path, transaction: Transaction):
