@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Union
 
 from neo4j import Record, Result, Session, Transaction
 
@@ -85,6 +85,36 @@ class Commit:
         self.name = name
         self.sha1sum = sha1sum
         self.date = date
+
+    @staticmethod
+    def iter(session: Union[Session, Transaction]) -> Iterator["Commit"]:
+        query = """
+        MATCH (o:Commit)
+        RETURN o
+        """
+        cursor = session.run(query)
+        for record in cursor:
+            sha1sum = record["o"]["sha1sum"]
+            name = record["o"]["name"]
+            date = record["o"]["date"]
+            commit = Commit(session, sha1sum, name, date)
+            yield commit
+
+    @staticmethod
+    def get(session: Union[Session, Transaction], sha1sum: str) -> Optional["Commit"]:
+        query = """
+        MATCH (o:Commit {sha1sum: $sha1sum})
+        RETURN o
+        """
+        cursor = session.run(query, {"sha1sum": sha1sum})
+        if cursor.single() is None:
+            return None
+        record: Record = list(cursor)[0]
+        sha1sum = record["o"]["sha1sum"]
+        name = record["o"]["name"]
+        date = record["o"]["date"]
+        commit = Commit(session, sha1sum, name, date)
+        return commit
 
     def create(self):
         query = """
