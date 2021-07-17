@@ -71,6 +71,41 @@ class Tree:
         """
         session.run(query, {"parent_sha1": self.sha1sum, "unwind_param": rel_list})
 
+    def has_child_tree(self, session: Union[Session, Transaction], tree_name: str) -> "Tree":
+        query = """
+        MATCH (p:Tree {sha1sum: $sha1sum})-[r:HAS_CHILD_TREE]->(t:Tree)
+        WHERE r.name = $tree_name
+        RETURN t
+        """
+        cursor = session.run(query, {"sha1sum": self.sha1sum, "tree_name": tree_name})
+        record_list = list(cursor)
+        if not record_list:
+            raise RuntimeError(f"Tree {self.sha1sum}: No child tree for filename {tree_name}")
+        record = record_list[0]
+        tree = Tree()
+        tree.sha1sum = record["t"]["sha1sum"]
+        return tree
+
+    def get_children(self, session: Union[Session, Transaction]):
+        query = """
+        MATCH (p:Tree {sha1sum: $sha1sum})-[r]->(c)
+        return r.name, c.sha1sum, labels(c)[0]
+        """
+        cursor = session.run(query, {"sha1sum": self.sha1sum})
+        for record in cursor:
+            filename, child_sha1sum, child_type = record
+            esc_filename = filename
+            if child_type == "Blob":
+                b = Blob()
+                b.sha1sum = child_sha1sum
+                self.children_blob[esc_filename] = b
+            elif child_type == "Tree":
+                t = Tree()
+                t.sha1sum = child_sha1sum
+                self.children_tree[esc_filename] = t
+            else:
+                raise RuntimeError(f"Unexpected child label {child_type}")
+
 
 @dataclass(init=False)
 class Commit:
@@ -116,6 +151,20 @@ class Commit:
         date = record["o"]["date"]
         commit = Commit(session, name, sha1sum, date)
         return commit
+
+    def owns_filesystem(self) -> Tree:
+        query = """
+        MATCH (o:Commit {sha1sum: $sha1sum})-[:OWNS_FILESYSTEM]->(t:Tree)
+        RETURN t
+        """
+        cursor = self.session.run(query, {"sha1sum": self.sha1sum})
+        record_list = list(cursor)
+        if not record_list:
+            raise RuntimeError("No filesystem associated with commit")
+        record: Record = record_list[0]
+        t = Tree()
+        t.sha1sum = record["t"]["sha1sum"]
+        return t
 
     def create(self):
         query = """
