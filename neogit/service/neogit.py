@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from functools import wraps
 from pathlib import Path, PurePath
-from typing import Iterator, Optional, Type, Union
+from typing import Iterator, Optional, Type, Union, List, Dict
 
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
@@ -48,22 +48,26 @@ class Neogit:
         with self._graph_driver.session() as session:
             return Commit.get(session, sha1sum)
 
-    def list_filesystem_at(self, sha1sum: str, fs_path: PurePath) -> Tree:
+    def list_filesystem_at(self, os_sha1_list: List[str], fs_path: PurePath) -> Dict[str, Tree]:
         """List the filesystem entries at fs_path for a specific OS sha1sum"""
         with self._graph_driver.session() as session:
-            commit: Optional[Commit] = Commit.get(session, sha1sum)
-            if not commit:
-                raise RuntimeError("Commit not found")
-            root_tree = commit.owns_filesystem()
-            # ['/', 'Program Files', 'Microsoft', ...]
-            # -> ['Program Files', 'Microsoft', ...]
-            cur_tree = root_tree
-            for path_part in fs_path.parts[1:]:
-                # get next tree
-                cur_tree = cur_tree.has_child_tree(session, path_part)
+            target_tree_list: Dict[str, Tree] = {}
+            for os_sha1 in os_sha1_list:
+                commit: Optional[Commit] = Commit.get(session, os_sha1)
+                if not commit:
+                    raise RuntimeError("Commit not found")
+                root_tree = commit.owns_filesystem()
+                # ['/', 'Program Files', 'Microsoft', ...]
+                # -> ['Program Files', 'Microsoft', ...]
+                cur_tree = root_tree
+                for path_part in fs_path.parts[1:]:
+                    # get next tree
+                    cur_tree = cur_tree.has_child_tree(session, path_part)
+                target_tree_list[os_sha1] = cur_tree
+            for os_sha1, tree in target_tree_list.items():
+                tree.get_children(session)
             # get children
-            cur_tree.get_children(session)
-            return cur_tree
+            return target_tree_list
 
     @measure_time
     def _build_tree_and_insert(self, root: Path, transaction: Transaction):
