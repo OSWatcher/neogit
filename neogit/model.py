@@ -298,6 +298,8 @@ class DiffStatus(Enum):
 
 
 @dataclass
-class DiffObject:
+class FSDiffObject:
     status: DiffStatus
+    is_dir: bool
     path: Path
+    sha1sum: str

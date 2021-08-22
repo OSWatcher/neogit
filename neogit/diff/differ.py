@@ -3,20 +3,19 @@ from typing import Iterator, List, Union
 
 from neo4j import Record, Result, Session, Transaction
 
-from neogit.model import DiffObject, DiffStatus, Tree
+from neogit.model import DiffStatus, FSDiffObject
 from neogit.utils import cypher_unescape
+
+ROOT_PATH = Path("/")
 
 
 def diff_trees(
-    session: Union[Session, Transaction], old_tree_sha1sum: Tree, new_tree_sha1sum: Tree
-) -> Iterator[DiffObject]:
-    root = Path("/")
-    yield from diff_trees_rec(session, root, old_tree_sha1sum, new_tree_sha1sum)
-
-
-def diff_trees_rec(
-    session: Union[Session, Transaction], root: Path, old_tree_sha1sum: Tree, new_tree_sha1sum: Tree
-) -> Iterator[DiffObject]:
+    session: Union[Session, Transaction],
+    old_tree_sha1sum: str,
+    new_tree_sha1sum: str,
+    root: Path = ROOT_PATH,
+    recursive: bool = False,
+) -> Iterator[FSDiffObject]:
     # stop if both trees are identical
     if old_tree_sha1sum == new_tree_sha1sum:
         return
@@ -39,27 +38,33 @@ def diff_trees_rec(
 
     # created children
     for c in new_children.keys() - old_children.keys():
+        reltype, sha1sum = new_children[c]
+        is_dir = True if reltype == "HAS_CHILD_TREE" else False
         new_path = root / cypher_unescape(c)
-        diff_object = DiffObject(DiffStatus.NEW, new_path)
+        diff_object = FSDiffObject(DiffStatus.NEW, is_dir, new_path, sha1sum)
         yield diff_object
     # deleted
     for c in old_children.keys() - new_children.keys():
+        reltype, sha1sum = old_children[c]
+        sha1sum = old_children[c][1]
+        is_dir = True if reltype == "HAS_CHILD_TREE" else False
         new_path = root / cypher_unescape(c)
-        diff_object = DiffObject(DiffStatus.DEL, new_path)
+        diff_object = FSDiffObject(DiffStatus.DEL, is_dir, new_path, sha1sum)
         yield diff_object
     # modified ?
     for c in new_children.keys() & old_children.keys():
         new_path = root / cypher_unescape(c)
         if new_children[c][0] != old_children[c][0]:
             # type change
-            diff_object = DiffObject(DiffStatus.TYP, new_path)
-            yield diff_object
+            raise NotImplementedError("Type change diff is not implemented")
+            # diff_object = FSDiffObject(DiffStatus.TYP, new_path)
+            # yield diff_object
         else:
-            old_sha1 = old_children[c][1]
-            new_sha1 = new_children[c][1]
-            if old_sha1 != new_sha1:
-                diff_object = DiffObject(DiffStatus.MOD, new_path)
+            old_reltype, old_sha1sum = old_children[c]
+            new_reltype, new_sha1sum = new_children[c]
+            is_dir = True if new_reltype == "HAS_CHILD_TREE" else False
+            if old_sha1sum != new_sha1sum:
+                diff_object = FSDiffObject(DiffStatus.MOD, is_dir, new_path, new_sha1sum)
                 yield diff_object
-                if new_children[c][0] == "HAS_CHILD_TREE":
-                    # recurse
-                    yield from diff_trees_rec(session, new_path, old_sha1, new_sha1)
+                if new_reltype == "HAS_CHILD_TREE" and recursive:
+                    yield from diff_trees(session, old_sha1sum, new_sha1sum, new_path, recursive)
