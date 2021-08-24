@@ -76,5 +76,9 @@ class AbstractObjectStorage(ABC):
         pass
 
     @abstractmethod
+    def download_object_as_stream(self, obj: Object, chunk_size: int = None) -> Iterator[bytes]:
+        pass
+
+    @abstractmethod
     def get_object(self, container: Container, name: str) -> Object:
         pass

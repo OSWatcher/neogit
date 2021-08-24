@@ -75,6 +75,11 @@ class FakeObjectStorage(AbstractObjectStorage):
             f.write(data)
             return True
 
+    def download_object_as_stream(self, obj: Object, chunk_size: int = None) -> Iterator[bytes]:
+        data, metadata = self._containers[obj.container][obj.name]
+        # TODO: chunk size ?
+        yield data
+
     def get_object(self, container: Container, name: str) -> Object:
         try:
             _, obj = self._containers[container][name]
