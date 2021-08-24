@@ -191,3 +191,15 @@ class Neogit:
                 yield from diff_trees(session, os1_final_tree.sha1sum, os2_final_tree.sha1sum, fs_path)
             else:
                 raise RuntimeError(f"Path {fs_path} not found OS commits")
+
+    def get_object_size(self, obj_sha1: str) -> int:
+        container_name = settings.object.container_name
+        container = self._object_driver.get_container(container_name)
+        obj = self._object_driver.get_object(container, obj_sha1)
+        return obj.size
+
+    def download_object_as_stream(self, obj_sha1: str, chunk_size: int = None) -> Iterator[bytes]:
+        container_name = settings.object.container_name
+        container = self._object_driver.get_container(container_name)
+        obj = self._object_driver.get_object(container, obj_sha1)
+        yield from self._object_driver.download_object_as_stream(obj, chunk_size)
