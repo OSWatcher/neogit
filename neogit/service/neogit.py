@@ -13,8 +13,9 @@ from neogit.console import EmptyConsoleAdapter, RichConsoleAdapter
 from neogit.diff import diff_trees
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
-from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, Tree
+from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
 from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
+from neogit.search import search_by_filename
 from neogit.utils import traverse_path_tree
 
 
@@ -177,16 +178,16 @@ class Neogit:
                 # get fs entries
                 fs_entries = self.list_filesystem_at([os2_sha1], fs_path)[os2_sha1]
                 for child_name, child_tree in fs_entries.children_tree.items():
-                    yield FSDiffObject(DiffStatus.NEW, True, fs_path / child_name, child_tree.sha1sum)
+                    yield FSDiffObject(DiffStatus.NEW, True, fs_path / child_name, None, child_tree.sha1sum)
                 for child_name, child_blob in fs_entries.children_blob.items():
-                    yield FSDiffObject(DiffStatus.NEW, False, fs_path / child_name, child_blob.sha1sum)
+                    yield FSDiffObject(DiffStatus.NEW, False, fs_path / child_name, None, child_blob.sha1sum)
             elif os1_final_tree and os2_final_tree is None:
                 # path is deleted directory on OS2
                 fs_entries = self.list_filesystem_at([os1_sha1], fs_path)[os1_sha1]
                 for child_name, child_tree in fs_entries.children_tree.items():
-                    yield FSDiffObject(DiffStatus.DEL, True, fs_path / child_name, child_tree.sha1sum)
+                    yield FSDiffObject(DiffStatus.DEL, True, fs_path / child_name, child_tree.sha1sum, None)
                 for child_name, child_blob in fs_entries.children_blob.items():
-                    yield FSDiffObject(DiffStatus.DEL, False, fs_path / child_name, child_blob.sha1sum)
+                    yield FSDiffObject(DiffStatus.DEL, False, fs_path / child_name, child_blob.sha1sum, None)
             elif os1_final_tree and os2_final_tree:
                 yield from diff_trees(session, os1_final_tree.sha1sum, os2_final_tree.sha1sum, fs_path)
             else:
@@ -203,3 +204,12 @@ class Neogit:
         container = self._object_driver.get_container(container_name)
         obj = self._object_driver.get_object(container, obj_sha1)
         yield from self._object_driver.download_object_as_stream(obj, chunk_size)
+
+    def filesystem_search(
+        self, os_sha1_list: Optional[List[str]], search_expr: str, search_type: FSSearchType
+    ) -> Iterator[FSSearchResult]:
+        with self._graph_driver.session() as session:
+            if search_type == FSSearchType.Filename:
+                yield from search_by_filename(session, os_sha1_list, search_expr)
+            else:
+                raise NotImplementedError

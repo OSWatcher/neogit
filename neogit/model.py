@@ -302,4 +302,22 @@ class FSDiffObject:
     status: DiffStatus
     is_dir: bool
     path: Path
-    sha1sum: str
+    old_sha1sum: Optional[str]
+    new_sha1sum: Optional[str]
+
+
+# fs search
+
+
+class FSSearchType(Enum):
+    Filename = auto()
+    Path = auto()
+    SHA1 = auto()
+
+
+@dataclass
+class FSSearchResult:
+    commit_name: str
+    commit_sha1: str
+    filepath: str
+    file_sha1: str
