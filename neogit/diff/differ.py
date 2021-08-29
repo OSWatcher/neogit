@@ -41,7 +41,7 @@ def diff_trees(
         reltype, sha1sum = new_children[c]
         is_dir = True if reltype == "HAS_CHILD_TREE" else False
         new_path = root / cypher_unescape(c)
-        diff_object = FSDiffObject(DiffStatus.NEW, is_dir, new_path, sha1sum)
+        diff_object = FSDiffObject(DiffStatus.NEW, is_dir, new_path, None, sha1sum)
         yield diff_object
     # deleted
     for c in old_children.keys() - new_children.keys():
@@ -49,22 +49,22 @@ def diff_trees(
         sha1sum = old_children[c][1]
         is_dir = True if reltype == "HAS_CHILD_TREE" else False
         new_path = root / cypher_unescape(c)
-        diff_object = FSDiffObject(DiffStatus.DEL, is_dir, new_path, sha1sum)
+        diff_object = FSDiffObject(DiffStatus.DEL, is_dir, new_path, sha1sum, None)
         yield diff_object
     # modified ?
     for c in new_children.keys() & old_children.keys():
         new_path = root / cypher_unescape(c)
-        if new_children[c][0] != old_children[c][0]:
+        old_reltype, old_sha1sum = old_children[c]
+        new_reltype, new_sha1sum = new_children[c]
+        if new_reltype != old_reltype:
             # type change
             raise NotImplementedError("Type change diff is not implemented")
             # diff_object = FSDiffObject(DiffStatus.TYP, new_path)
             # yield diff_object
         else:
-            old_reltype, old_sha1sum = old_children[c]
-            new_reltype, new_sha1sum = new_children[c]
             is_dir = True if new_reltype == "HAS_CHILD_TREE" else False
             if old_sha1sum != new_sha1sum:
-                diff_object = FSDiffObject(DiffStatus.MOD, is_dir, new_path, new_sha1sum)
+                diff_object = FSDiffObject(DiffStatus.MOD, is_dir, new_path, old_sha1sum, new_sha1sum)
                 yield diff_object
                 if new_reltype == "HAS_CHILD_TREE" and recursive:
                     yield from diff_trees(session, old_sha1sum, new_sha1sum, new_path, recursive)
