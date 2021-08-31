@@ -15,7 +15,7 @@ from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
 from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
-from neogit.search import search_by_filename
+from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
 
 
@@ -36,7 +36,9 @@ class Neogit:
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
-        self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=settings.neo4j.creds)
+        # dynaconf settings are list, need to convert to tuple
+        creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
+        self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
         object_config = ObjectConfig.from_settings(settings)
         self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
         self._object_driver = self._object_driver_ts.instance
@@ -211,5 +213,7 @@ class Neogit:
         with self._graph_driver.session() as session:
             if search_type == FSSearchType.Filename:
                 yield from search_by_filename(session, os_sha1_list, search_expr)
-            else:
-                raise NotImplementedError
+            elif search_type == FSSearchType.Path:
+                yield from search_by_path(session, os_sha1_list, search_expr)
+            elif search_type == FSSearchType.SHA1:
+                yield from search_by_sha1(session, os_sha1_list, search_expr)
