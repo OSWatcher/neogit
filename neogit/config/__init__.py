@@ -43,6 +43,10 @@ settings = Dynaconf(
         Validator("object.host", default=None),
         Validator("object.port", default=None),
         Validator("object.secure", default=None),
+        Validator("object.region", default=None),
+        Validator("object.ex_force_auth_url", default=None),
+        Validator("object.ex_force_auth_version", default=None),
+        Validator("object.ex_tenant_name", default=None),
         Validator("object.container_name", default=CONTAINER_NAME),
     ],
 )
@@ -56,6 +60,10 @@ class ObjectConfig:
     host: Optional[str] = field(default=None)
     port: Optional[int] = field(default=None)
     secure: Optional[bool] = field(default=None)
+    region: Optional[str] = field(default=None)
+    ex_force_auth_url: Optional[str] = field(default=None)
+    ex_force_auth_version: Optional[str] = field(default=None)
+    ex_tenant_name: Optional[str] = field(default=None)
 
     @staticmethod
     def from_settings(settings: LazySettings) -> "ObjectConfig":
@@ -66,4 +74,8 @@ class ObjectConfig:
             settings.object.host,
             settings.object.port,
             settings.object.secure,
+            settings.object.region,
+            settings.object.ex_force_auth_url,
+            settings.object.ex_force_auth_version,
+            settings.object.ex_tenant_name,
         )
