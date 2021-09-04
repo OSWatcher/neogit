@@ -13,6 +13,8 @@ loggers:
   # silence noisy third party libs
   neo4j:
     level: WARNING
+  urllib3.connectionpool:
+    level: WARNING
   # silence pipeline since it's noisy
   neogit.merkle.pipeline.MerklePipeline:
     level: WARNING
