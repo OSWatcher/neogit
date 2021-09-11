@@ -1,0 +1,30 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "neogit"
+version = "0.1.0"
+description = "Git-like tool backed by Neo4j"
+authors = ["Mathieu Tarral <mathieu.tarral@protonmail.com>"]
+readme = 'README.md'
+license = 'Proprietary'
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+neo4j = "4.2.1"
+docopt = "0.6.2"
+dynaconf = "3.1.4"
+PyYAML = "5.4.1"
+coloredlogs = "15.0"
+more-itertools = "8.7.0"
+apache-libcloud = "3.3.1"
+fasteners = "0.16"
+appdirs = "1.4.4"
+rich = "10.2.0"
+
+[tool.poetry.dev-dependencies]
+
