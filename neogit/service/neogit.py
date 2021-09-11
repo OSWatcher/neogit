@@ -46,7 +46,7 @@ class Neogit:
     def iter_commit(self) -> Iterator[Commit]:
         """Enumerate all commits in the database"""
         with self._graph_driver.session() as session:
-            yield from Commit.iter(session)
+            yield from Commit.iter(session, settings.branch)
 
     def get_commit(self, sha1sum: str) -> Optional[Commit]:
         """Retrieve a specific commit from the database"""

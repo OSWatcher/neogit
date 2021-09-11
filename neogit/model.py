@@ -123,18 +123,22 @@ class Commit:
         self.date = date
 
     @staticmethod
-    def iter(session: Union[Session, Transaction]) -> Iterator["Commit"]:
+    def iter(session: Union[Session, Transaction], branch: str) -> Iterator["Commit"]:
+        """produces an iterator on all commits pointed by the branch name, from most recent to oldest"""
         query = """
-        MATCH (o:Commit)
-        RETURN o
+        MATCH (b:Branch)-[:TRACKS_COMMIT]->(c:Commit)
+        WHERE b.name = $branch_name
+        OPTIONAL MATCH (c)-[:HAS_PREVIOUS*]->(p:Commit)
+        RETURN c + collect(p) as commit_log
         """
-        cursor = session.run(query)
-        for record in cursor:
-            sha1sum = record["o"]["sha1sum"]
-            name = record["o"]["name"]
-            date = record["o"]["date"]
-            commit = Commit(session, name, sha1sum, date)
-            yield commit
+        cursor = session.run(query, parameters={"branch_name": branch})
+        record = list(cursor)[0]
+        for commit in record["commit_log"]:
+            sha1sum = commit["sha1sum"]
+            name = commit["name"]
+            date = commit["date"]
+            commit_obj = Commit(session, name, sha1sum, date)
+            yield commit_obj
 
     @staticmethod
     def get(session: Union[Session, Transaction], sha1sum: str) -> Optional["Commit"]:
