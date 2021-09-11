@@ -9,7 +9,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from io import SEEK_END, SEEK_SET
 from pathlib import Path
 from threading import Condition, local
-from typing import Dict, Iterator, Optional, Tuple
+from typing import Dict, Iterator, Optional, Tuple, Union
 from uuid import uuid4
 
 from neogit.config import settings
@@ -30,8 +30,10 @@ class MerklePipeline:
         # hashlib: the Python GIL is released for data larger than 2047 bytes at object creation or on update
         self._sha1_pool = ThreadPoolExecutor(self._max_workers, "sha1-pool")
         self._storage_pool = ThreadPoolExecutor(thread_name_prefix="stor-pool")
+        # future to task_id
+        self._future_to_taskid: Dict[Future, str] = {}
         # pipeline results
-        self._pipeline_results: Dict[str, Optional[Tuple[Path, str]]] = {}
+        self._pipeline_results: Dict[str, Union[Optional[Tuple[Path, str]], BaseException]] = {}
         # condition variable
         self._cv = Condition()
         # cache container object per thread
@@ -66,9 +68,18 @@ class MerklePipeline:
             return task_id, result
 
     def _pipe_merkelize_to_upload(self, f: Future):
-        task_id, result = f.result()
-        future = self._storage_pool.submit(self._storage_upload, task_id, *result)
-        future.add_done_callback(self._pipeline_end)
+        # try to get the result, catch any exception on the way
+        try:
+            task_id, result = f.result()
+        except BaseException as e:
+            # pop the future so the dict doesn't grow indefinitely in RAM
+            task_id = self._future_to_taskid.pop(f)
+            # whatever happens, we need to set the task result
+            self.associate_result(task_id, e)
+        else:
+            future = self._storage_pool.submit(self._storage_upload, task_id, *result)
+            self._future_to_taskid[future] = task_id
+            future.add_done_callback(self._pipeline_end)
 
     def _storage_upload(self, task_id: str, filepath: Path, sha1sum: str):
         """pipeline stage to upload a given object to the object storage"""
@@ -100,15 +111,25 @@ class MerklePipeline:
         return task_id, result
 
     def _pipeline_end(self, f: Future):
-        task_id, result = f.result()
-        filepath, sha1sum = result
-        tid = threading.get_ident()
-        # associate result
+        # try to get the result, catch any exception on the way
+        try:
+            task_id, result = f.result()
+        except BaseException as e:
+            # pop the future so the dict doesn't grow indefinitely in RAM
+            task_id = self._future_to_taskid.pop(f)
+            # whatever happens, we need to set the task result
+            self.associate_result(task_id, e)
+        else:
+            self.associate_result(task_id, result)
+
+    def associate_result(self, task_id: str, result: Union[Tuple[Path, str], BaseException]):
+        """associate a task_id with a pipeline result, while holding the conditoin variable and notify the waiters"""
         with self._cv:
-            self._logger.debug("[%s]📄 %s: %s", tid, filepath, sha1sum)
-            self._pipeline_results[task_id] = filepath, sha1sum
-            # notify consumers
-            self._cv.notify_all()
+            tid = threading.get_ident()
+            self._logger.debug("[%s]📄 %s", tid, result)
+            self._pipeline_results[task_id] = result
+            # notify 1 consumer
+            self._cv.notify(1)
 
     def submit(self, filepath: Path) -> str:
         """submit a filepath to the pipeline
@@ -122,16 +143,22 @@ class MerklePipeline:
         self._pipeline_results[task_id] = None
         # then schedule it
         future = self._sha1_pool.submit(self._merkelize_file, task_id, filepath)
+        self._future_to_taskid[future] = task_id
         future.add_done_callback(self._pipe_merkelize_to_upload)
-
         return task_id
 
     def result(self, task_id: str) -> Tuple[Path, str]:
         """Fetch the pipeline results associated with a task_id, wait if necessary"""
         with self._cv:
+            # releases the lock and block until notified
             self._cv.wait_for(lambda: self._pipeline_results[task_id] is not None)
-            result: Optional[Tuple[Path, str]] = self._pipeline_results[task_id]
+            result: Union[Optional[Tuple[Path, str]], BaseException] = self._pipeline_results[task_id]
             assert result
             # remove entry to avoid filling RAM
             del self._pipeline_results[task_id]
-            return result
+            if isinstance(result, tuple):
+                return result
+            elif isinstance(result, BaseException):
+                raise result
+            else:
+                raise RuntimeError("Unexpected result type (%s) %s", type(result), result)

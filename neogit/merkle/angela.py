@@ -46,7 +46,13 @@ class MerkleFSTree:
             # get pipeline results
             filename_to_sha1: Dict[str, str] = {}
             for task in pipe_task_list:
-                filepath, sha1sum = self._pipeline.result(task)
+                try:
+                    filepath, sha1sum = self._pipeline.result(task)
+                except BaseException as e:
+                    # task failed
+                    # TODO: lost file
+                    logging.warning("Could not process %s: %s", task, e)
+                    continue
                 filename_to_sha1[filepath.name] = sha1sum
             tree: Tree = merkelize_dir(dir_info.dir, filename_to_sha1, self._tree_fs)
             self._logger.debug("📁 %s: %s", dir_info.dir, tree.sha1sum)
@@ -71,8 +77,13 @@ class MerkleFSTree:
             subdirs: List[str] = []
             for d in dirs:
                 subdir_path = Path(d.path)
-                subdirs.append(d.name)
-                self._explore_dfs_rec(subdir_path)
+                try:
+                    self._explore_dfs_rec(subdir_path)
+                except BaseException as e:
+                    self._logger.exception(e)
+                    continue
+                else:
+                    subdirs.append(d.name)
             # submit the files to the pipeline
             pipe_task_list: List[str] = []
             filename_list: List[str] = []

@@ -45,8 +45,13 @@ def merkelize_dir(cur_dir: Path, filename_to_sha1: Dict[str, str], tree_fs: Dict
     with os.scandir(cur_dir) as it:
         for subdir in filter(lambda entry: entry.is_dir(follow_symlinks=False), it):
             subdir_path = cur_dir / subdir.name
-            tree.children_tree[subdir.name] = tree_fs[subdir_path]
-            del tree_fs[subdir_path]
+            try:
+                tree.children_tree[subdir.name] = tree_fs[subdir_path]
+            except KeyError:
+                # dir skipped because libguestfs error
+                continue
+            else:
+                del tree_fs[subdir_path]
     # compute final hash for tree
     hasher = Hasher()
     # IMPORTANT: sort the keys before using them
