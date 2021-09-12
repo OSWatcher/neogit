@@ -33,6 +33,7 @@ flake8 = "3.9.2"
 isort = "5.9.3"
 mypy = "0.910"
 vermin = "1.2.2"
+pytest = "6.2.5"
 
 [tool.black]
 line-length = 120
