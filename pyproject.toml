@@ -35,6 +35,7 @@ mypy = "0.910"
 vermin = "1.2.2"
 pytest = "6.2.5"
 coverage = "5.5"
+# TODO: darglint, flake8-docstrings
 
 [tool.black]
 line-length = 120
