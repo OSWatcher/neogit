@@ -34,6 +34,7 @@ isort = "5.9.3"
 mypy = "0.910"
 vermin = "1.2.2"
 pytest = "6.2.5"
+coverage = "5.5"
 
 [tool.black]
 line-length = 120
@@ -52,7 +53,7 @@ line_length = 120
 # measure branch coverage in addition to statement coverage
 branch = true
 # restrict coverage on neogit package only
-source = "neogit"
+source = ["neogit"]
 
 [tool.mypy]
 warn_unreachable = true
