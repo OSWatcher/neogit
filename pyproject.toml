@@ -27,6 +27,10 @@ appdirs = "1.4.4"
 rich = "10.2.0"
 
 [tool.poetry.dev-dependencies]
+black = "21.8b0"
+
+[tool.black]
+line-length = 120
 
 [tool.isort]
 # black compatible config
