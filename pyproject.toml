@@ -36,6 +36,8 @@ vermin = "1.2.2"
 pytest = "6.2.5"
 coverage = "5.5"
 # TODO: darglint, flake8-docstrings
+types-docopt = "^0.6.3"
+appdirs-stubs = "^0.1.0"
 
 [tool.black]
 line-length = 120
@@ -70,10 +72,8 @@ pretty = true
 module = [
     "neo4j.*",
     "py2neo.*",
-    "docopt.*",
     "dynaconf.*",
     "coloredlogs.*",
-    "appdirs.*"
 ]
 ignore_missing_imports = true
 
