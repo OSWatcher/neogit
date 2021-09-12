@@ -1,9 +1,6 @@
 # IDE
 /.idea
 
-# Nox
-/.nox
-
 # virtualenv
 /.venv
 
@@ -35,6 +32,9 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# poetry lock
+poetry.lock
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
