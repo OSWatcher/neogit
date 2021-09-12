@@ -1,9 +1,6 @@
 # IDE
 /.idea
 
-# Nox
-/.nox
-
 # virtualenv
 /.venv
 
