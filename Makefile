@@ -21,3 +21,14 @@ vermin:
 
 cclean: fmt lint type vermin
 	# code cleanup without unit tests
+
+
+unit_test:
+	# run unit tests
+	coverage run -m pytest -m "not dev" -k unit -v
+	coverage report
+
+coverage_html:
+	# create html coverage report and display it in system browser
+	coverage html --dir .coverage_html
+	xdg-open .coverage_html/index.html
