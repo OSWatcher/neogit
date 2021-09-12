@@ -54,7 +54,7 @@ source = "neogit"
 
 [tool.mypy]
 warn_unreachable = true
-warn_return_any = true
+# TODO: warn_return_any = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 show_error_context = true

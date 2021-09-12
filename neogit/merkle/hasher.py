@@ -18,7 +18,7 @@ class Hasher:
         buffer = bytearray(65536)
         view = memoryview(buffer)
         # readinto avoid temporary buffers
-        for block_size in iter(lambda: io.readinto(view), 0):  # type: ignore
+        for block_size in iter(lambda: io.readinto(view), 0):
             self._hash.update(view[:block_size])
 
     def string(self, string: Union[str, bytes]) -> "Hasher":
