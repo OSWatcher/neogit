@@ -78,4 +78,6 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+# ignore dev tests by default
+addopts = "--strict-markers -m 'not dev'"
 markers = 'dev: mark a test as only for development with IPDB purposes'
