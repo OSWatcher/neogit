@@ -24,12 +24,19 @@ DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
 TEST_DATA_FS = TEST_DATA / "fs"
+TEST_DATA_FS_DIR_EMPTY = TEST_DATA_FS / "dir_empty"
 ROOT_REPO = Path(__file__).parent.parent
 
 
 def pytest_addoption(parser):
     """add a new option to pass a specific directory to be merkelized"""
     parser.addoption("--repo", action="store", help="root directory to be indexed")
+    parser.addoption(
+        "--persistdb",
+        action="store_true",
+        default=False,
+        help="do not remove container at the end of the integration tests, and reuse them for the next run",
+    )
 
 
 @fixture
@@ -52,7 +59,7 @@ class Neo4jDriver:
 
 
 @fixture(scope="session")
-def start_neo4j_db():
+def start_neo4j_db(pytestconfig):
     """start a neo4j db using Docker"""
     cont_name = random_name()
     cmdline = [
@@ -76,8 +83,9 @@ def start_neo4j_db():
     settings.neo4j.user = "neo4j"
     settings.neo4j.password = "neo4j"
     yield cont_name
-    cmdline = ["docker", "rm", "--force", cont_name]
-    subprocess.check_call(cmdline)
+    if not pytestconfig.getoption("persistdb"):
+        cmdline = ["docker", "rm", "--force", cont_name]
+        subprocess.check_call(cmdline)
 
 
 @fixture(scope="session")
@@ -175,7 +183,7 @@ def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
 
 
 @fixture(scope="session")
-def minio_db():
+def minio_db(pytestconfig):
     """start a MinIO db using Docker"""
     cont_name = random_name()
     provider = "minio"
@@ -205,8 +213,9 @@ def minio_db():
     # ensure ready to receive connections
     time.sleep(2)
     yield
-    cmdline = ["docker", "rm", "--force", cont_name]
-    subprocess.check_call(cmdline)
+    if not pytestconfig.getoption("persistdb"):
+        cmdline = ["docker", "rm", "--force", cont_name]
+        subprocess.check_call(cmdline)
 
 
 # fake filesystem fixtures
