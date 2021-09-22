@@ -198,7 +198,7 @@ def minio_db():
     cont_name = random_name()
     provider = "minio"
     key = "minioadmin"
-    secret_key = "minioadmin"
+    secret = "minioadmin"
     port = 9000
     host = "127.0.0.1"
     secure = False
@@ -216,7 +216,7 @@ def minio_db():
     # update settings
     settings.object.provider = provider
     settings.object.key = key
-    settings.object.secret_key = secret_key
+    settings.object.secret = secret
     settings.object.host = host
     settings.object.port = port
     settings.object.secure = secure
