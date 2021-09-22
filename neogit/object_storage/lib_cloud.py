@@ -1,6 +1,6 @@
+from dataclasses import asdict
 from pathlib import Path
 from typing import Iterator
-from dataclasses import asdict
 
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
@@ -30,7 +30,7 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         # drop all keys whose values is None
         config_dict = {k: v for k, v in asdict(config).items() if v is not None}
         # drop provider as well (already used before)
-        del config_dict['provider']
+        del config_dict["provider"]
         print(config_dict)
         self._driver = cls(**config_dict)
 

@@ -56,9 +56,9 @@ settings = Dynaconf(
 
 @dataclass
 class ObjectConfig:
+    provider: str
     key: str
     secret: Optional[str] = field(default=None)
-    provider: Optional[str] = field(default=None)
     host: Optional[str] = field(default=None)
     port: Optional[int] = field(default=None)
     secure: Optional[bool] = field(default=None)
@@ -70,9 +70,9 @@ class ObjectConfig:
     @staticmethod
     def from_settings(settings: LazySettings) -> "ObjectConfig":
         return ObjectConfig(
+            settings.object.provider,
             settings.object.key,
             settings.object.secret,
-            settings.object.provider,
             settings.object.host,
             settings.object.port,
             settings.object.secure,
