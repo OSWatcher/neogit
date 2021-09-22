@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -17,7 +17,6 @@ from pytest import fixture
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
-from neogit.repo.py2neo import Py2NeoRepository
 
 NEO4J_VERSION = "4.2.4"
 MINIO_VERSION = "RELEASE.2021-05-11T23-27-41Z"
@@ -38,29 +37,18 @@ def arg_repo_root(pytestconfig):
     return pytestconfig.getoption("repo")
 
 
-@dataclass
-class Neo4jConnection:
-    protocol: str
-    hostname: str
-    bolt_port: int
-    http_port: int
-    username: str
-    password: str
-    driver: Optional[BoltDriver]
-
-    def to_http(self):
-        return f"http://{self.hostname}:{self.http_port}"
-
-    def to_bolt(self, crendentials=False):
-        if crendentials:
-            return f"bolt://{self.username}:{self.password}@{self.hostname}:{self.bolt_port}"
-        else:
-            return f"bolt://{self.hostname}:{self.bolt_port}"
-
-
 def random_name():
+    """Generates a random name"""
     length = 8
     return "".join(random.choices(string.ascii_lowercase, k=length))
+
+
+# Neo4j fixtures
+
+
+@dataclass
+class Neo4jDriver:
+    driver: Optional[BoltDriver]
 
 
 @fixture(scope="session")
@@ -81,59 +69,53 @@ def start_neo4j_db():
         f"neo4j:{NEO4J_VERSION}",
     ]
     subprocess.check_call(cmdline)
-    con = Neo4jConnection(
-        protocol="bolt",
-        hostname="localhost",
-        bolt_port=7687,
-        http_port=7474,
-        username=DEFAULT_USERNAME,
-        password=DEFAULT_PASSWORD,
-        driver=None,
-    )
-    yield cont_name, con
+    # update dynaconf settings for tests
+    settings.neo4j.proto = "bolt"
+    settings.neo4j.host = "localhost"
+    settings.neo4j.port = 7687
+    settings.neo4j.user = "neo4j"
+    settings.neo4j.password = "neo4j"
+    yield cont_name
     cmdline = ["docker", "rm", "--force", cont_name]
     subprocess.check_call(cmdline)
 
 
 @fixture(scope="session")
-def neo4j_ready(start_neo4j_db: Tuple[str, Neo4jConnection]):
+def neo4j_ready(start_neo4j_db: str):
     """ensure neo4jdb is ready"""
-    container_name, con = start_neo4j_db
+    container_name = start_neo4j_db
+    neo4j_http_url = settings.neo4j.http_url
     opened = False
     while not opened:
         try:
-            logging.info("attempting to connect to DB %s", con.to_http())
-            with urlopen(con.to_http(), timeout=1) as opened_url:
+            logging.info("attempting to connect to DB %s", neo4j_http_url)
+            with urlopen(neo4j_http_url, timeout=1) as opened_url:
                 opened_url.read()
         except (URLError, ConnectionError):
             time.sleep(0.7)
         else:
             opened = True
-    yield con
-
-
-@fixture(scope="function")
-def driver_con(neo4j_con: Neo4jConnection):
-    repo = Py2NeoRepository(neo4j_con.to_bolt(crendentials=True))
-    neo_drv = neo4j_con.driver
-    yield repo, neo_drv
-    s = neo_drv.session()
-    s.run("MATCH (n) DETACH DELETE n")
-
-
-@fixture(scope="function")
-def py2neo_repo(driver_con):
-    repo, neo4j_drv = driver_con
-    yield repo
+    yield container_name
 
 
 @fixture(scope="session")
-def neo4j_con(neo4j_ready: Neo4jConnection):
-    con = neo4j_ready
+def neo4j_con(neo4j_ready: str):
     # start db connection with the most basic driver
-    creds = (con.username, con.password)
-    con.driver = GraphDatabase.driver(con.to_bolt(crendentials=False), auth=creds)
-    yield con
+    bolt_url = settings.neo4j.url
+    creds = (settings.neo4j.user, settings.neo4j.password)
+    driver = GraphDatabase.driver(bolt_url, auth=creds)
+    yield driver
+
+
+@fixture(scope="function")
+def clean_neo4j_db(neo4j_con: BoltDriver):
+    """cleanup db after test"""
+    driver = neo4j_con
+    yield driver
+    # cleanup
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
 
 
 # object storage fixtures
