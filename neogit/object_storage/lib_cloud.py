@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Iterator
+from dataclasses import asdict
 
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
@@ -26,17 +27,12 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         # local provider: ensure directory is created
         if cls == LocalStorageDriver:
             Path(config.key).mkdir(parents=True, exist_ok=True)
-        self._driver = cls(
-            config.key,
-            config.secret_key,
-            host=config.host,
-            port=config.port,
-            secure=config.secure,
-            region=config.region,
-            ex_force_auth_url=config.ex_force_auth_url,
-            ex_force_auth_version=config.ex_force_auth_version,
-            ex_tenant_name=config.ex_tenant_name,
-        )
+        # drop all keys whose values is None
+        config_dict = {k: v for k, v in asdict(config).items() if v is not None}
+        # drop provider as well (already used before)
+        del config_dict['provider']
+        print(config_dict)
+        self._driver = cls(**config_dict)
 
     def create_container(self, name: str) -> Container:
         try:
