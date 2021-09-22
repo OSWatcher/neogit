@@ -14,6 +14,7 @@ from urllib.request import urlopen
 
 from neo4j import BoltDriver, GraphDatabase
 from pytest import fixture
+from neomodel import db as neomodel_db
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
@@ -90,6 +91,8 @@ def start_neo4j_db(pytestconfig):
     settings.neo4j.port = 7687
     settings.neo4j.user = "neo4j"
     settings.neo4j.password = "neo4j"
+    # set neomodel config url
+    neomodel_db.set_connection(settings.neo4j.url_full)
     yield cont_name
     if not pytestconfig.getoption("persistdb"):
         cmdline = ["docker", "rm", "--force", cont_name]
