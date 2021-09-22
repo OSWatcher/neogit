@@ -39,6 +39,11 @@ settings = Dynaconf(
             "neo4j.url",
             default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",
         ),
+        Validator(
+            "neo4j.url_full",
+            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.user}:"
+            f"{_settings.neo4j.password}@{_settings.neo4j.host}:{_settings.neo4j.port}",
+        ),
         Validator("neo4j.http_url", default=lambda _settings, _url: f"http://{_settings.neo4j.host}:{NEO4J_HTTP_PORT}"),
         Validator("object.key", default=USER_DATA_DIR),
         Validator("object.secret", default=None),
