@@ -26,6 +26,8 @@ TEST_DATA = Path(__file__).parent / "data"
 TEST_DATA_FS = TEST_DATA / "fs"
 TEST_DATA_FS_DIR_EMPTY = TEST_DATA_FS / "dir_empty"
 ROOT_REPO = Path(__file__).parent.parent
+DEFAULT_NEO4J_DB_NAME = "neogit_neo4j_testdb"
+DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
 
 
 def pytest_addoption(parser):
@@ -61,20 +63,26 @@ class Neo4jDriver:
 @fixture(scope="session")
 def start_neo4j_db(pytestconfig):
     """start a neo4j db using Docker"""
-    cont_name = random_name()
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        "--publish=7474:7474",
-        "--publish=7687:7687",
-        "--env",
-        "NEO4J_AUTH=none",
-        "--env",
-        'NEO4JLABS_PLUGINS=["apoc"]',
-        f"--name={cont_name}",
-        f"neo4j:{NEO4J_VERSION}",
-    ]
+    # choose random name or default name if persistent
+    if not pytestconfig.getoption("persistdb"):
+        cont_name = random_name()
+        cmdline = [
+            "docker",
+            "run",
+            "--detach",
+            "--publish=7474:7474",
+            "--publish=7687:7687",
+            "--env",
+            "NEO4J_AUTH=none",
+            "--env",
+            'NEO4JLABS_PLUGINS=["apoc"]',
+            f"--name={cont_name}",
+            f"neo4j:{NEO4J_VERSION}",
+        ]
+    else:
+        cont_name = DEFAULT_NEO4J_DB_NAME
+        # ensure previous db is started
+        cmdline = ["docker", "start", cont_name]
     subprocess.check_call(cmdline)
     # update dynaconf settings for tests
     settings.neo4j.proto = "bolt"
@@ -119,6 +127,10 @@ def neo4j_con(neo4j_ready: str):
 def clean_neo4j_db(neo4j_con: BoltDriver):
     """cleanup db after test"""
     driver = neo4j_con
+    # ensure it's cleaned before test
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
     yield driver
     # cleanup
     with driver.session() as session:
@@ -185,23 +197,28 @@ def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
 @fixture(scope="session")
 def minio_db(pytestconfig):
     """start a MinIO db using Docker"""
-    cont_name = random_name()
+    # choose random name or default name if persistent
     provider = "minio"
     key = "minioadmin"
     secret = "minioadmin"
     port = 9000
     host = "127.0.0.1"
     secure = False
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        f"--publish=9000:{port}",
-        f"--name={cont_name}",
-        f"minio/minio:{MINIO_VERSION}",
-        "server",
-        "/data",
-    ]
+    if not pytestconfig.getoption("persistdb"):
+        cont_name = random_name()
+        cmdline = [
+            "docker",
+            "run",
+            "--detach",
+            f"--publish=9000:{port}",
+            f"--name={cont_name}",
+            f"minio/minio:{MINIO_VERSION}",
+            "server",
+            "/data",
+        ]
+    else:
+        cont_name = DEFAULT_MINIO_DB_NAME
+        cmdline = ["docker", "start", cont_name]
     subprocess.check_call(cmdline)
     # update settings
     settings.object.provider = provider
