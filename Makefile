@@ -25,7 +25,12 @@ cclean: fmt lint type vermin
 
 unit_test:
 	# run unit tests
-	coverage run -m pytest -m "not dev" -k unit -v
+	coverage run -m pytest -m "not dev" -v tests/unit
+	coverage report
+
+integration_test:
+	# run integration tests
+	coverage run -m pytest -m "not dev" -v tests/integration
 	coverage report
 
 coverage_html:
