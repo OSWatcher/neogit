@@ -1,6 +1,8 @@
 # run developer scripts and helpers via Makefile targets
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+# declare all target as PHONY
+.PHONY: fmt lint type vermin cclean unit_test integration_test coverage_html
 
 fmt:
 	# code formatting
