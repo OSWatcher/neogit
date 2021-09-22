@@ -3,11 +3,12 @@ Test the Neogit service class
 """
 from pytest import fixture
 
+from neogit.config import settings
 from neogit.object_storage import FakeObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 from tests.conftest import TEST_DATA_FS_DIR_EMPTY
-from tests.model import Commit, Branch
-from neogit.config import settings
+from tests.model import Branch, Commit
+
 
 @fixture(scope="function")
 def neogit(clean_neo4j_db):
@@ -43,10 +44,58 @@ def test_branch_is_created(neogit_init):
     assert len(branch.tracks) == 1
 
 
+def test_branch_is_updated(neogit_init):
+    neogit = neogit_init
+    old_commit_name = "first_commit"
+    neogit.commit(old_commit_name, TEST_DATA_FS_DIR_EMPTY)
+    branch = Branch.nodes.get(name=settings.branch)
+    old_commit = branch.tracks[0]
+    # recapture
+    new_commit_name = "second commit"
+    neogit.commit(new_commit_name, TEST_DATA_FS_DIR_EMPTY)
+    # assert
+    branch.refresh()
+    new_commit = branch.tracks[0]
+    assert old_commit != new_commit
+
+
 # commits:
 # - test that commit is created
 # - test that a new commit is created on second capture
-#
+
+# TODO
+# how to test commit sha1sum ? it depends on the date at time when the commit is created hard to test
+# how to test commit date ?
+
+
+def test_commit_is_created(neogit_init):
+    neogit = neogit_init
+    commit_name = "first commit"
+    neogit.commit(commit_name, TEST_DATA_FS_DIR_EMPTY)
+    commit = Commit.nodes.get(name=commit_name)
+    # assert
+    assert commit.name == commit_name
+    assert len(commit.sha1sum) == 40
+    assert commit.date != ""
+
+
+def test_new_commit_is_created(neogit_init):
+    neogit = neogit_init
+    # create first commit
+    prev_commit_name = "first commit"
+    neogit.commit(prev_commit_name, TEST_DATA_FS_DIR_EMPTY)
+    prev_commit = Commit.nodes.get(name=prev_commit_name)
+    # create second commit
+    new_commit_name = "second commit"
+    neogit.commit(new_commit_name, TEST_DATA_FS_DIR_EMPTY)
+    new_commit = Commit.nodes.get(name=new_commit_name)
+    # assert
+    assert new_commit.name == new_commit_name
+    assert len(new_commit.sha1sum) == 40
+    assert new_commit.date != ""
+    assert new_commit.previous[0] == prev_commit
+
+
 # filesystems:
 # - test that filesystem is created
 # - test that same filesystem captured twice is pointed to by the new commit

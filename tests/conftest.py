@@ -13,8 +13,8 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from neo4j import BoltDriver, GraphDatabase
-from pytest import fixture
 from neomodel import db as neomodel_db
+from pytest import fixture
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage

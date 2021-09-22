@@ -1,10 +1,12 @@
-from neomodel import StructuredNode, StringProperty, DateTimeProperty, RelationshipTo
+from neomodel import RelationshipTo, StringProperty, StructuredNode
 
 
 class Commit(StructuredNode):
     name = StringProperty(required=True)
     sha1sum = StringProperty(required=True, unique_index=True)
-    date = DateTimeProperty()
+    date = StringProperty(required=True)
+
+    previous = RelationshipTo("Commit", "HAS_PREVIOUS")
 
 
 class Branch(StructuredNode):
