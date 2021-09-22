@@ -38,6 +38,7 @@ coverage = "5.5"
 # TODO: darglint, flake8-docstrings
 types-docopt = "^0.6.3"
 appdirs-stubs = "^0.1.0"
+neomodel = "^4.0.5"
 
 [tool.black]
 line-length = 120
