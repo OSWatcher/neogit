@@ -1,6 +1,21 @@
 # run developer scripts and helpers via Makefile targets
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+# declare all targets in this variable
+ALL_TARGETS:=fmt lint type vermin cclean unit_test integration_test coverage_html
+# declare all target as PHONY
+.PHONY: $(ALL_TARGETS)
+
+# This small chunk of code allows us to pass arbitrary argument to our make targets
+# see the solution on SO:
+# https://stackoverflow.com/a/14061796/3017219
+# If the first argument is contained in ALL_TARGETS
+ifneq ($(filter $(firstword $(MAKECMDGOALS)), $(ALL_TARGETS)),)
+  # use the rest as arguments to create a new variable ADD_ARGS
+  EXTRA_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  $(eval $(EXTRA_ARGS):;@:)
+endif
 
 fmt:
 	# code formatting
@@ -25,12 +40,12 @@ cclean: fmt lint type vermin
 
 unit_test:
 	# run unit tests
-	coverage run -m pytest -m "not dev" -v tests/unit
+	coverage run -m pytest -v tests/unit $(EXTRA_ARGS)
 	coverage report
 
 integration_test:
 	# run integration tests
-	coverage run -m pytest -m "not dev" -v tests/integration
+	coverage run -m pytest -v tests/integration $(EXTRA_ARGS)
 	coverage report
 
 coverage_html:

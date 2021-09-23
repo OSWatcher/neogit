@@ -8,13 +8,13 @@ from typing import Dict, Iterator, List, Optional, Type, Union
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 
-from neogit.config import ObjectConfig, settings
+from neogit.config import settings
 from neogit.console import EmptyConsoleAdapter, RichConsoleAdapter
 from neogit.diff import diff_trees
 from neogit.merkle.angela import MerkleFSTree
 from neogit.merkle.hasher import Hasher
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
-from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
+from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
 
@@ -32,15 +32,14 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
         # dynaconf settings are list, need to convert to tuple
         creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
-        object_config = ObjectConfig.from_settings(settings)
-        self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
+        self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
 
     def iter_commit(self) -> Iterator[Commit]:

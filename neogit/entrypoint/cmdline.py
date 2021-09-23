@@ -20,7 +20,8 @@ import coloredlogs
 import yaml
 from docopt import docopt
 
-from neogit.config import settings
+from neogit.config import ObjectConfig, settings
+from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
 
@@ -49,7 +50,10 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     gui_enabled = args["--gui"]
-    git = Neogit(gui_enabled)
+    # init TSObjectStorage and inject dependency
+    obj_config = ObjectConfig.from_settings(settings)
+    tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
+    git = Neogit(tsobj, gui_enabled)
     if args["init"]:
         git.init()
     if args["commit"]:
