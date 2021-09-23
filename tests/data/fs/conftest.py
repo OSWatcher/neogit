@@ -38,6 +38,7 @@ class TestTree:
 @dataclass
 class TestFSRoot:
     """Represents a test filesystem root directory"""
+
     # make pytest ignore this class
     __test__ = False
     path: Path
