@@ -1,12 +1,13 @@
 """
 Test the Neogit service class
 """
+import pytest
 from pytest import fixture
 
 from neogit.config import settings
 from neogit.object_storage import FakeObjectStorage, TSObjectStorage
 from neogit.service import Neogit
-from tests.data.fs.conftest import TEST_DATA_FS
+from tests.data.fs.conftest import TEST_DATA_FS, TestFSRoot
 from tests.model import Branch, Commit
 
 
@@ -96,6 +97,20 @@ def test_new_commit_is_created(neogit_init):
     assert new_commit.previous[0] == prev_commit
 
 
+def gen_pytest_param_test_data_fs():
+    """simple generator to get nice test name displayed in pytest parametrize"""
+    for test_name, fs_root in TEST_DATA_FS.__dict__.items():
+        yield pytest.param(fs_root, id=test_name)
+
+
 # filesystems:
 # - test that filesystem is created
 # - test that same filesystem captured twice is pointed to by the new commit
+@pytest.mark.parametrize("fs_root", list(gen_pytest_param_test_data_fs()))
+def test_commit_filesystem_data_fs(neogit_init, fs_root: TestFSRoot):
+    neogit = neogit_init
+    commit_name = "first commit"
+    neogit.commit(commit_name, fs_root.path)
+    commit = Commit.nodes.get(name=commit_name)
+    assert len(commit.filesystem) == 1
+    assert commit.filesystem[0].asdict() == fs_root.tree.asdict()
