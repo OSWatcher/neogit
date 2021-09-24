@@ -2,7 +2,7 @@
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # declare all targets in this variable
-ALL_TARGETS:=fmt lint type vermin cclean unit_test integration_test coverage_html
+ALL_TARGETS:=fmt lint type vermin cclean unit_test integration_test bench_test coverage_html
 # declare all target as PHONY
 .PHONY: $(ALL_TARGETS)
 
@@ -47,6 +47,11 @@ integration_test:
 	# run integration tests
 	coverage run -m pytest -v tests/integration $(EXTRA_ARGS)
 	coverage report
+
+bench_test:
+	# run benchmarks
+	# durations=0 shows execution time for each test
+	coverage run -m pytest -v --durations=0 tests/bench $(EXTRA_ARGS)
 
 coverage_html:
 	# create html coverage report and display it in system browser
