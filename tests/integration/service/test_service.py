@@ -2,28 +2,10 @@
 Test the Neogit service class
 """
 import pytest
-from pytest import fixture
 
 from neogit.config import settings
-from neogit.object_storage import FakeObjectStorage, TSObjectStorage
-from neogit.service import Neogit
 from tests.data.fs.conftest import TEST_DATA_FS, TestFSRoot
 from tests.model import Branch, Commit
-
-
-@fixture(scope="function")
-def neogit(clean_neo4j_db):
-    """creates an instance of Neogit, inject a fake object storage as dependency"""
-    ts_obj = TSObjectStorage(FakeObjectStorage, None)
-    neogit = Neogit(ts_obj)
-    return neogit
-
-
-@fixture(scope="function")
-def neogit_init(neogit):
-    neogit.init()
-    return neogit
-
 
 # commit
 # --------------

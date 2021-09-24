@@ -18,6 +18,7 @@ from pytest import fixture
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
+from neogit.service import Neogit
 
 NEO4J_VERSION = "4.2.4"
 MINIO_VERSION = "RELEASE.2021-05-11T23-27-41Z"
@@ -33,7 +34,7 @@ DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
 
 def pytest_addoption(parser):
     """add a new option to pass a specific directory to be merkelized"""
-    parser.addoption("--repo", action="store", help="root directory to be indexed")
+    parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
     parser.addoption(
         "--persistdb",
         action="store_true",
@@ -285,3 +286,18 @@ def persistent_neo4j_db():
     ]
     subprocess.check_call(cmdline)
     time.sleep(2)
+
+
+# instantiate Neogit
+@fixture(scope="function")
+def neogit(clean_neo4j_db):
+    """creates an instance of Neogit, inject a fake object storage as dependency"""
+    ts_obj = TSObjectStorage(FakeObjectStorage, None)
+    neogit = Neogit(ts_obj)
+    return neogit
+
+
+@fixture(scope="function")
+def neogit_init(neogit):
+    neogit.init()
+    return neogit
