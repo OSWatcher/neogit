@@ -83,12 +83,20 @@ def extract_archive_workdir_per_class(archive_git_repo):
 
 
 @pytest.mark.parametrize("nb_repeat", range(NB_REPEAT))
-def test_merkle_workdir(tmp_path, init_libcloud_object_storage_per_module, extract_archive_workdir, nb_repeat):
-    """merklize a repository"""
+def test_merkle_workdir(tmp_path, init_libcloud_object_storage_per_module, extract_archive_workdir_per_func, nb_repeat):
+    """Only test the MerkleFSTree builder speed"""
     ts_object = init_libcloud_object_storage_per_module
-    workdir = extract_archive_workdir
+    workdir = extract_archive_workdir_per_func
     builder = MerkleFSTree(workdir, ts_object)
     consume(builder.merkelize())
+
+
+@pytest.mark.parametrize("nb_repeat", range(NB_REPEAT))
+def test_commit_speed_workdir_fresh(neogit_init, extract_archive_workdir_per_func, nb_repeat):
+    """Test the commit speed on a fresh workdir (nothing the graph / object DBs)"""
+    neogit = neogit_init
+    workdir = extract_archive_workdir_per_func
+    neogit.commit("first commit", workdir)
 
 
 class TestCommitSpeedAlreadyMerged:
