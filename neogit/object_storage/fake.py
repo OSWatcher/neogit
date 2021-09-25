@@ -42,6 +42,9 @@ class FakeObjectStorage(AbstractObjectStorage):
         # since we use this api to iterate and possibly remove containers
         yield from list(self._containers.keys())
 
+    def iterate_container_objects(self, container: Container) -> Iterator[Object]:
+        yield from self._containers[container].values()
+
     def get_container(self, name: str) -> Container:
         try:
             return [c for c in self._containers.keys() if c.name == name][0]

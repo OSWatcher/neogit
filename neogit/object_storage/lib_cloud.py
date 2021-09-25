@@ -60,6 +60,11 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         gen_containers = (Container(c.name) for c in self._driver.iterate_containers())
         yield from gen_containers
 
+    def iterate_container_objects(self, container: Container) -> Iterator[Object]:
+        libcloud_container = LibCloudContainer(container.name, {}, self._driver)
+        for obj in self._driver.iterate_container_objects(libcloud_container):
+            yield Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
     def get_container(self, name: str) -> Container:
         try:
             c: LibCloudContainer = self._driver.get_container(name)
