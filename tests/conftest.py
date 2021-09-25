@@ -102,7 +102,7 @@ def start_neo4j_db(pytestconfig):
 
 
 @fixture(scope="session")
-def neo4j_ready(start_neo4j_db: str):
+def ready_neo4j(start_neo4j_db: str):
     """ensure neo4jdb is ready"""
     container_name = start_neo4j_db
     neo4j_http_url = settings.neo4j.http_url
@@ -112,26 +112,19 @@ def neo4j_ready(start_neo4j_db: str):
             logging.info("attempting to connect to DB %s", neo4j_http_url)
             with urlopen(neo4j_http_url, timeout=1) as opened_url:
                 opened_url.read()
-        except (URLError, ConnectionError):
+        except (URLError, ConnectionError, ConnectionResetError):
             time.sleep(0.7)
         else:
             opened = True
     yield container_name
 
 
-@fixture(scope="session")
-def ready_neo4j(neo4j_ready: str):
-    # start db connection with the most basic driver
+@fixture(scope="class")
+def clean_neo4j_db_per_class(ready_neo4j: str):
+    """cleanup db after test"""
     bolt_url = settings.neo4j.url
     creds = (settings.neo4j.user, settings.neo4j.password)
     driver = GraphDatabase.driver(bolt_url, auth=creds)
-    yield driver
-
-
-@fixture(scope="class")
-def clean_neo4j_db_per_class(ready_neo4j: BoltDriver):
-    """cleanup db after test"""
-    driver = ready_neo4j
     # ensure it's cleaned before test
     with driver.session() as session:
         # clean all nodes and relationships
@@ -144,9 +137,11 @@ def clean_neo4j_db_per_class(ready_neo4j: BoltDriver):
 
 
 @fixture(scope="function")
-def clean_neo4j_db(ready_neo4j: BoltDriver):
+def clean_neo4j_db(ready_neo4j: str):
     """cleanup db after test"""
-    driver = ready_neo4j
+    bolt_url = settings.neo4j.url
+    creds = (settings.neo4j.user, settings.neo4j.password)
+    driver = GraphDatabase.driver(bolt_url, auth=creds)
     # ensure it's cleaned before test
     with driver.session() as session:
         # clean all nodes and relationships
