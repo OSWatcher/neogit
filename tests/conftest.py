@@ -12,6 +12,7 @@ from typing import Iterator, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
+import pytest
 from neo4j import BoltDriver, GraphDatabase
 from neomodel import db as neomodel_db
 from pytest import fixture
@@ -277,6 +278,20 @@ def clean_minio_db(ready_minio_db):
         libcloud_drv.delete_container(container)
 
 
+@fixture(scope="class")
+def clean_minio_db_per_class(ready_minio_db):
+    """cleanup DB after test"""
+    libcloud_drv = ready_minio_db
+    # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
+    for container in libcloud_drv.iterate_containers():
+        libcloud_drv.delete_container(container)
+    # do the test
+    yield libcloud_drv
+    # cleanup
+    for container in libcloud_drv.iterate_containers():
+        libcloud_drv.delete_container(container)
+
+
 # fake filesystem fixtures
 SHA1_EMPTY = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
@@ -288,17 +303,43 @@ def fakefs_one_empty_file(fs):
 
 
 # instantiate Neogit
-@fixture(scope="function")
-def neogit(clean_neo4j_db):
+@fixture(
+    scope="function", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"]
+)
+def neogit(clean_neo4j_db, clean_minio_db, tmp_path, request):
     """creates an instance of Neogit, inject a fake object storage as dependency"""
-    ts_obj = TSObjectStorage(FakeObjectStorage, None)
+    provider = request.param
+    config = None
+    cls = LibcloudObjectStorage
+    if provider is None:
+        cls = FakeObjectStorage
+    if provider == "local":
+        config = ObjectConfig(provider=provider, key=str(tmp_path))
+    if provider == "minio":
+        config = ObjectConfig.from_settings(settings)
+    ts_obj = TSObjectStorage(cls, config)
     neogit = Neogit(ts_obj)
     return neogit
 
 
-@fixture(scope="class")
-def neogit_per_class(clean_neo4j_db_per_class):
-    ts_obj = TSObjectStorage(FakeObjectStorage, None)
+@pytest.fixture(scope="class")
+def tmp_path_per_class():
+    with TemporaryDirectory() as tmp_dir:
+        yield Path(tmp_dir)
+
+
+@fixture(scope="class", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"])
+def neogit_per_class(clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_path_per_class, request):
+    provider = request.param
+    config = None
+    cls = LibcloudObjectStorage
+    if provider is None:
+        cls = FakeObjectStorage
+    if provider == "local":
+        config = ObjectConfig(provider=provider, key=str(tmp_path_per_class))
+    if provider == "minio":
+        config = ObjectConfig.from_settings(settings)
+    ts_obj = TSObjectStorage(cls, config)
     neogit = Neogit(ts_obj)
     return neogit
 
