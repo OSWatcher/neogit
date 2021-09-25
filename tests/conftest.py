@@ -249,45 +249,6 @@ def fakefs_one_empty_file(fs):
     empty_file.touch(exist_ok=False)
 
 
-@fixture
-def persistent_minio_db():
-    """start a MinIO db using Docker, persistent, for convience"""
-    port = 9000
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        f"--publish=9000:{port}",
-        "--name=neogit_miniodb",
-        f"minio/minio:{MINIO_VERSION}",
-        "server",
-        "/data",
-    ]
-    subprocess.check_call(cmdline)
-    # ensure ready to receive connections
-    time.sleep(2)
-
-
-@fixture(scope="session")
-def persistent_neo4j_db():
-    """start a neo4j db using Docker"""
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        "--publish=7474:7474",
-        "--publish=7687:7687",
-        "--env",
-        "NEO4J_AUTH=none",
-        "--env",
-        'NEO4JLABS_PLUGINS=["apoc"]',
-        "--name=neogit_neo4jdb",
-        f"neo4j:{NEO4J_VERSION}",
-    ]
-    subprocess.check_call(cmdline)
-    time.sleep(2)
-
-
 # instantiate Neogit
 @fixture(scope="function")
 def neogit(clean_neo4j_db):
