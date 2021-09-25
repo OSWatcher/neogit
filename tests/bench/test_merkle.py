@@ -6,9 +6,9 @@ Benchmarks for MerkleFS builder and Neogit commit
     - None (os.cpu_count())
     - os.cpu_count() * 2
 - object storage
-    - None
+    - None (TODO)
     - libcloud local
-    - libcloud MinIO
+    - libcloud MinIO (TODO, bug with MinIO and libcloud)
 - nb repeat (filesystem cache)
 - clean / unclean capture (object storage)
     - clean: object storage must upload everything
@@ -31,7 +31,7 @@ GIT_REPO_URL = "https://github.com/qemu/qemu"
 NB_REPEAT = 5
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def clone_git_repo():
     """clone the repo in a tests/data/cache directory"""
     repo_path = TEST_DATA / "cache" / "repo"
@@ -46,7 +46,7 @@ def clone_git_repo():
     return repo
 
 
-@pytest.fixture()
+@pytest.fixture(scope="class")
 def archive_git_repo(clone_git_repo):
     """archive the git repo into cache/archive.tar"""
     git_repo = clone_git_repo
@@ -57,8 +57,8 @@ def archive_git_repo(clone_git_repo):
     return archive_path
 
 
-@pytest.fixture()
-def extract_archive_workdir(archive_git_repo):
+@pytest.fixture(scope="function")
+def extract_archive_workdir_per_func(archive_git_repo):
     archive_path = archive_git_repo
     workdir = Path(archive_path).parent / "workdir"
     if not workdir.exists():
@@ -66,6 +66,20 @@ def extract_archive_workdir(archive_git_repo):
         with tarfile.TarFile(archive_path) as tar:
             tar.extractall(workdir)
     return workdir
+
+
+@pytest.fixture(scope="class")
+def extract_archive_workdir_per_class(archive_git_repo):
+    archive_path = archive_git_repo
+    workdir = Path(archive_path).parent / "workdir"
+    if not workdir.exists():
+        workdir.mkdir()
+        with tarfile.TarFile(archive_path) as tar:
+            tar.extractall(workdir)
+    return workdir
+
+
+# fixture to commit a workdir in neo4j, per class
 
 
 @pytest.mark.parametrize("nb_repeat", range(NB_REPEAT))
@@ -77,9 +91,28 @@ def test_merkle_workdir(tmp_path, init_libcloud_object_storage_per_module, extra
     consume(builder.merkelize())
 
 
-@pytest.mark.parametrize("nb_repeat", range(NB_REPEAT))
-def test_commit_workdir(neogit_init, extract_archive_workdir, nb_repeat):
-    """commit the workdir"""
-    neogit = neogit_init
-    workdir = extract_archive_workdir
-    neogit.commit("first commit", workdir)
+class TestCommitSpeedAlreadyMerged:
+    """
+    with a class scope
+    - neogit init once
+    - neo4j cleanup once
+
+    -> test speed of graph merge when whole Tree already exists
+    -> TODO: object storage
+    """
+
+    @pytest.fixture(scope="class")
+    def commit_workdir(self, neogit_init_per_class, extract_archive_workdir_per_class):
+        """simple feature to commit a workdir"""
+        neogit = neogit_init_per_class
+        workdir = extract_archive_workdir_per_class
+        neogit.commit("first commit", workdir)
+
+    @pytest.mark.parametrize("nb_repeat", range(NB_REPEAT))
+    def test_speed_commit_workdir_already_merged(
+        self, neogit_init_per_class, extract_archive_workdir_per_func, commit_workdir, nb_repeat
+    ):
+        """commit the workdir, and test the commit speed since the graph has already been merged"""
+        neogit = neogit_init_per_class
+        workdir = extract_archive_workdir_per_func
+        neogit.commit("first commit", workdir)
