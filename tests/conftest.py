@@ -1,6 +1,7 @@
 """pytest configuration and fixtures"""
 
 import logging
+import os
 import random
 import string
 import subprocess
@@ -303,10 +304,22 @@ def fakefs_one_empty_file(fs):
 
 
 # instantiate Neogit
+@fixture(scope="function", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+def max_workers(request):
+    nb_workers = request.param
+    return nb_workers
+
+
+@fixture(scope="class", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+def max_workers_per_class(request):
+    nb_workers = request.param
+    return nb_workers
+
+
 @fixture(
     scope="function", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"]
 )
-def neogit(clean_neo4j_db, clean_minio_db, tmp_path, request):
+def neogit(clean_neo4j_db, clean_minio_db, tmp_path, max_workers, request):
     """creates an instance of Neogit, inject a fake object storage as dependency"""
     provider = request.param
     config = None
@@ -317,6 +330,7 @@ def neogit(clean_neo4j_db, clean_minio_db, tmp_path, request):
         config = ObjectConfig(provider=provider, key=str(tmp_path))
     if provider == "minio":
         config = ObjectConfig.from_settings(settings)
+    settings.max_workers = max_workers
     ts_obj = TSObjectStorage(cls, config)
     neogit = Neogit(ts_obj)
     return neogit
@@ -329,7 +343,9 @@ def tmp_path_per_class():
 
 
 @fixture(scope="class", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"])
-def neogit_per_class(clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_path_per_class, request):
+def neogit_per_class(
+    clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_path_per_class, max_workers_per_class, request
+):
     provider = request.param
     config = None
     cls = LibcloudObjectStorage
@@ -339,6 +355,7 @@ def neogit_per_class(clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_pat
         config = ObjectConfig(provider=provider, key=str(tmp_path_per_class))
     if provider == "minio":
         config = ObjectConfig.from_settings(settings)
+    settings.max_workers = max_workers_per_class
     ts_obj = TSObjectStorage(cls, config)
     neogit = Neogit(ts_obj)
     return neogit
