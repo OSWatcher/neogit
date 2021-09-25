@@ -269,28 +269,38 @@ def ready_minio_db(minio_db):
 def clean_minio_db(ready_minio_db):
     """cleanup DB after test"""
     libcloud_drv = ready_minio_db
+
     # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
-    for container in libcloud_drv.iterate_containers():
-        libcloud_drv.delete_container(container)
+    def cleanup_db():
+        for container in libcloud_drv.iterate_containers():
+            for obj in libcloud_drv.iterate_container_objects(container):
+                libcloud_drv.delete_object(obj)
+            libcloud_drv.delete_container(container)
+
+    cleanup_db()
     # do the test
     yield libcloud_drv
     # cleanup
-    for container in libcloud_drv.iterate_containers():
-        libcloud_drv.delete_container(container)
+    cleanup_db()
 
 
 @fixture(scope="class")
 def clean_minio_db_per_class(ready_minio_db):
     """cleanup DB after test"""
     libcloud_drv = ready_minio_db
+
     # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
-    for container in libcloud_drv.iterate_containers():
-        libcloud_drv.delete_container(container)
+    def cleanup_db():
+        for container in libcloud_drv.iterate_containers():
+            for obj in libcloud_drv.iterate_container_objects(container):
+                libcloud_drv.delete_object(obj)
+            libcloud_drv.delete_container(container)
+
+    cleanup_db()
     # do the test
     yield libcloud_drv
     # cleanup
-    for container in libcloud_drv.iterate_containers():
-        libcloud_drv.delete_container(container)
+    cleanup_db()
 
 
 # fake filesystem fixtures
