@@ -1,3 +1,21 @@
+"""
+Benchmarks for MerkleFS builder and Neogit commit
+(desired) fixture parameters
+- settings.max_workers
+    - 1
+    - None (os.cpu_count())
+    - os.cpu_count() * 2
+- object storage
+    - None
+    - libcloud local
+    - libcloud MinIO
+- nb repeat (filesystem cache)
+- clean / unclean capture (object storage)
+    - clean: object storage must upload everything
+    - unclean: all objects are already in object storage, just existence checks
+"""
+
+
 import tarfile
 from pathlib import Path
 
