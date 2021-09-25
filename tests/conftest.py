@@ -15,6 +15,7 @@ from urllib.request import urlopen
 from neo4j import BoltDriver, GraphDatabase
 from neomodel import db as neomodel_db
 from pytest import fixture
+from requests.exceptions import ConnectionError
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
@@ -231,12 +232,39 @@ def minio_db(pytestconfig):
     settings.object.host = host
     settings.object.port = port
     settings.object.secure = secure
-    # ensure ready to receive connections
-    time.sleep(2)
     yield
     if not pytestconfig.getoption("persistdb"):
         cmdline = ["docker", "rm", "--force", cont_name]
         subprocess.check_call(cmdline)
+
+
+@fixture(scope="session")
+def ready_minio_db(minio_db):
+    """ensures that the minioDB is ready to receive connections"""
+    config = ObjectConfig.from_settings(settings)
+    driver = None
+    while driver is None:
+        try:
+            driver = LibcloudObjectStorage(config)
+            list(driver.iterate_containers())
+        except ConnectionError:
+            driver = None
+            time.sleep(0.1)
+    return driver
+
+
+@fixture(scope="function")
+def clean_minio_db(ready_minio_db):
+    """cleanup DB after test"""
+    libcloud_drv = ready_minio_db
+    # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
+    for container in libcloud_drv.iterate_containers():
+        libcloud_drv.delete_container(container)
+    # do the test
+    yield libcloud_drv
+    # cleanup
+    for container in libcloud_drv.iterate_containers():
+        libcloud_drv.delete_container(container)
 
 
 # fake filesystem fixtures
