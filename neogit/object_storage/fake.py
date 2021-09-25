@@ -89,3 +89,11 @@ class FakeObjectStorage(AbstractObjectStorage):
         except KeyError:
             raise ObjectDoesNotExistError
         return obj
+
+    def delete_object(self, obj: Object) -> bool:
+        try:
+            del self._containers[obj.container][obj.name]
+        except KeyError:
+            return False
+        else:
+            return True

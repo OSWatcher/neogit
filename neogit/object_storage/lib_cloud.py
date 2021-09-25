@@ -105,3 +105,11 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         except LibCloudObjectDoesNotExistError:
             raise ObjectDoesNotExistError
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
+    def delete_object(self, obj: Object) -> bool:
+        try:
+            libcloud_obj: LibCloudObject = self._driver.get_object(obj.container.name, obj.name)
+        except LibCloudObjectDoesNotExistError:
+            raise ObjectDoesNotExistError
+        else:
+            return self._driver.delete_object(libcloud_obj)

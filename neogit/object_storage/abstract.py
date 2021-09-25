@@ -86,3 +86,7 @@ class AbstractObjectStorage(ABC):
     @abstractmethod
     def get_object(self, container: Container, name: str) -> Object:
         pass
+
+    @abstractmethod
+    def delete_object(self, obj: Object) -> bool:
+        pass
