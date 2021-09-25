@@ -120,7 +120,7 @@ def neo4j_ready(start_neo4j_db: str):
 
 
 @fixture(scope="session")
-def neo4j_con(neo4j_ready: str):
+def ready_neo4j(neo4j_ready: str):
     # start db connection with the most basic driver
     bolt_url = settings.neo4j.url
     creds = (settings.neo4j.user, settings.neo4j.password)
@@ -128,10 +128,25 @@ def neo4j_con(neo4j_ready: str):
     yield driver
 
 
-@fixture(scope="function")
-def clean_neo4j_db(neo4j_con: BoltDriver):
+@fixture(scope="class")
+def clean_neo4j_db_per_class(ready_neo4j: BoltDriver):
     """cleanup db after test"""
-    driver = neo4j_con
+    driver = ready_neo4j
+    # ensure it's cleaned before test
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
+    yield driver
+    # cleanup
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
+
+
+@fixture(scope="function")
+def clean_neo4j_db(ready_neo4j: BoltDriver):
+    """cleanup db after test"""
+    driver = ready_neo4j
     # ensure it's cleaned before test
     with driver.session() as session:
         # clean all nodes and relationships
@@ -286,7 +301,21 @@ def neogit(clean_neo4j_db):
     return neogit
 
 
+@fixture(scope="class")
+def neogit_per_class(clean_neo4j_db_per_class):
+    ts_obj = TSObjectStorage(FakeObjectStorage, None)
+    neogit = Neogit(ts_obj)
+    return neogit
+
+
 @fixture(scope="function")
 def neogit_init(neogit):
+    neogit.init()
+    return neogit
+
+
+@fixture(scope="class")
+def neogit_init_per_class(neogit_per_class):
+    neogit = neogit_per_class
     neogit.init()
     return neogit
