@@ -1,6 +1,7 @@
 """pytest configuration and fixtures"""
 
 import logging
+import os
 import random
 import string
 import subprocess
@@ -12,12 +13,15 @@ from typing import Iterator, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
+import pytest
 from neo4j import BoltDriver, GraphDatabase
 from neomodel import db as neomodel_db
 from pytest import fixture
+from requests.exceptions import ConnectionError
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
+from neogit.service import Neogit
 
 NEO4J_VERSION = "4.2.4"
 MINIO_VERSION = "RELEASE.2021-05-11T23-27-41Z"
@@ -33,7 +37,7 @@ DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
 
 def pytest_addoption(parser):
     """add a new option to pass a specific directory to be merkelized"""
-    parser.addoption("--repo", action="store", help="root directory to be indexed")
+    parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
     parser.addoption(
         "--persistdb",
         action="store_true",
@@ -100,7 +104,7 @@ def start_neo4j_db(pytestconfig):
 
 
 @fixture(scope="session")
-def neo4j_ready(start_neo4j_db: str):
+def ready_neo4j(start_neo4j_db: str):
     """ensure neo4jdb is ready"""
     container_name = start_neo4j_db
     neo4j_http_url = settings.neo4j.http_url
@@ -110,26 +114,36 @@ def neo4j_ready(start_neo4j_db: str):
             logging.info("attempting to connect to DB %s", neo4j_http_url)
             with urlopen(neo4j_http_url, timeout=1) as opened_url:
                 opened_url.read()
-        except (URLError, ConnectionError):
+        except (URLError, ConnectionError, ConnectionResetError):
             time.sleep(0.7)
         else:
             opened = True
     yield container_name
 
 
-@fixture(scope="session")
-def neo4j_con(neo4j_ready: str):
-    # start db connection with the most basic driver
+@fixture(scope="class")
+def clean_neo4j_db_per_class(ready_neo4j: str):
+    """cleanup db after test"""
     bolt_url = settings.neo4j.url
     creds = (settings.neo4j.user, settings.neo4j.password)
     driver = GraphDatabase.driver(bolt_url, auth=creds)
+    # ensure it's cleaned before test
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
     yield driver
+    # cleanup
+    with driver.session() as session:
+        # clean all nodes and relationships
+        session.run("MATCH (n) DETACH DELETE n")
 
 
 @fixture(scope="function")
-def clean_neo4j_db(neo4j_con: BoltDriver):
+def clean_neo4j_db(ready_neo4j: str):
     """cleanup db after test"""
-    driver = neo4j_con
+    bolt_url = settings.neo4j.url
+    creds = (settings.neo4j.user, settings.neo4j.password)
+    driver = GraphDatabase.driver(bolt_url, auth=creds)
     # ensure it's cleaned before test
     with driver.session() as session:
         # clean all nodes and relationships
@@ -230,12 +244,63 @@ def minio_db(pytestconfig):
     settings.object.host = host
     settings.object.port = port
     settings.object.secure = secure
-    # ensure ready to receive connections
-    time.sleep(2)
     yield
     if not pytestconfig.getoption("persistdb"):
         cmdline = ["docker", "rm", "--force", cont_name]
         subprocess.check_call(cmdline)
+
+
+@fixture(scope="session")
+def ready_minio_db(minio_db):
+    """ensures that the minioDB is ready to receive connections"""
+    config = ObjectConfig.from_settings(settings)
+    driver = None
+    while driver is None:
+        try:
+            driver = LibcloudObjectStorage(config)
+            list(driver.iterate_containers())
+        except ConnectionError:
+            driver = None
+            time.sleep(0.1)
+    return driver
+
+
+@fixture(scope="function")
+def clean_minio_db(ready_minio_db):
+    """cleanup DB after test"""
+    libcloud_drv = ready_minio_db
+
+    # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
+    def cleanup_db():
+        for container in libcloud_drv.iterate_containers():
+            for obj in libcloud_drv.iterate_container_objects(container):
+                libcloud_drv.delete_object(obj)
+            libcloud_drv.delete_container(container)
+
+    cleanup_db()
+    # do the test
+    yield libcloud_drv
+    # cleanup
+    cleanup_db()
+
+
+@fixture(scope="class")
+def clean_minio_db_per_class(ready_minio_db):
+    """cleanup DB after test"""
+    libcloud_drv = ready_minio_db
+
+    # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
+    def cleanup_db():
+        for container in libcloud_drv.iterate_containers():
+            for obj in libcloud_drv.iterate_container_objects(container):
+                libcloud_drv.delete_object(obj)
+            libcloud_drv.delete_container(container)
+
+    cleanup_db()
+    # do the test
+    yield libcloud_drv
+    # cleanup
+    cleanup_db()
 
 
 # fake filesystem fixtures
@@ -248,40 +313,72 @@ def fakefs_one_empty_file(fs):
     empty_file.touch(exist_ok=False)
 
 
-@fixture
-def persistent_minio_db():
-    """start a MinIO db using Docker, persistent, for convience"""
-    port = 9000
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        f"--publish=9000:{port}",
-        "--name=neogit_miniodb",
-        f"minio/minio:{MINIO_VERSION}",
-        "server",
-        "/data",
-    ]
-    subprocess.check_call(cmdline)
-    # ensure ready to receive connections
-    time.sleep(2)
+# instantiate Neogit
+@fixture(scope="function", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+def max_workers(request):
+    nb_workers = request.param
+    return nb_workers
 
 
-@fixture(scope="session")
-def persistent_neo4j_db():
-    """start a neo4j db using Docker"""
-    cmdline = [
-        "docker",
-        "run",
-        "--detach",
-        "--publish=7474:7474",
-        "--publish=7687:7687",
-        "--env",
-        "NEO4J_AUTH=none",
-        "--env",
-        'NEO4JLABS_PLUGINS=["apoc"]',
-        "--name=neogit_neo4jdb",
-        f"neo4j:{NEO4J_VERSION}",
-    ]
-    subprocess.check_call(cmdline)
-    time.sleep(2)
+@fixture(scope="class", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+def max_workers_per_class(request):
+    nb_workers = request.param
+    return nb_workers
+
+
+@fixture(
+    scope="function", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"]
+)
+def neogit(clean_neo4j_db, clean_minio_db, tmp_path, max_workers, request):
+    """creates an instance of Neogit, inject a fake object storage as dependency"""
+    provider = request.param
+    config = None
+    cls = LibcloudObjectStorage
+    if provider is None:
+        cls = FakeObjectStorage
+    if provider == "local":
+        config = ObjectConfig(provider=provider, key=str(tmp_path))
+    if provider == "minio":
+        config = ObjectConfig.from_settings(settings)
+    settings.max_workers = max_workers
+    ts_obj = TSObjectStorage(cls, config)
+    neogit = Neogit(ts_obj)
+    return neogit
+
+
+@pytest.fixture(scope="class")
+def tmp_path_per_class():
+    with TemporaryDirectory() as tmp_dir:
+        yield Path(tmp_dir)
+
+
+@fixture(scope="class", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"])
+def neogit_per_class(
+    clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_path_per_class, max_workers_per_class, request
+):
+    provider = request.param
+    config = None
+    cls = LibcloudObjectStorage
+    if provider is None:
+        cls = FakeObjectStorage
+    if provider == "local":
+        config = ObjectConfig(provider=provider, key=str(tmp_path_per_class))
+    if provider == "minio":
+        config = ObjectConfig.from_settings(settings)
+    settings.max_workers = max_workers_per_class
+    ts_obj = TSObjectStorage(cls, config)
+    neogit = Neogit(ts_obj)
+    return neogit
+
+
+@fixture(scope="function")
+def neogit_init(neogit):
+    neogit.init()
+    return neogit
+
+
+@fixture(scope="class")
+def neogit_init_per_class(neogit_per_class):
+    neogit = neogit_per_class
+    neogit.init()
+    return neogit

@@ -62,6 +62,10 @@ class AbstractObjectStorage(ABC):
         pass
 
     @abstractmethod
+    def iterate_container_objects(self, container: Container) -> Iterator[Object]:
+        pass
+
+    @abstractmethod
     def upload_object(self, filepath: str, container: Container, object_name: str, extra: dict = None) -> Object:
         pass
 
@@ -81,4 +85,8 @@ class AbstractObjectStorage(ABC):
 
     @abstractmethod
     def get_object(self, container: Container, name: str) -> Object:
+        pass
+
+    @abstractmethod
+    def delete_object(self, obj: Object) -> bool:
         pass

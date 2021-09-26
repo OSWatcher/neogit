@@ -60,6 +60,11 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         gen_containers = (Container(c.name) for c in self._driver.iterate_containers())
         yield from gen_containers
 
+    def iterate_container_objects(self, container: Container) -> Iterator[Object]:
+        libcloud_container = LibCloudContainer(container.name, {}, self._driver)
+        for obj in self._driver.iterate_container_objects(libcloud_container):
+            yield Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
     def get_container(self, name: str) -> Container:
         try:
             c: LibCloudContainer = self._driver.get_container(name)
@@ -100,3 +105,11 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         except LibCloudObjectDoesNotExistError:
             raise ObjectDoesNotExistError
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
+
+    def delete_object(self, obj: Object) -> bool:
+        try:
+            libcloud_obj: LibCloudObject = self._driver.get_object(obj.container.name, obj.name)
+        except LibCloudObjectDoesNotExistError:
+            raise ObjectDoesNotExistError
+        else:
+            return self._driver.delete_object(libcloud_obj)

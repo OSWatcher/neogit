@@ -60,3 +60,6 @@ coverage.xml
 
 # Ignore dynaconf secret files
 neogit/config/.secrets.toml
+
+# ignore tests cache
+tests/data/cache
