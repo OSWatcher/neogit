@@ -96,3 +96,12 @@ def test_commit_filesystem_data_fs(neogit_init, fs_root: TestFSRoot):
     commit = Commit.nodes.get(name=commit_name)
     assert len(commit.filesystem) == 1
     assert commit.filesystem[0].asdict() == fs_root.tree.asdict()
+
+
+# get_object_size
+def test_get_object_size(neogit_init):
+    neogit = neogit_init
+    neogit.commit("first commit", TEST_DATA_FS.dir_one_file.path)
+    first_child_blob = next(iter(TEST_DATA_FS.dir_one_file.tree.children_blob.values()))
+    size = neogit.get_object_size(first_child_blob.sha1sum)
+    assert size == 75146
