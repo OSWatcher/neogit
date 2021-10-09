@@ -6,7 +6,7 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 
 from typing import Callable, Optional
 
-from neogit.domain import Node
+from neogit.core.model import Node
 
 
 class NodeVisitor(object):

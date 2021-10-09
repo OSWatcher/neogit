@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterator
 import attr
 
 if typing.TYPE_CHECKING:
-    from neogit.visitor import NodeVisitor
+    from neogit.core.visitor import NodeVisitor
 
 
 @attr.s

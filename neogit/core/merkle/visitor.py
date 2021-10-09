@@ -2,8 +2,8 @@ import hashlib
 
 from more_itertools import consume
 
-from neogit.domain import FSDirectoryNode, FSFileNode, MerkleNode
-from neogit.visitor import NodeVisitor
+from neogit.core.model import FSDirectoryNode, FSFileNode, MerkleNode
+from neogit.core.visitor import NodeVisitor
 
 
 class MerkleVisitor(NodeVisitor):

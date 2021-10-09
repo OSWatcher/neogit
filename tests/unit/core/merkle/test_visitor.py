@@ -7,8 +7,8 @@ import attr
 import pytest
 from pytest import fixture
 
-from neogit.domain import FSDirectoryNode, MerkleNode
-from neogit.merkle import MerkleVisitor
+from neogit.core.model import FSDirectoryNode, MerkleNode
+from neogit.core.merkle import MerkleVisitor
 
 EMPTY_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
