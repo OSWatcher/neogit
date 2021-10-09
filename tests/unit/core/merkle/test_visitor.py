@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from neogit.core.model import FSDirectoryNode
 from neogit.core.merkle import MerkleVisitor
+from neogit.core.model import FSDirectoryNode
 
 
 def test_merklevisitor_root_fs(root_fs):
