@@ -27,6 +27,7 @@ fasteners = "0.16"
 appdirs = "1.4.4"
 rich = "10.2.0"
 attrs = "^21.2.0"
+neomodel = "^4.0.5"
 
 [tool.poetry.dev-dependencies]
 black = "21.8b0"
@@ -39,7 +40,6 @@ coverage = "5.5"
 # TODO: darglint, flake8-docstrings
 types-docopt = "^0.6.3"
 appdirs-stubs = "^0.1.0"
-neomodel = "^4.0.5"
 GitPython = "^3.1.14"
 
 [tool.black]
@@ -77,6 +77,7 @@ pretty = true
 module = [
     "neo4j.*",
     "py2neo.*",
+    "neomodel.*",
     "dynaconf.*",
     "coloredlogs.*",
 ]
