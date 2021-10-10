@@ -9,11 +9,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterator, Optional, Dict, Union
+from typing import Dict, Iterator, Optional, Union
 from urllib.error import URLError
 from urllib.request import urlopen
-import attr
 
+import attr
 import pytest
 from neo4j import BoltDriver, GraphDatabase
 from neomodel import db as neomodel_db
@@ -386,10 +386,34 @@ def neogit_init_per_class(neogit_per_class):
     return neogit
 
 
+# object storage fixture
+#
+# generate multiple object storage
+# --------------------------------------------
+
+
+@fixture(scope="class", params=[None, "local", "minio"], ids=["FakeObjectStorage", "LibCloud-Local", "LibCloud-MinIO"])
+def ts_object_storage(
+    clean_neo4j_db_per_class, clean_minio_db_per_class, tmp_path_per_class, max_workers_per_class, request
+):
+    provider = request.param
+    config = None
+    cls = LibcloudObjectStorage
+    if provider is None:
+        cls = FakeObjectStorage
+    if provider == "local":
+        config = ObjectConfig(provider=provider, key=str(tmp_path_per_class))
+    if provider == "minio":
+        config = ObjectConfig.from_settings(settings)
+    settings.max_workers = max_workers_per_class
+    ts_obj = TSObjectStorage(cls, config)
+    yield ts_obj
+
+
 # root_fs
 #
 # fixture related to generating a virtual root_fs populated with files and directories
-#--------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------
 EMPTY_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 
