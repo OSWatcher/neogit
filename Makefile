@@ -57,3 +57,10 @@ coverage_html:
 	# create html coverage report and display it in system browser
 	coverage html --dir .coverage_html
 	xdg-open .coverage_html/index.html
+
+
+shutdown_dbs:
+	# shutdown Neo4j and MinIOD DBs, if they are running
+	# useful after integration test session with --persistdb
+	docker stop neogit_neo4j_testdb
+	docker stop neogit_minio_testdb
