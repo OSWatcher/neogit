@@ -1,5 +1,6 @@
 import hashlib
 import re
+from enum import Enum, auto
 from functools import lru_cache
 from typing import Dict, List
 
@@ -7,6 +8,13 @@ import attr
 
 # avoid circular dependency
 from .node import Node
+
+
+class MerkleLabel(Enum):
+    # this is used to differentiate between MerkleNode who are blobs and empty Trees
+    # since both have no children
+    Blob = auto()
+    Tree = auto()
 
 
 @lru_cache(maxsize=1)
@@ -24,6 +32,9 @@ class MerkleNode(Node):
 
     """The hexdigest of a hashing algorithm (SHA1, SHA256, SHA512)"""
     hash: str = attr.ib()
+    # label to differentiate Blob from Trees
+    label: MerkleLabel = attr.ib(validator=attr.validators.in_(MerkleLabel))
+    # TODO: use iter_child_nodes
     children: Dict[str, "MerkleNode"] = attr.ib(factory=dict)
 
     @hash.validator

@@ -21,7 +21,7 @@ from pytest import fixture
 from requests.exceptions import ConnectionError
 
 from neogit.config import ObjectConfig, settings
-from neogit.core.model import MerkleNode
+from neogit.core.model import MerkleNode, MerkleLabel
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
@@ -434,17 +434,17 @@ def gen_root_fs() -> Iterator[VirtualFSDirectory]:
 
     Each VirtualFSDirectory also contains its merkle_node representation"""
     # root
-    root_merkle_node = MerkleNode(EMPTY_SHA1)
+    root_merkle_node = MerkleNode(EMPTY_SHA1, label=MerkleLabel.Tree)
     root_dir = VirtualFSDirectory(root_merkle_node)
     yield pytest.param(root_dir, id="empty_dir")
     # one subdirectory
-    subdir1_merkle_node = MerkleNode(EMPTY_SHA1)
+    subdir1_merkle_node = MerkleNode(EMPTY_SHA1, label=MerkleLabel.Tree)
     subdir1 = VirtualFSDirectory(subdir1_merkle_node)
     root_dir.merkeled_node.hash = "ac7b58cb43a320c493188b1a976a27f94a4e53ea"
     root_dir.children["subdir1"] = subdir1
     yield pytest.param(root_dir, id="one_subdir")
     # one file
-    one_file_merkle_node = MerkleNode(EMPTY_SHA1)
+    one_file_merkle_node = MerkleNode(EMPTY_SHA1, MerkleLabel.Tree)
     one_file_blob = VirtualFSBlob(b"")
     root_dir.children.clear()
     root_dir.children["one_file"] = one_file_blob
