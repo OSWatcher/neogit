@@ -1,4 +1,14 @@
-"""Test Object Uploader"""
+"""
+Test Object Uploader
+
+- upload one file
+- upload one file already uploaded
+- upload 10/100/1000 files
+- max workers 1/2/6/12/24
+- fault injection while uploading, retry logic
+- inject KeyboardInterrupt, should remove every objects previously uploaded
+
+"""
 import hashlib
 from pathlib import Path
 
