@@ -3,8 +3,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
-from threading import local
-from typing import Optional
+from threading import get_ident, local
+from typing import Dict, Optional
 
 import attr
 
@@ -27,6 +27,8 @@ class ObjectUploader:
         self._upload_pool = ThreadPoolExecutor(thread_name_prefix="upload-pool", max_workers=max_workers)
         # cache container object per thread
         self._th_local = local()
+        # give human readable worker count for each worker
+        self._tid_to_number: Dict[int, int] = {}
 
     def __enter__(self):
         self._upload_pool.__enter__()
@@ -60,6 +62,12 @@ class ObjectUploader:
         """pipeline stage to upload a given object to the object storage"""
         # get per-thread object storage instance
         obj_adapter = self._ts_object.instance
+        tid = get_ident()
+        try:
+            worker_number = self._tid_to_number[tid]
+        except KeyError:
+            self._tid_to_number[tid] = len(self._tid_to_number) + 1
+            worker_number = self._tid_to_number[tid]
 
         # get container
         container = self._get_container()
@@ -73,4 +81,7 @@ class ObjectUploader:
             with filepath_merkle_ctx(to_upload_obj.filepath) as io:
                 read_chunk_iter = iter(partial(io.read, BUFFER_SIZE), b"")
                 obj_adapter.upload_object_via_stream(read_chunk_iter, container, obj_name)
+            self._logger.debug("[%s]%s Uploaded", worker_number, to_upload_obj.hash)
+        else:
+            self._logger.debug("[%s]%s Exists", worker_number, to_upload_obj.hash)
         return True

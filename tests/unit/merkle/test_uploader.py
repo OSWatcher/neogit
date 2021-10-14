@@ -10,12 +10,57 @@ Test Object Uploader
 
 """
 import hashlib
+import itertools
+import os
+import random
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import List
 
+import attr
+import pytest
 from pytest import fixture
 
+from neogit.config import settings
 from neogit.merkle.uploader import ObjectUploader
 from neogit.object_storage import FakeObjectStorage, TSObjectStorage
+
+
+@attr.s
+class ObjectToUpload:
+    filepath: Path = attr.ib()
+    hash: str = attr.ib()
+
+
+def sha1sum(data: bytes) -> str:
+    hash = hashlib.sha1()
+    hash.update(data)
+    return hash.hexdigest()
+
+
+@fixture(params=[1, 2, 12, 24], autouse=True, ids=lambda x: f"max_workers-{x}")
+def uploader_max_workers(request):
+    """Fixture to param uploader max workers threads
+    autouse for all tests in this file"""
+    # configure neogit
+    max_workers: int = request.param
+    settings.max_workers = max_workers
+
+
+def gen_file_list():
+    """Generate a list of files"""
+    # We don't delete the files here
+    # so make sure to request the virtual filesystem fixture "fs", so
+    # it won't remain for real
+    while True:
+        with NamedTemporaryFile(delete=False) as tmp_file:
+            # write random data
+            # of random size
+            rand_size = random.randint(1, 1024)
+            data = os.urandom(rand_size)
+            tmp_file.file.write(data)
+            tmp_file.flush()
+            yield ObjectToUpload(Path(tmp_file.name), sha1sum(data))
 
 
 @fixture
@@ -28,23 +73,22 @@ def fake_ts_object_storage():
         ts_object_storage.instance.delete_container(container)
 
 
-def test_upload_one_file(fs, fake_ts_object_storage):
+@pytest.mark.parametrize("file_count", [1, 10, 100])
+def test_upload_file(fs, fake_ts_object_storage, file_count):
     # arrange
-    expected_data = b"data"
-    hash = hashlib.sha1()
-    hash.update(expected_data)
-    expected_data_hash = hash.hexdigest()
-    filepath = Path("/file1.txt")
-    with open(filepath, "wb") as f:
-        f.write(expected_data)
+    # get first n elements
+    file_list: List[ObjectToUpload] = list(itertools.islice(gen_file_list(), file_count))
     container = fake_ts_object_storage.instance.get_container("objects")
     # act
     with ObjectUploader(fake_ts_object_storage) as uploader:
-        uploader.submit(filepath, expected_data_hash)
+        for file_to_upload in file_list:
+            uploader.submit(file_to_upload.filepath, file_to_upload.hash)
     # assert
-    obj = fake_ts_object_storage.instance.get_object(container, expected_data_hash)
-    assert obj
-    fake_ts_object_storage.instance.download_object(obj, "/file2.txt")
-    with open("/file2.txt", "rb") as f:
-        content = f.read()
-        assert content, expected_data
+    for file_to_upload in file_list:
+        obj = fake_ts_object_storage.instance.get_object(container, file_to_upload.hash)
+        assert obj
+        with NamedTemporaryFile() as tmp_file:
+            fake_ts_object_storage.instance.download_object(obj, tmp_file.name)
+            with open(tmp_file.name, "rb") as f:
+                content = f.read()
+                assert sha1sum(content) == file_to_upload.hash
