@@ -31,7 +31,6 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         config_dict = {k: v for k, v in asdict(config).items() if v is not None}
         # drop provider as well (already used before)
         del config_dict["provider"]
-        print(config_dict)
         self._driver = cls(**config_dict)
 
     def create_container(self, name: str) -> Container:
