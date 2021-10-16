@@ -1,9 +1,9 @@
 """This module takes care of uploading objects to the object storage"""
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
-from threading import get_ident, local
+from threading import Lock, get_ident, local
 from typing import Dict, Optional
 
 import attr
@@ -29,6 +29,10 @@ class ObjectUploader:
         self._th_local = local()
         # give human readable worker count for each worker
         self._tid_to_number: Dict[int, int] = {}
+        # future to upload object
+        self._fut_to_upobj: Dict[Future, UploadObject] = {}
+        # if any exception was raised by one of the future
+        self._has_exception: Optional[BaseException] = None
 
     def __enter__(self):
         self._upload_pool.__enter__()
@@ -39,11 +43,32 @@ class ObjectUploader:
 
     def submit(self, filepath: Path, hash: str):
         object = UploadObject(filepath, hash)
-        self._upload_pool.submit(self._storage_upload, object)
+        future: Future = self._upload_pool.submit(self._storage_upload, object)
+        self._fut_to_upobj[future] = object
+        future.add_done_callback(self._check_upload_result)
 
     def wait(self):
         """Wait for the pool to terminate"""
         self.__exit__(None, None, None)
+
+    def _check_upload_result(self, future: Future):
+        """Checks the result of the Future object and logs the error if any"""
+        upload_object = self._fut_to_upobj[future]
+        exception = future.exception()
+        if exception is not None:
+            # TODO: how to cancel insertion
+            self._logger.warning(f"Failed to upload {upload_object}: {exception}")
+            # lock the thread before updating the variable
+            # it will be checked by another thread
+            with Lock():
+                self._has_exception = exception
+        # remove entry in dict
+        del self._fut_to_upobj[future]
+
+    def check_exception(self):
+        """Checks if any exception was raised by one of the future, and raise it"""
+        if self._has_exception is not None:
+            raise self._has_exception
 
     def _get_container(self):
         """get the container and cache it in a thread local variable.
