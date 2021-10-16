@@ -1,12 +1,11 @@
 """
 Test Object Uploader
 
-- upload one file
-- upload one file already uploaded
-- upload 10/100/1000 files
+- upload 1/10/100/1000 files
 - max workers 1/2/6/12/24
-- fault injection while uploading, retry logic
-- inject KeyboardInterrupt, should remove every objects previously uploaded
+- TODO: upload one file already uploaded
+- TODO: fault injection while uploading, retry logic
+- TODO: inject KeyboardInterrupt, should remove every objects previously uploaded
 
 """
 import hashlib
@@ -92,3 +91,19 @@ def test_upload_file(fs, fake_ts_object_storage, file_count):
             with open(tmp_file.name, "rb") as f:
                 content = f.read()
                 assert sha1sum(content) == file_to_upload.hash
+
+
+# TODO
+# def test_upload_file_already_existing(fs, fake_ts_object_storage):
+#     # arrange
+#     object_to_upload = list(itertools.islice(gen_file_list(), 1))[0]
+#     container = fake_ts_object_storage.instance.get_container("objects")
+#     # upload first time
+#     uploader = ObjectUploader(fake_ts_object_storage)
+#     uploader.submit(object_to_upload.filepath, object_to_upload.hash)
+#     # act
+#     # upload twice
+#     uploader.submit(object_to_upload.filepath, object_to_upload.hash)
+#     uploader.wait()
+#     # assert
+#     # ????
