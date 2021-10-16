@@ -24,7 +24,11 @@ class Object:
     meta_data: dict
 
 
-class ContainerError(Exception):
+class ObjectStorageError(Exception):
+    """Base error class"""
+
+
+class ContainerError(ObjectStorageError):
     pass
 
 
@@ -36,7 +40,7 @@ class ContainerDoesNotExistError(ContainerError):
     pass
 
 
-class ObjectError(Exception):
+class ObjectError(ObjectStorageError):
     pass
 
 
