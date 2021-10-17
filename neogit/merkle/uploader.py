@@ -14,7 +14,7 @@ from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
 
 @attr.s
-class UploadObject:
+class MerkleFile:
     filepath: Path = attr.ib()
     hash: str = attr.ib()
 
@@ -30,7 +30,7 @@ class ObjectUploader:
         # give human readable worker count for each worker
         self._tid_to_number: Dict[int, int] = {}
         # future to upload object
-        self._fut_to_upobj: Dict[Future, UploadObject] = {}
+        self._fut_to_upobj: Dict[Future, MerkleFile] = {}
         # if any exception was raised by one of the future
         self._has_exception: Optional[BaseException] = None
 
@@ -42,7 +42,7 @@ class ObjectUploader:
         self._upload_pool.__exit__(exc_type, exc_val, exc_tb)
 
     def submit(self, filepath: Path, hash: str):
-        object = UploadObject(filepath, hash)
+        object = MerkleFile(filepath, hash)
         future: Future = self._upload_pool.submit(self._storage_upload, object)
         self._fut_to_upobj[future] = object
         future.add_done_callback(self._check_upload_result)
@@ -83,7 +83,7 @@ class ObjectUploader:
             self._th_local.container = container
         return container
 
-    def _storage_upload(self, to_upload_obj: UploadObject):
+    def _storage_upload(self, to_upload_obj: MerkleFile):
         """pipeline stage to upload a given object to the object storage"""
         # get per-thread object storage instance
         obj_adapter = self._ts_object.instance

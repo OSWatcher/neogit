@@ -17,19 +17,12 @@ from tempfile import NamedTemporaryFile
 from typing import List
 from unittest.mock import Mock
 
-import attr
 import pytest
 from pytest import fixture
 
 from neogit.config import settings
-from neogit.merkle.uploader import ObjectUploader
+from neogit.merkle.uploader import MerkleFile, ObjectUploader
 from neogit.object_storage import FakeObjectStorage, ObjectDoesNotExistError, TSObjectStorage
-
-
-@attr.s
-class ObjectToUpload:
-    filepath: Path = attr.ib()
-    hash: str = attr.ib()
 
 
 def sha1sum(data: bytes) -> str:
@@ -60,7 +53,7 @@ def gen_file_list():
             data = os.urandom(rand_size)
             tmp_file.file.write(data)
             tmp_file.flush()
-            yield ObjectToUpload(Path(tmp_file.name), sha1sum(data))
+            yield MerkleFile(Path(tmp_file.name), sha1sum(data))
 
 
 @fixture
@@ -77,7 +70,7 @@ def fake_ts_object_storage():
 def test_upload_file(fs, fake_ts_object_storage, file_count):
     # arrange
     # get first n elements
-    file_list: List[ObjectToUpload] = list(itertools.islice(gen_file_list(), file_count))
+    file_list: List[MerkleFile] = list(itertools.islice(gen_file_list(), file_count))
     container = fake_ts_object_storage.instance.get_container("objects")
     # act
     with ObjectUploader(fake_ts_object_storage) as uploader:
@@ -97,7 +90,7 @@ def test_upload_file(fs, fake_ts_object_storage, file_count):
 def test_check_exception(fs):
     """Check that check_exception API raise an exception when one thread encounters a fatal error"""
     # arrange
-    object_to_upload = list(itertools.islice(gen_file_list(), 1))[0]
+    object_to_upload: MerkleFile = list(itertools.islice(gen_file_list(), 1))[0]
     # get object should raise that the object cannot be found
     mock_fake_ts_object_storage = Mock()
     mock_fake_ts_object_storage.instance.get_object.side_effect = ObjectDoesNotExistError()
