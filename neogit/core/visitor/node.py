@@ -6,7 +6,7 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 
 from functools import wraps
 from queue import Queue
-from typing import Any, Callable, Optional
+from typing import Any, Callable, List, Optional, Union
 
 import attr
 from attr.validators import instance_of
@@ -37,9 +37,10 @@ def visit_hook(f):
         if post_visit_f:
             post_visit_f(node, visit_ret_val, *args, **kwargs)
         # if queue defined, post visit return value there
-        if self._queue:
+        if self._queue_list:
             item = VisitedNode(node, visit_ret_val)
-            self._queue.put(item)
+            for q in self._queue_list:
+                q.put(item)
         return visit_ret_val
 
     return wrapper
@@ -56,13 +57,15 @@ class NodeVisitor(object):
     (return value `None`) the `generic_visit` visitor is used instead.
     """
 
-    def __init__(self, queue: Queue = None):
+    def __init__(self, queue: Union[Queue, List[Queue]] = None):
         """Initialize a NodeVisitor
 
         Parameters:
             queue: post visit queue to put visited node and their return value for external processing
         """
-        self._queue = queue
+        self._queue_list = queue
+        if isinstance(queue, Queue):
+            self._queue_list = [queue]
 
     def get_visitor(self, node: Node, prefix="visit_") -> Optional[Callable]:
         """Return the visitor function for this node or `None` if no visitor
@@ -88,5 +91,6 @@ class NodeVisitor(object):
     def done_visiting(self):
         """a workaround method to put the None object inside the queue, if any"""
         # TODO: better interface ?
-        if self._queue:
-            self._queue.put(None)
+        if self._queue_list:
+            for q in self._queue_list:
+                q.put(None)
