@@ -5,9 +5,19 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 """
 
 from functools import wraps
-from typing import Callable, Optional
+from queue import Queue
+from typing import Any, Callable, Optional
+
+import attr
+from attr.validators import instance_of
 
 from neogit.core.model import Node
+
+
+@attr.s
+class VisitedNode:
+    node: Node = attr.ib(validator=instance_of(Node))
+    return_value: Any = attr.ib()
 
 
 def visit_hook(f):
@@ -16,18 +26,20 @@ def visit_hook(f):
     @wraps(f)
     def wrapper(self, node: Node, *args, **kwargs):
         # call pre_visit hook, if any
-        pre_method_name = f"pre_visit_{node.__class__.__name__}"
-        pre_visit_f = getattr(self, pre_method_name, None)
+        pre_visit_f = self.get_visitor(node, "pre_visit")
         if pre_visit_f:
             pre_visit_f(node, *args, **kwargs)
         # call main func
         # this func needs self
         visit_ret_val = f(self, node, *args, **kwargs)
         # call post_visit hook, if any
-        post_method_name = f"post_visit_{node.__class__.__name__}"
-        post_visit_f = getattr(self, post_method_name, None)
+        post_visit_f = self.get_visitor(node, "post_visit")
         if post_visit_f:
             post_visit_f(node, visit_ret_val, *args, **kwargs)
+        # if queue defined, post visit return value there
+        if self._queue:
+            item = VisitedNode(node, visit_ret_val)
+            self._queue.put(item)
         return visit_ret_val
 
     return wrapper
@@ -44,12 +56,20 @@ class NodeVisitor(object):
     (return value `None`) the `generic_visit` visitor is used instead.
     """
 
-    def get_visitor(self, node: Node) -> Optional[Callable]:
+    def __init__(self, queue: Queue = None):
+        """Initialize a NodeVisitor
+
+        Parameters:
+            queue: post visit queue to put visited node and their return value for external processing
+        """
+        self._queue = queue
+
+    def get_visitor(self, node: Node, prefix="visit_") -> Optional[Callable]:
         """Return the visitor function for this node or `None` if no visitor
         exists for this node.  In that case the generic visit function is
         used instead.
         """
-        method = "visit_" + node.__class__.__name__
+        method = prefix + node.__class__.__name__
         return getattr(self, method, None)
 
     @visit_hook

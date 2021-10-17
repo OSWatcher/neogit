@@ -21,7 +21,7 @@ from pytest import fixture
 from requests.exceptions import ConnectionError
 
 from neogit.config import ObjectConfig, settings
-from neogit.core.model import MerkleNode, MerkleLabel
+from neogit.core.model import MerkleLabel, MerkleNode
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 

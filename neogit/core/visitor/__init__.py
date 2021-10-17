@@ -1,1 +1,1 @@
-from .node import NodeVisitor
+from .node import NodeVisitor, VisitedNode
