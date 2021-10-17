@@ -1,5 +1,5 @@
 """pytest configuration and fixtures"""
-
+import hashlib
 import logging
 import os
 import random
@@ -8,7 +8,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Dict, Iterator, Optional, Union
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -22,6 +22,7 @@ from requests.exceptions import ConnectionError
 
 from neogit.config import ObjectConfig, settings
 from neogit.core.model import MerkleLabel, MerkleNode
+from neogit.merkle.uploader import MerkleFile
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
@@ -51,6 +52,15 @@ def pytest_addoption(parser):
 @fixture
 def arg_repo_root(pytestconfig):
     return pytestconfig.getoption("repo")
+
+
+# helpers
+
+
+def sha1sum(data: bytes) -> str:
+    hash = hashlib.sha1()
+    hash.update(data)
+    return hash.hexdigest()
 
 
 def random_name():
@@ -410,6 +420,16 @@ def ts_object_storage(
     yield ts_obj
 
 
+@fixture
+def fake_ts_object_storage():
+    ts_object_storage = TSObjectStorage(FakeObjectStorage, None)
+    ts_object_storage.instance.create_container("objects")
+    yield ts_object_storage
+    # cleanup
+    for container in ts_object_storage.instance.iterate_containers():
+        ts_object_storage.instance.delete_container(container)
+
+
 # root_fs
 #
 # fixture related to generating a virtual root_fs populated with files and directories
@@ -472,3 +492,20 @@ def root_fs(fs, request):
 
     build_fs(root_dir, Path("/"))
     return root_dir.merkeled_node
+
+
+# gen file list
+def gen_file_list():
+    """Generate a list of files"""
+    # We don't delete the files here
+    # so make sure to request the virtual filesystem fixture "fs", so
+    # it won't remain for real
+    while True:
+        with NamedTemporaryFile(delete=False) as tmp_file:
+            # write random data
+            # of random size
+            rand_size = random.randint(1, 1024)
+            data = os.urandom(rand_size)
+            tmp_file.file.write(data)
+            tmp_file.flush()
+            yield MerkleFile(Path(tmp_file.name), sha1sum(data))

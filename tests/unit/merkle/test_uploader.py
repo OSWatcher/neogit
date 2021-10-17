@@ -8,11 +8,7 @@ Test Object Uploader
 - TODO: inject KeyboardInterrupt, should remove every objects previously uploaded
 
 """
-import hashlib
 import itertools
-import os
-import random
-from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import List
 from unittest.mock import Mock
@@ -22,13 +18,8 @@ from pytest import fixture
 
 from neogit.config import settings
 from neogit.merkle.uploader import MerkleFile, ObjectUploader
-from neogit.object_storage import FakeObjectStorage, ObjectDoesNotExistError, TSObjectStorage
-
-
-def sha1sum(data: bytes) -> str:
-    hash = hashlib.sha1()
-    hash.update(data)
-    return hash.hexdigest()
+from neogit.object_storage import ObjectDoesNotExistError
+from tests.conftest import gen_file_list, sha1sum
 
 
 @fixture(params=[1, 2, 12, 24], autouse=True, ids=lambda x: f"max_workers-{x}")
@@ -38,32 +29,6 @@ def uploader_max_workers(request):
     # configure neogit
     max_workers: int = request.param
     settings.max_workers = max_workers
-
-
-def gen_file_list():
-    """Generate a list of files"""
-    # We don't delete the files here
-    # so make sure to request the virtual filesystem fixture "fs", so
-    # it won't remain for real
-    while True:
-        with NamedTemporaryFile(delete=False) as tmp_file:
-            # write random data
-            # of random size
-            rand_size = random.randint(1, 1024)
-            data = os.urandom(rand_size)
-            tmp_file.file.write(data)
-            tmp_file.flush()
-            yield MerkleFile(Path(tmp_file.name), sha1sum(data))
-
-
-@fixture
-def fake_ts_object_storage():
-    ts_object_storage = TSObjectStorage(FakeObjectStorage, None)
-    ts_object_storage.instance.create_container("objects")
-    yield ts_object_storage
-    # cleanup
-    for container in ts_object_storage.instance.iterate_containers():
-        ts_object_storage.instance.delete_container(container)
 
 
 @pytest.mark.parametrize("file_count", [1, 10, 100])
