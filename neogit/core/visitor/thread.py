@@ -34,4 +34,7 @@ class NodeVisitorThread:
         return self._future.result()
 
     def _run(self, visitor: NodeVisitor, node_to_visit: Node):
-        return visitor.visit(node_to_visit)
+        value = visitor.visit(node_to_visit)
+        # put None in queue
+        visitor.done_visiting()
+        return value

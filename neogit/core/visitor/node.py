@@ -84,3 +84,9 @@ class NodeVisitor(object):
         """Called if no explicit visitor function exists for a node."""
         for node in node.iter_child_nodes():
             self.visit(node, *args, **kwargs)
+
+    def done_visiting(self):
+        """a workaround method to put the None object inside the queue, if any"""
+        # TODO: better interface ?
+        if self._queue:
+            self._queue.put(None)

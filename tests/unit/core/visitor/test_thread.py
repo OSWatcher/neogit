@@ -14,5 +14,7 @@ def test_node_visitor_thread():
         thread.start()
         thread.join()
     # assert
-    assert queue.qsize() == 1
+    assert queue.qsize() == 2
     assert queue.get() == VisitedNode(node, None)
+    # sentinel
+    assert queue.get() is None
