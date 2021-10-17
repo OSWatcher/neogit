@@ -15,6 +15,7 @@ import random
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import List
+from unittest.mock import Mock
 
 import attr
 import pytest
@@ -22,7 +23,7 @@ from pytest import fixture
 
 from neogit.config import settings
 from neogit.merkle.uploader import ObjectUploader
-from neogit.object_storage import FakeObjectStorage, TSObjectStorage
+from neogit.object_storage import FakeObjectStorage, ObjectDoesNotExistError, TSObjectStorage
 
 
 @attr.s
@@ -91,6 +92,23 @@ def test_upload_file(fs, fake_ts_object_storage, file_count):
             with open(tmp_file.name, "rb") as f:
                 content = f.read()
                 assert sha1sum(content) == file_to_upload.hash
+
+
+def test_check_exception(fs):
+    """Check that check_exception API raise an exception when one thread encounters a fatal error"""
+    # arrange
+    object_to_upload = list(itertools.islice(gen_file_list(), 1))[0]
+    # get object should raise that the object cannot be found
+    mock_fake_ts_object_storage = Mock()
+    mock_fake_ts_object_storage.instance.get_object.side_effect = ObjectDoesNotExistError()
+    mock_fake_ts_object_storage.instance.upload_object_via_stream.side_effect = ConnectionError("Connection Error !")
+    # act
+    uploader = ObjectUploader(mock_fake_ts_object_storage)
+    uploader.submit(object_to_upload.filepath, object_to_upload.hash)
+    uploader.wait()
+    # assert
+    with pytest.raises(ConnectionError):
+        uploader.check_exception()
 
 
 # TODO
