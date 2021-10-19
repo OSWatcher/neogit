@@ -25,7 +25,6 @@ class Blob(BaseMerkleNode):
 
 
 class Tree(BaseMerkleNode):
-    hash = StringProperty(unique_index=True, required=True)
     children_blob = RelationshipTo(Blob, "HAS_CHILD_BLOB", model=HasChildRel)
     children_tree = RelationshipTo("Tree", "HAS_CHILD_TREE", model=HasChildRel)
 
