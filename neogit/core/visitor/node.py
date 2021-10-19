@@ -4,6 +4,7 @@ Visitor design pattern
 Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/jinja2/visitor.py (NodeJS)
 """
 
+import logging
 from functools import wraps
 from queue import Queue
 from typing import Any, Callable, List, Optional, Union
@@ -63,6 +64,7 @@ class NodeVisitor(object):
         Parameters:
             queue: post visit queue to put visited node and their return value for external processing
         """
+        self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._queue_list = queue
         if isinstance(queue, Queue):
             self._queue_list = [queue]
