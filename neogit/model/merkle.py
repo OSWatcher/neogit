@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Dict, Union
 
 from neomodel import RelationshipTo, StringProperty, StructuredNode, StructuredRel
@@ -56,7 +55,8 @@ class Tree(BaseMerkleNode):
         return {"hash": self.hash, "content": content}
 
 
-@lru_cache(maxsize=1024)
+# TODO
+# @lru_cache(maxsize=1024)
 def cached_retrieve_merkle_node(node: MerkleNode) -> Union[Blob, Tree]:
     if node.label == MerkleLabel.Blob:
         return Blob.nodes.get(hash=hash)
