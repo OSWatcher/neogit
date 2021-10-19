@@ -59,8 +59,8 @@ class Tree(BaseMerkleNode):
 # @lru_cache(maxsize=1024)
 def cached_retrieve_merkle_node(node: MerkleNode) -> Union[Blob, Tree]:
     if node.label == MerkleLabel.Blob:
-        return Blob.nodes.get(hash=hash)
+        return Blob.nodes.get(hash=node.hash)
     elif node.label == MerkleLabel.Tree:
-        return Tree.nodes.get(hash=hash)
+        return Tree.nodes.get(hash=node.hash)
     else:
         raise NotImplementedError
