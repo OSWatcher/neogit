@@ -92,7 +92,7 @@ class Neogit:
         # compute new commit digest
         hasher = Hasher()
         commit_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        new_commit_sha1sum = hasher.commit(name, commit_date, root_tree).digest()
+        new_commit_sha1sum = hasher.commit(name, commit_date, root_tree.sha1sum).digest()
         # create OS commit
         new_commit: Commit = Commit(tx, name, new_commit_sha1sum, commit_date)
         new_commit.create()
