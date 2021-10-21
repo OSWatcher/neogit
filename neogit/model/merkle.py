@@ -30,14 +30,22 @@ class Tree(BaseMerkleNode):
     @classmethod
     def from_merkle_node(cls, node: MerkleNode) -> "Tree":
         """Build a Tree from a MerkleNode"""
-        tree = cls(hash=node.hash)
+        try:
+            tree = cls.nodes.get(hash=node.hash)
+        except Tree.DoesNotExist:
+            tree = cls(hash=node.hash)
+        # save the tree before connecting any nodes to it
+        tree.save()
         # retrieve children
         for child_name, child_node in node.children.items():
-            child_neo_node = cached_retrieve_merkle_node(child_node)
             rel_properties = {"name": child_name}
             if child_node.label == MerkleLabel.Blob:
+                # Blob
+                child_neo_node = Blob.nodes.get(hash=child_node.hash)
                 tree.children_blob.connect(child_neo_node, rel_properties)
             elif child_node.label == MerkleLabel.Tree:
+                # Tree
+                child_neo_node = Tree.nodes.get(hash=child_node.hash)
                 tree.children_tree.connect(child_neo_node, rel_properties)
             else:
                 raise NotImplementedError
@@ -53,14 +61,3 @@ class Tree(BaseMerkleNode):
             rel = self.children_blob.relationship(child_blob)
             content[rel.name] = child_blob.hash
         return {"hash": self.hash, "content": content}
-
-
-# TODO
-# @lru_cache(maxsize=1024)
-def cached_retrieve_merkle_node(node: MerkleNode) -> Union[Blob, Tree]:
-    if node.label == MerkleLabel.Blob:
-        return Blob.nodes.get(hash=node.hash)
-    elif node.label == MerkleLabel.Tree:
-        return Tree.nodes.get(hash=node.hash)
-    else:
-        raise NotImplementedError
