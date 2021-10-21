@@ -81,6 +81,7 @@ class NodeVisitor(object):
     def visit(self, node: Node, *args, **kwargs):
         """Visit a node."""
         f = self.get_visitor(node)
+        self._logger.debug("visit %s", node)
         if f is not None:
             return f(node, *args, **kwargs)
         return self.generic_visit(node, *args, **kwargs)
