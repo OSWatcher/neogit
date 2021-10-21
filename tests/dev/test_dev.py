@@ -2,5 +2,5 @@ import pytest
 
 
 @pytest.mark.dev
-def test_persistent(persistent_neo4j_db, persistent_minio_db):
+def test_persistent(clean_neo4j_db, clean_minio_db):
     raise AssertionError()
