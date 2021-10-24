@@ -4,10 +4,10 @@ from queue import Queue
 from typing import Optional
 
 from neogit.core.merkle import MerkleVisitor
-from neogit.core.model import FSDirectoryNode, MerkleLabel, MerkleNode, Node
+from neogit.core.model import FSDirectoryNode, MerkleNode, Node
 from neogit.core.visitor import NodeVisitorThread, VisitedNode
 from neogit.merkle.uploaderthread import ObjectUploaderThread
-from neogit.model.merkle import Blob, Tree
+from neogit.model.merkle import Tree
 from neogit.object_storage import TSObjectStorage
 
 
@@ -47,20 +47,9 @@ class NeoMerkleTreeBuilder:
             if not isinstance(item.node, FSDirectoryNode):
                 continue
             # directory, upload it to Neo4j
-            # Ensure all child blobs have been created
-            for child_blob in (
-                child for child in item.return_value.children.values() if child.label == MerkleLabel.Blob
-            ):
-                try:
-                    Blob.nodes.get(hash=child_blob.hash)
-                except Blob.DoesNotExist:
-                    blob = Blob(hash=child_blob.hash)
-                    blob.save()
-
-            # Build Tree node
-            tree = Tree.from_merkle_node(item.return_value)
-            tree.save()
+            self._logger.info("create Tree from %s", item.node)
+            Tree.create_from_merkle_node(item.return_value)
         merkle_node = self._visitor_thread.join()
         self._uploader_thread.join()
-        # convert to Tree
-        return Tree.from_merkle_node(merkle_node)
+        # return root Tree
+        return Tree.nodes.get(hash=merkle_node.hash)

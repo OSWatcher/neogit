@@ -12,8 +12,7 @@ from neogit.merkle import NeoMerkleTreeBuilder
 
 
 @patch("neogit.merkle.visitor.Tree", autospec=True)
-@patch("neogit.merkle.visitor.Blob", autospec=True)
-def test_that_no_hang(mocked_blob, mocked_tree, fs, fake_ts_object_storage, root_fs):
+def test_that_no_hang(mocked_tree, fs, fake_ts_object_storage, root_fs):
     # arrange
     node = FSDirectoryNode(Path("/"))
     # act
