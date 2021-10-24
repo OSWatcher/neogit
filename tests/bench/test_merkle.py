@@ -18,13 +18,14 @@ Benchmarks for MerkleFS builder and Neogit commit
 
 import tarfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from git import Repo
 from git.exc import InvalidGitRepositoryError
-from more_itertools import consume
 
-from neogit.merkle import MerkleFSTree
+from neogit.core.model import FSDirectoryNode
+from neogit.merkle import NeoMerkleTreeBuilder
 from tests.conftest import TEST_DATA
 
 GIT_REPO_URL = "https://github.com/qemu/qemu"
@@ -82,13 +83,19 @@ def extract_archive_workdir_per_class(archive_git_repo):
 # fixture to commit a workdir in neo4j, per class
 
 
+@patch("neogit.merkle.visitor.Tree", autospec=True)
 @pytest.mark.parametrize("nb_repeat", range(1, NB_REPEAT + 1), ids=lambda val: f"repeat-{val}")
-def test_merkle_workdir(tmp_path, init_libcloud_object_storage_per_module, extract_archive_workdir_per_func, nb_repeat):
+def test_merkle_workdir(
+    mocked_tree, tmp_path, init_libcloud_object_storage_per_module, extract_archive_workdir_per_func, nb_repeat
+):
     """Only test the MerkleFSTree builder speed"""
     ts_object = init_libcloud_object_storage_per_module
     workdir = extract_archive_workdir_per_func
-    builder = MerkleFSTree(workdir, ts_object)
-    consume(builder.merkelize())
+    # arrange
+    node = FSDirectoryNode(workdir)
+    # act
+    with NeoMerkleTreeBuilder(ts_object, node) as builder:
+        builder.run()
 
 
 @pytest.mark.parametrize("nb_repeat", range(1, NB_REPEAT + 1), ids=lambda val: f"repeat-{val}")
