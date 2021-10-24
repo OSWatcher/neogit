@@ -6,8 +6,8 @@ from functools import reduce
 import pytest
 
 from neogit.config import settings
+from neogit.model.neo import Branch, Commit
 from tests.data.fs.conftest import TEST_DATA_FS, TestFSRoot
-from tests.model import Branch, Commit
 
 # commit
 # --------------
@@ -60,7 +60,7 @@ def test_commit_is_created(neogit_init):
     commit = Commit.nodes.get(name=commit_name)
     # assert
     assert commit.name == commit_name
-    assert len(commit.sha1sum) == 40
+    assert len(commit.hash) == 40
     assert commit.date != ""
 
 
@@ -76,7 +76,7 @@ def test_new_commit_is_created(neogit_init):
     new_commit = Commit.nodes.get(name=new_commit_name)
     # assert
     assert new_commit.name == new_commit_name
-    assert len(new_commit.sha1sum) == 40
+    assert len(new_commit.hash) == 40
     assert new_commit.date != ""
     assert new_commit.previous[0] == prev_commit
 
@@ -105,7 +105,7 @@ def test_get_object_size(neogit_init):
     neogit = neogit_init
     neogit.commit("first commit", TEST_DATA_FS.dir_one_file.path)
     first_child_blob = next(iter(TEST_DATA_FS.dir_one_file.tree.children_blob.values()))
-    size = neogit.get_object_size(first_child_blob.sha1sum)
+    size = neogit.get_object_size(first_child_blob.hash)
     assert size == 75146
 
 
@@ -114,6 +114,6 @@ def test_download_object_as_stream(neogit_init):
     neogit = neogit_init
     neogit.commit("first commit", TEST_DATA_FS.dir_one_file.path)
     first_child_blob_name, first_child_blob = next(iter(TEST_DATA_FS.dir_one_file.tree.children_blob.items()))
-    file_content = reduce(lambda a, b: a + b, neogit.download_object_as_stream(first_child_blob.sha1sum))
+    file_content = reduce(lambda a, b: a + b, neogit.download_object_as_stream(first_child_blob.hash))
     with open(TEST_DATA_FS.dir_one_file.path / first_child_blob_name, "rb") as f:
         assert file_content == f.read()

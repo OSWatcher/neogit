@@ -29,7 +29,7 @@ def test_single_commit_dir_empty(py2neo_repo: Py2NeoRepository):
     assert len(trees) == 1
     tree = trees[0]
     # tree node should have empty dir sha1
-    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709", tree.sha1sum
+    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709", tree.hash
 
 
 def test_neogit_commit(neo4j_con, minio_db):

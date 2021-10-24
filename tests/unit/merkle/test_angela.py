@@ -33,7 +33,7 @@ def one_subdir_fs(root_fs):
     tree = Tree()
     tree.sha1sum = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
     expected.children_tree["subdir1"] = tree
-    expected.sha1sum = "ac7b58cb43a320c493188b1a976a27f94a4e53ea"
+    expected.hash = "ac7b58cb43a320c493188b1a976a27f94a4e53ea"
     return root, expected
 
 
@@ -55,7 +55,7 @@ def multiple_subdirs_fs(root_fs):
         subdir_tree = Tree()
         subdir_tree.sha1sum = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         expected.children_tree[subdir_name] = subdir_tree
-    expected.sha1sum = "0dc6fc1493c0c6a9d56007b436ac6a3613e5e346"
+    expected.hash = "0dc6fc1493c0c6a9d56007b436ac6a3613e5e346"
     return root, expected
 
 
@@ -76,7 +76,7 @@ def one_file_fs(root_fs):
     file_blob = Blob()
     file_blob.sha1sum = "4c4e3587ef717dff0d533394483cd5d5feaa983a"
     expected.children_blob["file1.txt"] = file_blob
-    expected.sha1sum = "0032782e6f3381866532878f1bd3c1405203fff7"
+    expected.hash = "0032782e6f3381866532878f1bd3c1405203fff7"
     return root, expected
 
 
@@ -103,7 +103,7 @@ def multiple_files_fs(root_fs):
         file_blob = Blob()
         file_blob.sha1sum = sha1
         expected.children_blob[filename] = file_blob
-    expected.sha1sum = "04b0e76cbd0a1f82470bf923da8d85aa343c110f"
+    expected.hash = "04b0e76cbd0a1f82470bf923da8d85aa343c110f"
     return root, expected
 
 

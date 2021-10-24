@@ -12,7 +12,7 @@ class Commit(StructuredNode):
     date = DateTimeProperty(required=True)
     hash = StringProperty(required=True, unique_index=True)
 
-    has_previous = RelationshipTo("Commit", "HAS_PREVIOUS")
+    previous = RelationshipTo("Commit", "HAS_PREVIOUS")
     filesystem = RelationshipTo("Tree", "OWNS_FILESYSTEM")
 
     @classmethod

@@ -117,7 +117,7 @@ class Neogit:
             new_commit = NeoCommit.from_name(name, root_tree)
             # connect to previous, if any
             if prev_commit:
-                new_commit.has_previous.connect(prev_commit)
+                new_commit.previous.connect(prev_commit)
             # update main branch
             branch.tracks.replace(new_commit)
 
