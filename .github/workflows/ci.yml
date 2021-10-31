@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check format
+        run: poetry run make fmt -- --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check format
+        run: poetry run make lint
+
+  type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check types
+        run: poetry run make type
+
+  vermin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check minimum version
+        run: poetry run make vermin
+
+  unit_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check unit test
+        run: poetry run make unit_test
