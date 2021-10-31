@@ -17,6 +17,7 @@ Benchmarks for MerkleFS builder and Neogit commit
 
 
 import tarfile
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -60,24 +61,26 @@ def archive_git_repo(clone_git_repo):
 
 @pytest.fixture(scope="function")
 def extract_archive_workdir_per_func(archive_git_repo):
-    archive_path = archive_git_repo
-    workdir = Path(archive_path).parent / "workdir"
-    if not workdir.exists():
-        workdir.mkdir()
-        with tarfile.TarFile(archive_path) as tar:
-            tar.extractall(workdir)
-    return workdir
+    with extract_archive_workdir_impl(archive_git_repo) as workdir:
+        yield workdir
 
 
 @pytest.fixture(scope="class")
 def extract_archive_workdir_per_class(archive_git_repo):
+    with extract_archive_workdir_impl(archive_git_repo) as workdir:
+        yield workdir
+
+
+@contextmanager
+def extract_archive_workdir_impl(archive_git_repo: Path):
+    """common implementation for same fixture with different scopes"""
     archive_path = archive_git_repo
     workdir = Path(archive_path).parent / "workdir"
     if not workdir.exists():
         workdir.mkdir()
         with tarfile.TarFile(archive_path) as tar:
             tar.extractall(workdir)
-    return workdir
+    yield workdir
 
 
 # fixture to commit a workdir in neo4j, per class

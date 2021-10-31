@@ -6,6 +6,7 @@ import random
 import string
 import subprocess
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -140,23 +141,20 @@ def ready_neo4j(start_neo4j_db: str):
 @fixture(scope="class")
 def clean_neo4j_db_per_class(ready_neo4j: str):
     """cleanup db after test"""
-    bolt_url = settings.neo4j.url
-    creds = (settings.neo4j.user, settings.neo4j.password)
-    driver = GraphDatabase.driver(bolt_url, auth=creds)
-    # ensure it's cleaned before test
-    with driver.session() as session:
-        # clean all nodes and relationships
-        session.run("MATCH (n) DETACH DELETE n")
-    yield driver
-    # cleanup
-    with driver.session() as session:
-        # clean all nodes and relationships
-        session.run("MATCH (n) DETACH DELETE n")
+    with clean_neo4j_db_impl() as driver:
+        yield driver
 
 
 @fixture(scope="function")
 def clean_neo4j_db(ready_neo4j: str):
     """cleanup db after test"""
+    with clean_neo4j_db_impl() as driver:
+        yield driver
+
+
+@contextmanager
+def clean_neo4j_db_impl():
+    """common implementation for same fixture with different scopes"""
     bolt_url = settings.neo4j.url
     creds = (settings.neo4j.user, settings.neo4j.password)
     driver = GraphDatabase.driver(bolt_url, auth=creds)
@@ -164,11 +162,13 @@ def clean_neo4j_db(ready_neo4j: str):
     with driver.session() as session:
         # clean all nodes and relationships
         session.run("MATCH (n) DETACH DELETE n")
-    yield driver
-    # cleanup
-    with driver.session() as session:
-        # clean all nodes and relationships
-        session.run("MATCH (n) DETACH DELETE n")
+    try:
+        yield driver
+    finally:
+        # cleanup
+        with driver.session() as session:
+            # clean all nodes and relationships
+            session.run("MATCH (n) DETACH DELETE n")
 
 
 # object storage fixtures
@@ -199,12 +199,19 @@ def init_fake_object_storage():
 
 @fixture(scope="function")
 def init_libcloud_object_storage_per_func():
-    with TemporaryDirectory() as tmp_path:
-        yield from init_libcloud(tmp_path)
+    with init_libcloud_object_storage_impl() as tmp_path:
+        yield tmp_path
 
 
 @fixture(scope="module")
 def init_libcloud_object_storage_per_module():
+    with init_libcloud_object_storage_impl() as tmp_path:
+        yield tmp_path
+
+
+@contextmanager
+def init_libcloud_object_storage_impl():
+    """common implementation for same fixture with different scopes"""
     with TemporaryDirectory() as tmp_path:
         yield from init_libcloud(tmp_path)
 
@@ -290,25 +297,20 @@ def ready_minio_db(minio_db):
 @fixture(scope="function")
 def clean_minio_db(ready_minio_db):
     """cleanup DB after test"""
-    libcloud_drv = ready_minio_db
-
-    # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
-    def cleanup_db():
-        for container in libcloud_drv.iterate_containers():
-            for obj in libcloud_drv.iterate_container_objects(container):
-                libcloud_drv.delete_object(obj)
-            libcloud_drv.delete_container(container)
-
-    cleanup_db()
-    # do the test
-    yield libcloud_drv
-    # cleanup
-    cleanup_db()
+    with clean_minio_db_impl(ready_minio_db) as libcloud_drv:
+        yield libcloud_drv
 
 
 @fixture(scope="class")
 def clean_minio_db_per_class(ready_minio_db):
     """cleanup DB after test"""
+    with clean_minio_db_impl(ready_minio_db) as libcloud_drv:
+        yield libcloud_drv
+
+
+@contextmanager
+def clean_minio_db_impl(ready_minio_db):
+    """common implementation for same fixture with different scopes"""
     libcloud_drv = ready_minio_db
 
     # ensure cleanup up before test if pytest crashed or process killed, or teardown skipped for whatever reason
@@ -320,9 +322,11 @@ def clean_minio_db_per_class(ready_minio_db):
 
     cleanup_db()
     # do the test
-    yield libcloud_drv
-    # cleanup
-    cleanup_db()
+    try:
+        yield libcloud_drv
+    finally:
+        # cleanup
+        cleanup_db()
 
 
 # fake filesystem fixtures
