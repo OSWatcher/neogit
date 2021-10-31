@@ -28,6 +28,7 @@ appdirs = "1.4.4"
 rich = "10.2.0"
 attrs = "^21.2.0"
 neomodel = "^4.0.5"
+types-PyYAML = "^6.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "21.8b0"
