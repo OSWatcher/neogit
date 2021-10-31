@@ -19,7 +19,7 @@ endif
 
 fmt:
 	# code formatting
-	black $(ROOT_DIR)
+	black $(ROOT_DIR) $(EXTRA_ARGS)
 
 lint:
 	# code linting
