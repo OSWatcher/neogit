@@ -23,7 +23,7 @@ from requests.exceptions import ConnectionError
 from neogit.config import ObjectConfig, settings
 from neogit.core.model import MerkleLabel, MerkleNode
 from neogit.merkle.uploader import MerkleFile
-from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, TSObjectStorage
+from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, ObjectStorageError, TSObjectStorage
 from neogit.service import Neogit
 
 NEO4J_VERSION = "4.2.4"
@@ -83,6 +83,14 @@ def start_neo4j_db(pytestconfig):
     # choose random name or default name if persistent
     if not pytestconfig.getoption("persistdb"):
         cont_name = random_name()
+    else:
+        cont_name = DEFAULT_NEO4J_DB_NAME
+    # try to start it
+    cmdline = ["docker", "start", cont_name]
+    try:
+        subprocess.check_call(cmdline)
+    except subprocess.CalledProcessError:
+        # create it
         cmdline = [
             "docker",
             "run",
@@ -96,11 +104,7 @@ def start_neo4j_db(pytestconfig):
             f"--name={cont_name}",
             f"neo4j:{NEO4J_VERSION}",
         ]
-    else:
-        cont_name = DEFAULT_NEO4J_DB_NAME
-        # ensure previous db is started
-        cmdline = ["docker", "start", cont_name]
-    subprocess.check_call(cmdline)
+        subprocess.check_call(cmdline)
     # update dynaconf settings for tests
     settings.neo4j.proto = "bolt"
     settings.neo4j.host = "localhost"
@@ -235,6 +239,15 @@ def minio_db(pytestconfig):
     secure = False
     if not pytestconfig.getoption("persistdb"):
         cont_name = random_name()
+    else:
+        cont_name = DEFAULT_MINIO_DB_NAME
+    # try to start container
+    cmdline = ["docker", "start", cont_name]
+    try:
+        subprocess.check_call(cmdline)
+    except subprocess.CalledProcessError:
+        # assume docker start failed because container doesn't exist
+        # create it
         cmdline = [
             "docker",
             "run",
@@ -245,10 +258,7 @@ def minio_db(pytestconfig):
             "server",
             "/data",
         ]
-    else:
-        cont_name = DEFAULT_MINIO_DB_NAME
-        cmdline = ["docker", "start", cont_name]
-    subprocess.check_call(cmdline)
+        subprocess.check_call(cmdline)
     # update settings
     settings.object.provider = provider
     settings.object.key = key
@@ -271,7 +281,7 @@ def ready_minio_db(minio_db):
         try:
             driver = LibcloudObjectStorage(config)
             list(driver.iterate_containers())
-        except ConnectionError:
+        except (ConnectionError, ObjectStorageError):
             driver = None
             time.sleep(0.1)
     return driver
