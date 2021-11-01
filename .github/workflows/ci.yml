@@ -69,9 +69,19 @@ jobs:
     runs-on: ubuntu-latest
     services:
       minio:
-        image: minio/minio:RELEASE.2021-10-23T03-28-24Z
+        # need to use a custom image because Github Actions doesn't allow us to pass a CMD
+        # and the official Minio image needs a "server" command
+        image: lazybit/minio
         ports:
           - 9000:9000
+      neo4j:
+        image: neo4j:4.2.4
+        ports:
+          - 7687:7687
+          # also expose the HTTP port since we use this to test whether the DB is ready
+          - 7474:7474
+        env:
+          NEO4J_AUTH: none
     steps:
       - uses: actions/checkout@v2
 

@@ -21,7 +21,7 @@ from tests.data.fs.conftest import TEST_DATA_FS, TestFSRoot
 def test_branch_is_created(neogit_init):
     neogit = neogit_init
     commit_name = "first commit"
-    neogit.commit(commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(commit_name, TEST_DATA_FS.dir_one_file.path)
     # assert
     branch = Branch.nodes.get(name=settings.branch)
     assert branch is not None
@@ -32,12 +32,12 @@ def test_branch_is_created(neogit_init):
 def test_branch_is_updated(neogit_init):
     neogit = neogit_init
     old_commit_name = "first_commit"
-    neogit.commit(old_commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(old_commit_name, TEST_DATA_FS.dir_one_file.path)
     branch = Branch.nodes.get(name=settings.branch)
     old_commit = branch.tracks[0]
     # recapture
     new_commit_name = "second commit"
-    neogit.commit(new_commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(new_commit_name, TEST_DATA_FS.dir_one_file.path)
     # assert
     branch.refresh()
     new_commit = branch.tracks[0]
@@ -56,7 +56,7 @@ def test_branch_is_updated(neogit_init):
 def test_commit_is_created(neogit_init):
     neogit = neogit_init
     commit_name = "first commit"
-    neogit.commit(commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(commit_name, TEST_DATA_FS.dir_one_file.path)
     commit = Commit.nodes.get(name=commit_name)
     # assert
     assert commit.name == commit_name
@@ -68,11 +68,11 @@ def test_new_commit_is_created(neogit_init):
     neogit = neogit_init
     # create first commit
     prev_commit_name = "first commit"
-    neogit.commit(prev_commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(prev_commit_name, TEST_DATA_FS.dir_one_file.path)
     prev_commit = Commit.nodes.get(name=prev_commit_name)
     # create second commit
     new_commit_name = "second commit"
-    neogit.commit(new_commit_name, TEST_DATA_FS.dir_empty.path)
+    neogit.commit(new_commit_name, TEST_DATA_FS.dir_one_file.path)
     new_commit = Commit.nodes.get(name=new_commit_name)
     # assert
     assert new_commit.name == new_commit_name
