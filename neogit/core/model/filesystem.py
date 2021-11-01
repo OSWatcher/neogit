@@ -27,11 +27,11 @@ class FSDirectoryNode(FSNode):
             raise ValueError(f"Path {value} is not a directory")
 
     def iter_child_nodes(self) -> Iterator[FSNode]:
-        if self.path.is_dir():
+        if self.path.is_dir() and not self.path.is_symlink():
             with os.scandir(self.path) as scan_it:
                 for entry in scan_it:
                     entry_path = self.path / entry.name
-                    if entry.is_dir():
+                    if entry.is_dir(follow_symlinks=False):
                         yield FSDirectoryNode(entry_path)
                     else:
                         yield FSFileNode(entry_path)
