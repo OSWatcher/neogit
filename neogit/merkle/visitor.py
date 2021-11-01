@@ -53,8 +53,9 @@ class NeoMerkleTreeBuilder:
             if not isinstance(item.node, FSDirectoryNode):
                 continue
             # directory, upload it to Neo4j
-            self._logger.info("create Tree from %s", item.node)
-            Tree.create_from_merkle_node(item.return_value)
+            self._logger.info("create Tree %s from %s", item.return_value.hash, item.node)
+            # Tree.create_from_merkle_node(item.return_value)
+            Tree.create_from_merkle_node_neomodel(item.return_value)
         merkle_node = self._visitor_thread.join()
         self._uploader_thread.join()
         # return root Tree

@@ -1,6 +1,7 @@
+from functools import lru_cache
 from typing import Dict, Union
 
-from neomodel import RelationshipTo, StringProperty, StructuredNode, StructuredRel, db
+from neomodel import DoesNotExist, RelationshipTo, StringProperty, StructuredNode, StructuredRel, db
 
 from neogit.core.model import MerkleLabel, MerkleNode
 
@@ -28,7 +29,43 @@ class Tree(BaseMerkleNode):
     children_tree = RelationshipTo("Tree", "HAS_CHILD_TREE", model=HasChildRel)
 
     @classmethod
-    def create_from_merkle_node(cls, node: MerkleNode):
+    def create_from_merkle_node_neomodel(cls, node: MerkleNode) -> "Tree":
+        """Build a Tree from a MerkleNode"""
+        try:
+            tree = cls._cached_retrieve_merkle_node(node.hash, node.label)
+        except DoesNotExist:
+            tree = cls(hash=node.hash)
+            # the tree must be saved before connecting any nodes
+            tree.save()
+            # retrieve children
+            for child_name, child_node in node.children.items():
+                try:
+                    child_neo_node = cls._cached_retrieve_merkle_node(child_node.hash, child_node.label)
+                except Blob.DoesNotExist:
+                    child_neo_node = Blob(hash=child_node.hash)
+                    child_neo_node.save()
+                # don't except Tree.DoesNotExist as they are supposed be created already
+                rel_properties = {"name": child_name}
+                if child_node.label == MerkleLabel.Blob:
+                    tree.children_blob.connect(child_neo_node, rel_properties)
+                elif child_node.label == MerkleLabel.Tree:
+                    tree.children_tree.connect(child_neo_node, rel_properties)
+                else:
+                    raise NotImplementedError
+        return tree
+
+    @classmethod
+    @lru_cache(maxsize=1024)
+    def _cached_retrieve_merkle_node(cls, hash: str, label: MerkleLabel):
+        if label == MerkleLabel.Blob:
+            return Blob.nodes.get(hash=hash)
+        elif label == MerkleLabel.Tree:
+            return Tree.nodes.get(hash=hash)
+        else:
+            raise NotImplementedError
+
+    @classmethod
+    def create_from_merkle_node_cypher(cls, node: MerkleNode):
         """Build a Tree from a MerkleNode"""
         cls._create_child_blobs(node)
         cls._create_child_trees(node)
