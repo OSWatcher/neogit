@@ -30,6 +30,15 @@ class NodeVisitorThread:
         self.__enter__()
         self._future = self._pool.submit(self._run, self._visitor, self._node_to_visit)
 
+    def check_exception(self):
+        if not self._future:
+            return
+        if self._future.running():
+            return
+        exc = self._future.exception()
+        if exc:
+            raise exc
+
     def join(self):
         return self._future.result()
 
