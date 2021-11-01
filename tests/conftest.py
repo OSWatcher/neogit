@@ -40,13 +40,20 @@ DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
 
 
 def pytest_addoption(parser):
-    """add a new option to pass a specific directory to be merkelized"""
     parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
     parser.addoption(
         "--persistdb",
         action="store_true",
         default=False,
         help="do not remove container at the end of the integration tests, and reuse them for the next run",
+    )
+    parser.addoption(
+        "--externdb",
+        action="store_true",
+        default=False,
+        help="do not create required containers (Neo4j/MinIO) with Docker. Use the provided values (and environment "
+        "variables) instead. Useful to run the integration tests in Github Actions where the services containers "
+        "already provides the databases we need.",
     )
 
 
@@ -81,6 +88,10 @@ class Neo4jDriver:
 @fixture(scope="session")
 def start_neo4j_db(pytestconfig):
     """start a neo4j db using Docker"""
+    if pytestconfig.getoption("externdb"):
+        # do not create or start any container, just return None
+        yield
+        return
     # choose random name or default name if persistent
     if not pytestconfig.getoption("persistdb"):
         cont_name = random_name()
@@ -121,7 +132,7 @@ def start_neo4j_db(pytestconfig):
 
 
 @fixture(scope="session")
-def ready_neo4j(start_neo4j_db: str):
+def ready_neo4j(start_neo4j_db: Optional[str]):
     """ensure neo4jdb is ready"""
     container_name = start_neo4j_db
     neo4j_http_url = settings.neo4j.http_url
@@ -139,14 +150,14 @@ def ready_neo4j(start_neo4j_db: str):
 
 
 @fixture(scope="class")
-def clean_neo4j_db_per_class(ready_neo4j: str):
+def clean_neo4j_db_per_class(ready_neo4j: Optional[str]):
     """cleanup db after test"""
     with clean_neo4j_db_impl() as driver:
         yield driver
 
 
 @fixture(scope="function")
-def clean_neo4j_db(ready_neo4j: str):
+def clean_neo4j_db(ready_neo4j: Optional[str]):
     """cleanup db after test"""
     with clean_neo4j_db_impl() as driver:
         yield driver
@@ -237,8 +248,14 @@ def container_ctx_and_yield(ts_object) -> Iterator[TSObjectStorage]:
 @fixture(scope="session")
 def minio_db(pytestconfig):
     """start a MinIO db using Docker"""
-    # choose random name or default name if persistent
     provider = "minio"
+    # whatever happens next, make sure that we forced minio
+    settings.object.provider = provider
+    if pytestconfig.getoption("externdb"):
+        # do not create or start any container
+        yield
+        return
+    # choose random name or default name if persistent
     key = "minioadmin"
     secret = "minioadmin"
     port = 9000
