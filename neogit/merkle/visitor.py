@@ -1,6 +1,6 @@
 """Implements a Visitor which handles Neo4j transaction upload and the Object Storage upload"""
 import logging
-from queue import Queue
+from queue import Empty, Queue
 from typing import Optional
 
 from neogit.core.merkle import MerkleVisitor
@@ -40,7 +40,13 @@ class NeoMerkleTreeBuilder:
         while True:
             # on every loop, check that one of the uploader thread pool didn't raise any fatal exception
             self._uploader_thread.check_exception()
-            item: Optional[VisitedNode] = self._main_queue.get()
+            try:
+                item: Optional[VisitedNode] = self._main_queue.get(timeout=1)
+            except Empty:
+                # no items yet
+                # check if the visitor thread is dead
+                self._visitor_thread.check_exception()
+                continue
             if item is None:
                 break
             assert isinstance(item.return_value, MerkleNode)
