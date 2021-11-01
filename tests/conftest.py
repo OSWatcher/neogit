@@ -167,7 +167,7 @@ def clean_neo4j_db(ready_neo4j: Optional[str]):
 def clean_neo4j_db_impl():
     """common implementation for same fixture with different scopes"""
     bolt_url = settings.neo4j.url
-    creds = (settings.neo4j.user, settings.neo4j.password)
+    creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
     driver = GraphDatabase.driver(bolt_url, auth=creds)
     # ensure it's cleaned before test
     with driver.session() as session:
