@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from functools import partial
+from io import BytesIO
 from pathlib import Path
 from typing import Iterator
 
@@ -44,7 +45,15 @@ class FSFileNode(FSNode):
             raise ValueError(f"Path {value} should not be a directory")
 
     def hashable_data(self) -> Iterator[bytes]:
-        # file, return content
-        with open(self.path, "rb") as f:
-            read_block = partial(f.read, 4096)
+        if self.path.is_symlink():
+            data: bytes = os.readlink(str(self.path)).encode()
+            bio = BytesIO(data)
+            read_block = partial(bio.read, 4096)
             yield from iter(read_block, b"")
+        elif self.path.is_file():
+            # file, return content
+            with open(self.path, "rb") as f:
+                read_block = partial(f.read, 4096)
+                yield from iter(read_block, b"")
+        else:
+            raise NotImplementedError(f"file {self.path} of type {self.path.stat()} is not handled")
