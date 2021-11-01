@@ -37,21 +37,23 @@ class Tree(BaseMerkleNode):
             tree = cls(hash=node.hash)
             # the tree must be saved before connecting any nodes
             tree.save()
-            # retrieve children
-            for child_name, child_node in node.children.items():
-                try:
-                    child_neo_node = cls._cached_retrieve_merkle_node(child_node.hash, child_node.label)
-                except Blob.DoesNotExist:
-                    child_neo_node = Blob(hash=child_node.hash)
-                    child_neo_node.save()
-                # don't except Tree.DoesNotExist as they are supposed be created already
-                rel_properties = {"name": child_name}
-                if child_node.label == MerkleLabel.Blob:
-                    tree.children_blob.connect(child_neo_node, rel_properties)
-                elif child_node.label == MerkleLabel.Tree:
-                    tree.children_tree.connect(child_neo_node, rel_properties)
-                else:
-                    raise NotImplementedError
+            # separate trees from blobs
+            child_blobs = {
+                child_name: child_node
+                for child_name, child_node in node.children.items()
+                if child_node.label == MerkleLabel.Blob
+            }
+            child_trees = {
+                child_name: child_node
+                for child_name, child_node in node.children.items()
+                if child_node.label == MerkleLabel.Tree
+            }
+            # create children blobs
+            blob_props = [{"hash": child_blob.hash} for child_blob in child_blobs.values()]
+            Blob.get_or_create(props=blob_props, relationship=tree.children_blob)
+            # create children trees
+            tree_props = [{"hash": child_tree.hash for child_tree in child_trees.values()}]
+            cls.get_or_create(props=tree_props, relationship=tree.children_tree)
         return tree
 
     @classmethod
