@@ -28,7 +28,7 @@ from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, Obje
 from neogit.service import Neogit
 
 NEO4J_VERSION = "4.2.4"
-MINIO_VERSION = "RELEASE.2021-05-11T23-27-41Z"
+MINIO_VERSION = "RELEASE.2021-10-23T03-28-24Z"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
