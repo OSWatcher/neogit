@@ -64,3 +64,27 @@ jobs:
 
       - name: Check unit test
         run: poetry run make unit_test
+
+  integration_test:
+    runs-on: ubuntu-latest
+    services:
+      minio:
+        image: minio/minio:RELEASE.2021-10-23T03-28-24Z
+        ports:
+          - 9000:9000
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      # pass --externdb to use github actions service containers instead
+      - name: Run integration tests
+        run: poetry run make integration_test -- --externdb
+        env:
+          NEOGIT_OBJECT__PROVIDER: minio
+          NEOGIT_OBJECT__HOST: 127.0.0.1
+          NEOGIT_OBJECT__PORT: 9000
+          NEOGIT_OBJECT__KEY: minioadmin
+          NEOGIT_OBJECT__SECRET: minioadmin
+          NEOGIT_OBJECT__SECURE: false
