@@ -57,7 +57,7 @@ class ObjectUploader:
         exception = future.exception()
         if exception is not None:
             # TODO: how to cancel insertion
-            self._logger.warning(f"Failed to upload {upload_object}: {exception}")
+            self._logger.warning(f"Failed to upload {upload_object}: {repr(exception)}")
             # lock the thread before updating the variable
             # it will be checked by another thread
             with Lock():
