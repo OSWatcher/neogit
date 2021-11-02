@@ -67,7 +67,7 @@ class Tree(BaseMerkleNode):
             raise NotImplementedError
 
     @classmethod
-    def create_from_merkle_node_cypher(cls, node: MerkleNode):
+    def create_from_merkle_node_neomodel_cypher(cls, node: MerkleNode):
         """Build a Tree from a MerkleNode"""
         cls._create_child_blobs(node)
         cls._create_child_trees(node)
