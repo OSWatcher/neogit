@@ -1,7 +1,9 @@
 """Implements a Visitor which handles Neo4j transaction upload and the Object Storage upload"""
 import logging
 from queue import Empty, Queue
-from typing import Optional
+from typing import Optional, Union
+
+from neo4j import Session, Transaction
 
 from neogit.core.merkle import MerkleVisitor
 from neogit.core.model import FSDirectoryNode, MerkleNode, Node
@@ -12,8 +14,9 @@ from neogit.object_storage import TSObjectStorage
 
 
 class NeoMerkleTreeBuilder:
-    def __init__(self, ts_object: TSObjectStorage, node_to_visit: Node):
+    def __init__(self, ts_object: TSObjectStorage, node_to_visit: Node, session: Union[Session, Transaction]):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
+        self._session = session
         self._main_queue: Queue = Queue()
         self._uploader_queue: Queue = Queue()
         self._uploader_thread = ObjectUploaderThread(ts_object, self._uploader_queue)
@@ -45,6 +48,7 @@ class NeoMerkleTreeBuilder:
             except Empty:
                 # no items yet
                 # check if the visitor thread is dead
+                self._logger.info("MainQueue: No MerkleNode items available. Waiting.")
                 self._visitor_thread.check_exception()
                 continue
             if item is None:
@@ -53,9 +57,8 @@ class NeoMerkleTreeBuilder:
             if not isinstance(item.node, FSDirectoryNode):
                 continue
             # directory, upload it to Neo4j
-            self._logger.info("create Tree %s from %s", item.return_value.hash, item.node)
-            # Tree.create_from_merkle_node(item.return_value)
-            Tree.create_from_merkle_node_neomodel(item.return_value)
+            Tree.create_from_merkle_node_cypher(self._session, item.return_value)
+            self._logger.info("Tree %s created from %s", item.return_value.hash, item.node.path)
         merkle_node = self._visitor_thread.join()
         self._uploader_thread.join()
         # return root Tree

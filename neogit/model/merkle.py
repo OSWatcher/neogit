@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Dict, Union
 
+from neo4j import Session, Transaction
 from neomodel import DoesNotExist, RelationshipTo, StringProperty, StructuredNode, StructuredRel, db
 
 from neogit.core.model import MerkleLabel, MerkleNode
@@ -135,6 +136,58 @@ class Tree(BaseMerkleNode):
         MERGE (p)-[:HAS_CHILD_TREE {name: rel.name}]->(c)
         """
         db.cypher_query(query, {"parent_hash": node.hash, "unwind_param": rel_list})
+
+    @classmethod
+    def create_from_merkle_node_cypher(cls, session: Union[Session, Transaction], node: MerkleNode):
+        """Create the Tree using a session or transaction from the neo4j driver"""
+        # create child blobs
+        query = """
+        UNWIND $unwind_param as blob
+        MERGE (b:Blob {hash: blob})
+        """
+        blob_hash_list = [n.hash for n in node.children.values() if n.label == MerkleLabel.Blob]
+        session.run(query, {"unwind_param": blob_hash_list})
+        # create child trees
+        query = """
+        UNWIND $unwind_param as tree
+        MERGE (t:Tree {hash: tree})
+        """
+        tree_hash_list = [n.hash for n in node.children.values() if n.label == MerkleLabel.Tree]
+        session.run(query, {"unwind_param": tree_hash_list})
+        # create parent
+        query = """
+        MERGE (p:Tree {hash: $hash})
+        """
+        session.run(query, {"hash": node.hash})
+        # create blob relationship
+        # [{"name": "xxx", "hash: "xxxx"
+        rel_list = [
+            {"name": filename, "hash": node.hash}
+            for filename, node in node.children.items()
+            if node.label == MerkleLabel.Blob
+        ]
+        query = """
+        MATCH (p:Tree {hash: $parent_hash})
+        WITH p
+        UNWIND $unwind_param as rel
+        MATCH (c:Blob {hash: rel.hash})
+        MERGE (p)-[:HAS_CHILD_BLOB {name: rel.name}]->(c)
+        """
+        session.run(query, {"parent_hash": node.hash, "unwind_param": rel_list})
+        # create Tree relationship
+        rel_list = [
+            {"name": filename, "hash": node.hash}
+            for filename, node in node.children.items()
+            if node.label == MerkleLabel.Tree
+        ]
+        query = """
+        MATCH (p:Tree {hash: $parent_hash})
+        WITH p
+        UNWIND $unwind_param as rel
+        MATCH (c:Tree {hash: rel.hash})
+        MERGE (p)-[:HAS_CHILD_TREE {name: rel.name}]->(c)
+        """
+        session.run(query, {"parent_hash": node.hash, "unwind_param": rel_list})
 
     def asdict(self) -> Dict[str, Union[str, Dict]]:
         """Return a representation of the Tree as a dictionary"""

@@ -5,7 +5,7 @@ from functools import wraps
 from pathlib import Path, PurePath
 from typing import Dict, Iterator, List, Optional
 
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 from neomodel import db
 
@@ -98,10 +98,11 @@ class Neogit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
-        with db.write_transaction:
+        with db.write_transaction as transaction_proxy:
+            trans: Transaction = transaction_proxy.db._active_transaction
             # build merkle tree
             root_node = FSDirectoryNode(root)
-            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node) as builder:
+            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
                 root_tree = builder.run()
             # ensure Branch is created
             try:
