@@ -19,7 +19,7 @@ Benchmarks for MerkleFS builder and Neogit commit
 import tarfile
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from git import Repo
@@ -96,8 +96,9 @@ def test_merkle_workdir(
     workdir = extract_archive_workdir_per_func
     # arrange
     node = FSDirectoryNode(workdir)
+    mock_session = Mock()
     # act
-    with NeoMerkleTreeBuilder(ts_object, node) as builder:
+    with NeoMerkleTreeBuilder(ts_object, node, mock_session) as builder:
         builder.run()
 
 

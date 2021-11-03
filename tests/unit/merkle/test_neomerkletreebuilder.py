@@ -5,7 +5,7 @@ the NodeVisitorThread, while uploading any relevant object in the object storage
 and merging any Tree in Neo4j"""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from neogit.core.model import FSDirectoryNode
 from neogit.merkle import NeoMerkleTreeBuilder
@@ -15,7 +15,8 @@ from neogit.merkle import NeoMerkleTreeBuilder
 def test_that_no_hang(mocked_tree, fs, fake_ts_object_storage, root_fs):
     # arrange
     node = FSDirectoryNode(Path("/"))
+    mock_session = Mock()
     # act
-    with NeoMerkleTreeBuilder(fake_ts_object_storage, node) as builder:
+    with NeoMerkleTreeBuilder(fake_ts_object_storage, node, mock_session) as builder:
         builder.run()
     # assert
