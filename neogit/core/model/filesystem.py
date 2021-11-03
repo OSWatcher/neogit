@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from functools import partial
@@ -29,13 +30,19 @@ class FSDirectoryNode(FSNode):
 
     def iter_child_nodes(self) -> Iterator[FSNode]:
         if self.path.is_dir() and not self.path.is_symlink():
-            with os.scandir(self.path) as scan_it:
-                for entry in scan_it:
-                    entry_path = self.path / entry.name
-                    if entry.is_dir(follow_symlinks=False):
-                        yield FSDirectoryNode(entry_path)
-                    else:
-                        yield FSFileNode(entry_path)
+            try:
+                with os.scandir(self.path) as scan_it:
+                    for entry in scan_it:
+                        entry_path = self.path / entry.name
+                        if entry.is_dir(follow_symlinks=False):
+                            yield FSDirectoryNode(entry_path)
+                        else:
+                            yield FSFileNode(entry_path)
+            # TODO: how to put try except only on with statement ?
+            except OSError as e:
+                # log warning and return
+                logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
+                logger.warning("SKIP: %s (%s)", self.path, e)
 
 
 @attr.s
