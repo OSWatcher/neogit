@@ -1,6 +1,7 @@
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from queue import Queue
+from threading import current_thread
 from typing import Optional
 
 from neogit.core.model import FSFileNode, MerkleNode
@@ -49,3 +50,4 @@ class ObjectUploaderThread:
             assert isinstance(item.return_value, MerkleNode)
             uploader.submit(item.node.path, item.return_value.hash)
         uploader.wait()
+        self._logger.debug("Thread %s done", current_thread().getName())

@@ -1,4 +1,6 @@
+import logging
 from concurrent.futures import Future, ThreadPoolExecutor
+from threading import current_thread
 from typing import Optional
 
 from neogit.core.model import Node
@@ -9,6 +11,7 @@ class NodeVisitorThread:
     """Visit a Node inside a thread"""
 
     def __init__(self, visitor: NodeVisitor, node_to_visit: Node):
+        self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         # manages one thread with ThreadPoolExecutor
         # with Future objects, it's easy to return a value and get exceptions
         self._pool = ThreadPoolExecutor(
@@ -46,4 +49,5 @@ class NodeVisitorThread:
         value = visitor.visit(node_to_visit)
         # put None in queue
         visitor.done_visiting()
+        self._logger.debug("Thread %s done", current_thread().getName())
         return value
