@@ -17,12 +17,11 @@ def fake_adapter(fs):
     yield storage
     # cleanup
     for container in storage.iterate_containers():
-        pass
         # TODO: this triggers a race condition or conflict in pyfakefs / fasteners ?
         # only on Github Actions
         # disable it for now while we investigate
         # https://github.com/jmcgeheeiv/pyfakefs/issues/645
-        # storage.delete_container(container)
+        storage.delete_container(container)
 
 
 def test_create_container_ok(fake_adapter):
