@@ -74,7 +74,7 @@ def sha1sum(data: bytes) -> str:
 def random_name():
     """Generates a random name"""
     length = 8
-    return "".join(random.choices(string.ascii_lowercase, k=length))
+    return "".join(random.choices(string.ascii_lowercase, k=length))  # noqa: DUO102
 
 
 # Neo4j fixtures
@@ -535,7 +535,7 @@ def gen_file_list():
         with NamedTemporaryFile(delete=False) as tmp_file:
             # write random data
             # of random size
-            rand_size = random.randint(1, 1024)
+            rand_size = random.randint(1, 1024)  # noqa: DUO102
             data = os.urandom(rand_size)
             tmp_file.file.write(data)
             tmp_file.flush()
