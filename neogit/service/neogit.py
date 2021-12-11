@@ -3,18 +3,20 @@ import logging
 from datetime import datetime
 from functools import wraps
 from pathlib import Path, PurePath
-from typing import Dict, Iterator, List, Optional, Type, Union
+from typing import Dict, Iterator, List, Optional
 
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
+from neomodel import db
 
-from neogit.config import ObjectConfig, settings
-from neogit.console import EmptyConsoleAdapter, RichConsoleAdapter
+from neogit.config import settings
+from neogit.core.model import FSDirectoryNode
 from neogit.diff import diff_trees
-from neogit.merkle.angela import MerkleFSTree
-from neogit.merkle.hasher import Hasher
+from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
-from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
+from neogit.model.neo import Branch as NeoBranch
+from neogit.model.neo import Commit as NeoCommit
+from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
 
@@ -32,15 +34,15 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
         # dynaconf settings are list, need to convert to tuple
         creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
-        object_config = ObjectConfig.from_settings(settings)
-        self._object_driver_ts = TSObjectStorage(LibcloudObjectStorage, object_config)
+        db.set_connection(settings.neo4j.url_full)
+        self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
 
     def iter_commit(self) -> Iterator[Commit]:
@@ -70,45 +72,10 @@ class Neogit:
             # get children
             return target_tree_list
 
-    @measure_time
-    def _build_tree_and_insert(self, root: Path, transaction: Transaction):
-        console_cls: Union[Type[EmptyConsoleAdapter], Type[RichConsoleAdapter]] = EmptyConsoleAdapter
-        if self._gui_enabled:
-            console_cls = RichConsoleAdapter
-        with console_cls() as console:
-            builder = MerkleFSTree(root, self._object_driver_ts, console)
-            for tree in builder.merkelize():
-                tree.create_partial(transaction)
-            return builder.root_tree
-
-    def _commit_transaction(self, name: str, root: Path, tx):
-        root_tree: Tree = self._build_tree_and_insert(root, tx)
-        # test branch
-        branch = Branch(tx, settings.branch)
-        if not branch:
-            logging.debug("Creating branch: %s", branch.name)
-            branch.create()
-        # get previous commit
-        prev_commit: Optional[Commit] = branch.os_commit
-        # compute new commit digest
-        hasher = Hasher()
-        commit_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        new_commit_sha1sum = hasher.commit(name, commit_date, root_tree).digest()
-        # create OS commit
-        new_commit: Commit = Commit(tx, name, new_commit_sha1sum, commit_date)
-        new_commit.create()
-        # add filesystem
-        new_commit.add_filesystem(root_tree)
-        # add previous if exists
-        if prev_commit:
-            new_commit.add_previous(prev_commit)
-        # update branch
-        branch.set_os_commit(new_commit)
-
     def init(self):
         """Initialize a neogit repository by creating indexes and constraints"""
         with self._graph_driver.session() as session:
-            constraints = {"Blob": "sha1sum", "Tree": "sha1sum", "Commit": "sha1sum", "Branch": "name"}
+            constraints = {"Blob": "hash", "Tree": "hash", "Commit": "hash", "Branch": "name"}
             for label, unique_prop in constraints.items():
                 try:
                     self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
@@ -131,16 +98,29 @@ class Neogit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
-        with self._graph_driver.session() as session:
-            tx = session.begin_transaction()
+        with db.write_transaction as transaction_proxy:
+            trans: Transaction = transaction_proxy.db._active_transaction
+            # build merkle tree
+            root_node = FSDirectoryNode(root)
+            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
+                root_tree = builder.run()
+            # ensure Branch is created
             try:
-                self._commit_transaction(name, root, tx)
-            except Exception:
-                # rollback transaction
-                tx.rollback()
-                raise
-            else:
-                tx.commit()
+                branch = NeoBranch.nodes.get(name=settings.branch)
+            except NeoBranch.DoesNotExist:
+                branch = NeoBranch(name=settings.branch)
+                branch.save()
+            # get previous commit
+            prev_commit = None
+            if branch.tracks:
+                prev_commit = branch.tracks[0]
+            # create new commit
+            new_commit = NeoCommit.from_name(name, root_tree)
+            # connect to previous, if any
+            if prev_commit:
+                new_commit.previous.connect(prev_commit)
+            # update main branch
+            branch.tracks.replace(new_commit)
 
     def log(self):
         branch_name: str = settings.branch

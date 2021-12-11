@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check format
+        run: poetry run make fmt -- --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check format
+        run: poetry run make lint
+
+  type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check types
+        run: poetry run make type
+
+  vermin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check minimum version
+        run: poetry run make vermin
+
+  unit_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check unit test
+        run: poetry run make unit_test
+
+  integration_test:
+    runs-on: ubuntu-latest
+    services:
+      minio:
+        # need to use a custom image because Github Actions doesn't allow us to pass a CMD
+        # and the official Minio image needs a "server" command
+        image: lazybit/minio
+        ports:
+          - 9000:9000
+      neo4j:
+        image: neo4j:4.2.4
+        ports:
+          - 7687:7687
+          # also expose the HTTP port since we use this to test whether the DB is ready
+          - 7474:7474
+        env:
+          NEO4J_AUTH: none
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      # pass --externdb to use github actions service containers instead
+      - name: Run integration tests
+        run: poetry run make integration_test -- --externdb
+        env:
+          NEOGIT_OBJECT__PROVIDER: minio
+          NEOGIT_OBJECT__HOST: 127.0.0.1
+          NEOGIT_OBJECT__PORT: 9000
+          NEOGIT_OBJECT__KEY: minioadmin
+          NEOGIT_OBJECT__SECRET: minioadmin
+          NEOGIT_OBJECT__SECURE: false

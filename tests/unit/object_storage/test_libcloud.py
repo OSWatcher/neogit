@@ -17,6 +17,10 @@ def fake_adapter(fs):
     yield storage
     # cleanup
     for container in storage.iterate_containers():
+        # TODO: this triggers a race condition or conflict in pyfakefs / fasteners ?
+        # only on Github Actions
+        # disable it for now while we investigate
+        # https://github.com/jmcgeheeiv/pyfakefs/issues/645
         storage.delete_container(container)
 
 
@@ -45,7 +49,7 @@ def test_get_container_ok(fake_adapter):
     assert c.name == container_name
 
 
-def test_upload_obj(fs, fake_adapter):
+def test_upload_obj(fake_adapter):
     # setup
     expected_data = b"data"
     with open("/file1.txt", "wb") as f:

@@ -10,6 +10,7 @@ CUR_DIR = Path(__file__).parent
 LOG_FMT = "%(asctime)s:%(name)s:%(levelname)s:%(message)s"
 USER_DATA_DIR = Path(user_data_dir(APPNAME))
 CONTAINER_NAME = "objects"
+NEO4J_HTTP_PORT = 7474
 
 settings = Dynaconf(
     envvar_prefix="NEOGIT",
@@ -38,8 +39,14 @@ settings = Dynaconf(
             "neo4j.url",
             default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",
         ),
+        Validator(
+            "neo4j.url_full",
+            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.user}:"
+            f"{_settings.neo4j.password}@{_settings.neo4j.host}:{_settings.neo4j.port}",
+        ),
+        Validator("neo4j.http_url", default=lambda _settings, _url: f"http://{_settings.neo4j.host}:{NEO4J_HTTP_PORT}"),
         Validator("object.key", default=USER_DATA_DIR),
-        Validator("object.secret_key", default=None),
+        Validator("object.secret", default=None),
         Validator("object.host", default=None),
         Validator("object.port", default=None),
         Validator("object.secure", default=None),
@@ -56,7 +63,7 @@ settings = Dynaconf(
 class ObjectConfig:
     provider: str
     key: str
-    secret_key: Optional[str] = field(default=None)
+    secret: Optional[str] = field(default=None)
     host: Optional[str] = field(default=None)
     port: Optional[int] = field(default=None)
     secure: Optional[bool] = field(default=None)
@@ -70,7 +77,7 @@ class ObjectConfig:
         return ObjectConfig(
             settings.object.provider,
             settings.object.key,
-            settings.object.secret_key,
+            settings.object.secret,
             settings.object.host,
             settings.object.port,
             settings.object.secure,

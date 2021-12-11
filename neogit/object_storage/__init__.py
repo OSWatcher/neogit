@@ -5,6 +5,8 @@ from .abstract import (
     ContainerError,
     Object,
     ObjectDoesNotExistError,
+    ObjectError,
+    ObjectStorageError,
 )
 from .fake import FakeObjectStorage
 from .lib_cloud import LibcloudObjectStorage
