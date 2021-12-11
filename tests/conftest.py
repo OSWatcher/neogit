@@ -142,7 +142,7 @@ def ready_neo4j(start_neo4j_db: Optional[str]):
             logging.info("attempting to connect to DB %s", neo4j_http_url)
             with urlopen(neo4j_http_url, timeout=1) as opened_url:
                 opened_url.read()
-        except (URLError, ConnectionError, ConnectionResetError):
+        except (URLError, ConnectionError):
             time.sleep(0.7)
         else:
             opened = True
