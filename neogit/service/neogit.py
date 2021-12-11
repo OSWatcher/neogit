@@ -5,7 +5,8 @@ from functools import wraps
 from pathlib import Path, PurePath
 from typing import Dict, Iterator, List, Optional
 
-from neo4j import GraphDatabase, Transaction
+from gql import Client
+from neo4j import GraphDatabase
 from neo4j.exceptions import ClientError
 from neomodel import db
 
@@ -14,8 +15,6 @@ from neogit.core.model import FSDirectoryNode
 from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
-from neogit.model.neo import Branch as NeoBranch
-from neogit.model.neo import Commit as NeoCommit
 from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
@@ -34,10 +33,11 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage, graphql_client: Client, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
+        self._gql_client = graphql_client
         # dynaconf settings are list, need to convert to tuple
         creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
@@ -98,29 +98,12 @@ class Neogit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
-        with db.write_transaction as transaction_proxy:
-            trans: Transaction = transaction_proxy.db._active_transaction
-            # build merkle tree
-            root_node = FSDirectoryNode(root)
-            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
-                root_tree = builder.run()
-            # ensure Branch is created
-            try:
-                branch = NeoBranch.nodes.get(name=settings.branch)
-            except NeoBranch.DoesNotExist:
-                branch = NeoBranch(name=settings.branch)
-                branch.save()
-            # get previous commit
-            prev_commit = None
-            if branch.tracks:
-                prev_commit = branch.tracks[0]
-            # create new commit
-            new_commit = NeoCommit.from_name(name, root_tree)
-            # connect to previous, if any
-            if prev_commit:
-                new_commit.previous.connect(prev_commit)
-            # update main branch
-            branch.tracks.replace(new_commit)
+        # build merkle tree
+        root_node = FSDirectoryNode(root)
+        with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, self._gql_client) as builder:
+            root_tree = builder.run()  # noqa: F841 TODO
+        raise NotImplementedError
+        # ensure Branch is created
 
     def log(self):
         branch_name: str = settings.branch

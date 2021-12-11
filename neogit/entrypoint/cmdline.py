@@ -58,7 +58,7 @@ def handle_cmdline():
     # init TSObjectStorage and inject dependency
     obj_config = ObjectConfig.from_settings(settings)
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
-    git = Neogit(tsobj, gui_enabled)
+    git = Neogit(tsobj, client, gui_enabled)
     if args["init"]:
         git.init()
     if args["commit"]:
