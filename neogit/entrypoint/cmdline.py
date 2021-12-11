@@ -19,6 +19,8 @@ from pathlib import Path
 import coloredlogs
 import yaml
 from docopt import docopt
+from gql import Client
+from gql.transport.requests import RequestsHTTPTransport
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
@@ -50,6 +52,9 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     gui_enabled = args["--gui"]
+    # GraphQL Client
+    transport = RequestsHTTPTransport(settings.graphql.url, verify=True, retries=3)
+    client = Client(transport=transport, fetch_schema_from_transport=True)
     # init TSObjectStorage and inject dependency
     obj_config = ObjectConfig.from_settings(settings)
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
