@@ -55,7 +55,7 @@ settings = Dynaconf(
         Validator("object.ex_force_auth_version", default=None),
         Validator("object.ex_tenant_name", default=None),
         Validator("object.container_name", default=CONTAINER_NAME),
-        Validator("graphql.url", must_exist=True)
+        Validator("graphql.url", must_exist=True),
     ],
 )
 
