@@ -29,6 +29,7 @@ rich = "10.2.0"
 attrs = "^21.2.0"
 neomodel = "^4.0.5"
 types-PyYAML = "^6.0.0"
+gql = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "21.8b0"
@@ -82,6 +83,7 @@ module = [
     "neomodel.*",
     "dynaconf.*",
     "coloredlogs.*",
+    "gql.*"
 ]
 ignore_missing_imports = true
 
