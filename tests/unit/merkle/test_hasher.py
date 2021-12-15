@@ -20,6 +20,6 @@ def test_hasher_filepath(filename, expected_sha1):
     filepath = TEST_DATA_SHA / filename
     with filepath_merkle_ctx(filepath) as io:
         hasher = Hasher()
-        [hasher.string(chunk) for chunk in iter_chunk(io)]
+        [hasher.from_bytes(chunk) for chunk in iter_chunk(io)]
     sha1 = hasher.digest()
     assert expected_sha1 == sha1

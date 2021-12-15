@@ -59,11 +59,11 @@ def merkelize_dir(cur_dir: Path, filename_to_sha1: Dict[str, str], tree_fs: Dict
     for entry_name in sorted(tree.children_tree):
         child_sha1sum = tree.children_tree[entry_name].sha1sum
         data = f"{entry_name}{child_sha1sum}\n"
-        hasher.string(data.encode())
+        hasher.from_bytes(data.encode())
     # then files
     for entry_name in sorted(tree.children_blob):
         child_sha1sum = tree.children_blob[entry_name].sha1sum
         data = f"{entry_name}{child_sha1sum}\n"
-        hasher.string(data.encode())
+        hasher.from_bytes(data.encode())
     tree.sha1sum = hasher.digest()
     return tree

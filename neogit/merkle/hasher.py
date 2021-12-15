@@ -1,5 +1,4 @@
 import hashlib
-from typing import Union
 
 COMMIT_STRING = """
 {name}{date}{tree_sha1}
@@ -19,7 +18,7 @@ class Hasher:
         for block_size in iter(lambda: io.readinto(view), 0):
             self._hash.update(view[:block_size])
 
-    def string(self, string: Union[str, bytes]) -> "Hasher":
+    def from_bytes(self, string: bytes) -> "Hasher":
         self._hash.update(string)
         return self
 
