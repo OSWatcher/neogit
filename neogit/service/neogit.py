@@ -5,7 +5,7 @@ from functools import wraps
 from pathlib import Path, PurePath
 from typing import Dict, Iterator, List, Optional
 
-from gql import Client
+from gql import Client, gql
 from neo4j import GraphDatabase
 from neo4j.exceptions import ClientError
 from neomodel import db
@@ -15,6 +15,7 @@ from neogit.core.model import FSDirectoryNode
 from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
+from neogit.model.gql import Commit as GQLCommit
 from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
@@ -102,8 +103,85 @@ class Neogit:
         root_node = FSDirectoryNode(root)
         with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, self._gql_client) as builder:
             root_tree = builder.run()  # noqa: F841 TODO
-        raise NotImplementedError
-        # ensure Branch is created
+        # get branch and the current tracked commit
+        query = gql(
+            """
+            query($where: BranchWhere) {
+              branches(where: $where) {
+                name
+                tracks {
+                  hash
+                }
+              }
+            }
+            """
+        )
+        where_params = {"name": settings.branch}
+        result = self._gql_client.execute(query, variable_values={"where": where_params})
+        branches = result["branches"]
+        previous_commit_hash: Optional[str] = None
+        if not branches:
+            # must create new branch
+            query = gql(
+                """
+                mutation createNewBranch($input: [BranchCreateInput!]!) {
+                    createBranches(input: $input) {
+                        branches {
+                            name
+                        }
+                    }
+                }
+                """
+            )
+            branch_create_params = {"name": settings.branch}
+            self._log.info("Creating new branch: %s", settings.branch)
+            self._gql_client.execute(query, variable_values={"input": branch_create_params})
+        else:
+            previous_commit_hash = branches[0]["tracks"]["hash"]
+        gql_commit = GQLCommit(name, root_tree.hash)
+        mut_new_commit_params = {
+            # create the commit
+            "input": {
+                "hash": gql_commit.hash,
+                "name": gql_commit.name,
+                "date": gql_commit.date,
+                "filesystem": {"connect": {"where": {"node": {"hash": root_tree.hash}}}},
+            },
+            "where": {"name": settings.branch},
+            "input_branch": {
+                "name": settings.branch,
+                "tracks": {"connect": {"where": {"node": {"hash": gql_commit.hash}}}},
+            },
+        }
+        # connect new commit to previous
+        if previous_commit_hash:
+            mut_new_commit_params["input"]["previous"] = {
+                "connect": {"where": {"node": {"hash": previous_commit_hash}}}
+            }
+        query = gql(
+            """
+            mutation createNewCommit($input: [CommitCreateInput!]!,
+                $where: BranchWhere, $input_branch: [BranchCreateInput!]!) {
+                untrack: deleteBranches(where: $where) {
+                    nodesDeleted
+                }
+                createCommits(input: $input) {
+                    commits {
+                        name
+                    }
+                }
+                track: createBranches(input: $input_branch ) {
+                    branches {
+                        tracks {
+                            hash
+                        }
+                    }
+                }
+            }
+            """
+        )
+        result = self._gql_client.execute(query, variable_values=mut_new_commit_params)
+        self._log.info("Commit created: %s", gql_commit)
 
     def log(self):
         branch_name: str = settings.branch

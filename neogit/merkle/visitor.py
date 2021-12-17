@@ -64,5 +64,4 @@ class NeoMerkleTreeBuilder:
         merkle_node = self._visitor_thread.join()  # noqa: F841 TODO
         self._uploader_thread.join()
         self._graphql_pool.wait()
-        # return root Tree
-        return None
+        return merkle_node
