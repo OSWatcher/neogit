@@ -140,6 +140,8 @@ class Neogit:
             previous_commit_hash = branches[0]["tracks"]["hash"]
         gql_commit = GQLCommit(name, root_tree.hash)
         mut_new_commit_params = {
+            # disconnect branch from all commits
+            "disconnect": {"tracks": {}},
             # create the commit
             "input": {
                 "hash": gql_commit.hash,
@@ -148,10 +150,8 @@ class Neogit:
                 "filesystem": {"connect": {"where": {"node": {"hash": root_tree.hash}}}},
             },
             "where": {"name": settings.branch},
-            "input_branch": {
-                "name": settings.branch,
-                "tracks": {"connect": {"where": {"node": {"hash": gql_commit.hash}}}},
-            },
+            # connect branch to new commit
+            "connect": {"tracks": {"where": {"node": {"hash": gql_commit.hash}}}},
         }
         # connect new commit to previous
         if previous_commit_hash:
@@ -160,17 +160,21 @@ class Neogit:
             }
         query = gql(
             """
-            mutation createNewCommit($input: [CommitCreateInput!]!,
-                $where: BranchWhere, $input_branch: [BranchCreateInput!]!) {
-                untrack: deleteBranches(where: $where) {
-                    nodesDeleted
+            mutation createNewCommit($disconnect: BranchDisconnectInput, $input: [CommitCreateInput!]!,
+                $where: BranchWhere, $connect: BranchConnectInput) {
+                untrackPrevious: updateBranches(where: $where, disconnect: $disconnect) {
+                    branches {
+                        tracks {
+                            hash
+                        }
+                    }
                 }
                 createCommits(input: $input) {
                     commits {
                         name
                     }
                 }
-                track: createBranches(input: $input_branch ) {
+                trackNew: updateBranches(where: $where, connect: $connect) {
                     branches {
                         tracks {
                             hash
