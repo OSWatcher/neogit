@@ -67,5 +67,5 @@ def handle_cmdline():
     if args["diff"]:
         ref1 = args["<ref1>"]
         ref2 = args["<ref2>"]
-        for diff_obj in git.diff(ref1, ref2):
+        for diff_obj in git.diff_commits(ref1, ref2):
             print(diff_obj)

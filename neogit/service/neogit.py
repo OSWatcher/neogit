@@ -197,12 +197,39 @@ class Neogit:
             # TODO commit: Optional[Commit] = branch.os_commit
             raise NotImplementedError
 
-    def diff(self, ref1: str, ref2: str):
-        # check if both refs exists
-        with self._graph_driver.session() as session:
-            ref1_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref1)
-            ref2_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref2)
-            yield from diff_trees(session, ref1_tree_sha1, ref2_tree_sha1)
+    def diff_commits(self, base_commit_hash: str, diffee_commit_hash: str) -> Iterator[FSDiffObject]:
+        query = gql(
+            """
+            query($baseCommitHash: String!, $diffeeCommitHash: String!) {
+              diffCommits(base_commit_hash: $baseCommitHash, diffee_commit_hash: $diffeeCommitHash) {
+                newitems {
+                  path
+                  old_hash
+                  new_hash
+                }
+                delitems {
+                  path
+                  old_hash
+                  new_hash
+                }
+                moditems {
+                  path
+                  old_hash
+                  new_hash
+                }
+              }
+            }
+        """
+        )
+        result = self._gql_client.execute(
+            query, variable_values={"baseCommitHash": base_commit_hash, "diffeeCommitHash": diffee_commit_hash}
+        )
+        for item in result["diffCommits"]["newitems"]:
+            yield FSDiffObject(DiffStatus.NEW, item["path"], item["old_hash"], item["new_hash"])
+        for item in result["diffCommits"]["delitems"]:
+            yield FSDiffObject(DiffStatus.DEL, item["path"], item["old_hash"], item["new_hash"])
+        for item in result["diffCommits"]["moditems"]:
+            yield FSDiffObject(DiffStatus.MOD, item["path"], item["old_hash"], item["new_hash"])
 
     def diff_filesystem_at(self, os1_sha1: str, os2_sha1: str, fs_path: Path) -> Iterator[FSDiffObject]:
         with self._graph_driver.session() as session:
