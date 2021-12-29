@@ -95,7 +95,7 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path):
+    def commit(self, name: str, root: Path) -> GQLCommit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
@@ -186,6 +186,7 @@ class Neogit:
         )
         result = self._gql_client.execute(query, variable_values=mut_new_commit_params)
         self._log.info("Commit created: %s", gql_commit)
+        return gql_commit
 
     def log(self):
         branch_name: str = settings.branch
