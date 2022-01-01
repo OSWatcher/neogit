@@ -19,6 +19,8 @@ from pathlib import Path
 import coloredlogs
 import yaml
 from docopt import docopt
+from gql import Client
+from gql.transport.requests import RequestsHTTPTransport
 
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
@@ -50,10 +52,13 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     gui_enabled = args["--gui"]
+    # GraphQL Client
+    transport = RequestsHTTPTransport(settings.graphql.url, verify=True, retries=3)
+    client = Client(transport=transport, fetch_schema_from_transport=True)
     # init TSObjectStorage and inject dependency
     obj_config = ObjectConfig.from_settings(settings)
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
-    git = Neogit(tsobj, gui_enabled)
+    git = Neogit(tsobj, client, gui_enabled)
     if args["init"]:
         git.init()
     if args["commit"]:
@@ -62,5 +67,5 @@ def handle_cmdline():
     if args["diff"]:
         ref1 = args["<ref1>"]
         ref2 = args["<ref2>"]
-        for diff_obj in git.diff(ref1, ref2):
+        for diff_obj in git.diff_commits(ref1, ref2):
             print(diff_obj)

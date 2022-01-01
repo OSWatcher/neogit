@@ -5,17 +5,16 @@ from functools import wraps
 from pathlib import Path, PurePath
 from typing import Dict, Iterator, List, Optional
 
-from neo4j import GraphDatabase, Transaction
+from gql import Client, gql
+from neo4j import GraphDatabase
 from neo4j.exceptions import ClientError
 from neomodel import db
 
 from neogit.config import settings
 from neogit.core.model import FSDirectoryNode
-from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import Branch, Commit, DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
-from neogit.model.neo import Branch as NeoBranch
-from neogit.model.neo import Commit as NeoCommit
+from neogit.model.gql import Commit as GQLCommit
 from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import traverse_path_tree
@@ -34,10 +33,11 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage, graphql_client: Client, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
+        self._gql_client = graphql_client
         # dynaconf settings are list, need to convert to tuple
         creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
@@ -94,33 +94,98 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path):
+    def commit(self, name: str, root: Path) -> GQLCommit:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
-        with db.write_transaction as transaction_proxy:
-            trans: Transaction = transaction_proxy.db._active_transaction
-            # build merkle tree
-            root_node = FSDirectoryNode(root)
-            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
-                root_tree = builder.run()
-            # ensure Branch is created
-            try:
-                branch = NeoBranch.nodes.get(name=settings.branch)
-            except NeoBranch.DoesNotExist:
-                branch = NeoBranch(name=settings.branch)
-                branch.save()
-            # get previous commit
-            prev_commit = None
-            if branch.tracks:
-                prev_commit = branch.tracks[0]
-            # create new commit
-            new_commit = NeoCommit.from_name(name, root_tree)
-            # connect to previous, if any
-            if prev_commit:
-                new_commit.previous.connect(prev_commit)
-            # update main branch
-            branch.tracks.replace(new_commit)
+        # build merkle tree
+        root_node = FSDirectoryNode(root)
+        with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, self._gql_client) as builder:
+            root_tree = builder.run()  # noqa: F841 TODO
+        # get branch and the current tracked commit
+        query = gql(
+            """
+            query($where: BranchWhere) {
+              branches(where: $where) {
+                name
+                tracks {
+                  hash
+                }
+              }
+            }
+            """
+        )
+        where_params = {"name": settings.branch}
+        result = self._gql_client.execute(query, variable_values={"where": where_params})
+        branches = result["branches"]
+        previous_commit_hash: Optional[str] = None
+        if not branches:
+            # must create new branch
+            query = gql(
+                """
+                mutation createNewBranch($input: [BranchCreateInput!]!) {
+                    createBranches(input: $input) {
+                        branches {
+                            name
+                        }
+                    }
+                }
+                """
+            )
+            branch_create_params = {"name": settings.branch}
+            self._log.info("Creating new branch: %s", settings.branch)
+            self._gql_client.execute(query, variable_values={"input": branch_create_params})
+        else:
+            previous_commit_hash = branches[0]["tracks"]["hash"]
+        gql_commit = GQLCommit(name, root_tree.hash)
+        mut_new_commit_params = {
+            # disconnect branch from all commits
+            "disconnect": {"tracks": {}},
+            # create the commit
+            "input": {
+                "hash": gql_commit.hash,
+                "name": gql_commit.name,
+                "date": gql_commit.date,
+                "filesystem": {"connect": {"where": {"node": {"hash": root_tree.hash}}}},
+            },
+            "where": {"name": settings.branch},
+            # connect branch to new commit
+            "connect": {"tracks": {"where": {"node": {"hash": gql_commit.hash}}}},
+        }
+        # connect new commit to previous
+        if previous_commit_hash:
+            mut_new_commit_params["input"]["previous"] = {  # type: ignore
+                "connect": {"where": {"node": {"hash": previous_commit_hash}}}
+            }
+        query = gql(
+            """
+            mutation createNewCommit($disconnect: BranchDisconnectInput, $input: [CommitCreateInput!]!,
+                $where: BranchWhere, $connect: BranchConnectInput) {
+                untrackPrevious: updateBranches(where: $where, disconnect: $disconnect) {
+                    branches {
+                        tracks {
+                            hash
+                        }
+                    }
+                }
+                createCommits(input: $input) {
+                    commits {
+                        name
+                    }
+                }
+                trackNew: updateBranches(where: $where, connect: $connect) {
+                    branches {
+                        tracks {
+                            hash
+                        }
+                    }
+                }
+            }
+            """
+        )
+        result = self._gql_client.execute(query, variable_values=mut_new_commit_params)
+        self._log.info("Commit created: %s", gql_commit)
+        return gql_commit
 
     def log(self):
         branch_name: str = settings.branch
@@ -132,48 +197,42 @@ class Neogit:
             # TODO commit: Optional[Commit] = branch.os_commit
             raise NotImplementedError
 
-    def diff(self, ref1: str, ref2: str):
-        # check if both refs exists
-        with self._graph_driver.session() as session:
-            ref1_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref1)
-            ref2_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref2)
-            yield from diff_trees(session, ref1_tree_sha1, ref2_tree_sha1)
+    def diff_commits(self, base_commit_hash: str, diffee_commit_hash: str) -> Iterator[FSDiffObject]:
+        query = gql(
+            """
+            query($baseCommitHash: String!, $diffeeCommitHash: String!) {
+              diffCommits(base_commit_hash: $baseCommitHash, diffee_commit_hash: $diffeeCommitHash) {
+                newitems {
+                  path
+                  old_hash
+                  new_hash
+                }
+                delitems {
+                  path
+                  old_hash
+                  new_hash
+                }
+                moditems {
+                  path
+                  old_hash
+                  new_hash
+                }
+              }
+            }
+        """
+        )
+        result = self._gql_client.execute(
+            query, variable_values={"baseCommitHash": base_commit_hash, "diffeeCommitHash": diffee_commit_hash}
+        )
+        for item in result["diffCommits"]["newitems"]:
+            yield FSDiffObject(DiffStatus.NEW, item["path"], item["old_hash"], item["new_hash"])
+        for item in result["diffCommits"]["delitems"]:
+            yield FSDiffObject(DiffStatus.DEL, item["path"], item["old_hash"], item["new_hash"])
+        for item in result["diffCommits"]["moditems"]:
+            yield FSDiffObject(DiffStatus.MOD, item["path"], item["old_hash"], item["new_hash"])
 
     def diff_filesystem_at(self, os1_sha1: str, os2_sha1: str, fs_path: Path) -> Iterator[FSDiffObject]:
-        with self._graph_driver.session() as session:
-            try:
-                os1_final_tree_sha1 = traverse_path_tree(session, os1_sha1, fs_path)
-            except RuntimeError:
-                os1_final_tree = None
-            else:
-                os1_final_tree = Tree()
-                os1_final_tree.sha1sum = os1_final_tree_sha1
-            try:
-                os2_final_tree_sha1 = traverse_path_tree(session, os2_sha1, fs_path)
-            except RuntimeError:
-                os2_final_tree = None
-            else:
-                os2_final_tree = Tree()
-                os2_final_tree.sha1sum = os2_final_tree_sha1
-            if os1_final_tree is None and os2_final_tree:
-                # path is a new directory on OS2
-                # get fs entries
-                fs_entries = self.list_filesystem_at([os2_sha1], fs_path)[os2_sha1]
-                for child_name, child_tree in fs_entries.children_tree.items():
-                    yield FSDiffObject(DiffStatus.NEW, True, fs_path / child_name, None, child_tree.sha1sum)
-                for child_name, child_blob in fs_entries.children_blob.items():
-                    yield FSDiffObject(DiffStatus.NEW, False, fs_path / child_name, None, child_blob.sha1sum)
-            elif os1_final_tree and os2_final_tree is None:
-                # path is deleted directory on OS2
-                fs_entries = self.list_filesystem_at([os1_sha1], fs_path)[os1_sha1]
-                for child_name, child_tree in fs_entries.children_tree.items():
-                    yield FSDiffObject(DiffStatus.DEL, True, fs_path / child_name, child_tree.sha1sum, None)
-                for child_name, child_blob in fs_entries.children_blob.items():
-                    yield FSDiffObject(DiffStatus.DEL, False, fs_path / child_name, child_blob.sha1sum, None)
-            elif os1_final_tree and os2_final_tree:
-                yield from diff_trees(session, os1_final_tree.sha1sum, os2_final_tree.sha1sum, fs_path)
-            else:
-                raise RuntimeError(f"Path {fs_path} not found OS commits")
+        raise NotImplementedError
 
     def get_object_size(self, obj_sha1: str) -> int:
         container_name = settings.object.container_name

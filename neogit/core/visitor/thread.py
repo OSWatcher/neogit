@@ -3,7 +3,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from threading import current_thread
 from typing import Optional
 
-from neogit.core.model import Node
+from neogit.core.model import MerkleNode, Node
 from neogit.core.visitor import NodeVisitor
 
 
@@ -46,7 +46,7 @@ class NodeVisitorThread:
         return self._future.result()
 
     def _run(self, visitor: NodeVisitor, node_to_visit: Node):
-        value = visitor.visit(node_to_visit)
+        value: MerkleNode = visitor.visit(node_to_visit)
         # put None in queue
         visitor.done_visiting()
         self._logger.debug("Thread %s done", current_thread().getName())

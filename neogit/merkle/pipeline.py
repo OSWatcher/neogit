@@ -61,7 +61,7 @@ class MerklePipeline:
             self._console.set_pool_task(TaskPool.SHA1, task_name, file_size)
             hash = Hasher()
             for chunk in iter_chunk(io):
-                hash.string(chunk)
+                hash.from_bytes(chunk)
                 self._console.update_pool_task(TaskPool.SHA1, len(chunk))
             sha1 = hash.digest()
             result = filepath, sha1

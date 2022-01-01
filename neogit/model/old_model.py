@@ -304,10 +304,9 @@ class DiffStatus(Enum):
 @dataclass
 class FSDiffObject:
     status: DiffStatus
-    is_dir: bool
     path: Path
-    old_sha1sum: Optional[str]
-    new_sha1sum: Optional[str]
+    old_hash: Optional[str]
+    new_hash: Optional[str]
 
 
 # fs search
