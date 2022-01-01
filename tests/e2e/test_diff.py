@@ -9,21 +9,21 @@
 # extract to tmpdir
 # commit with Neogit
 # git diff vs neogit diff
+import tarfile
 from itertools import islice
 from pathlib import Path
-from typing import Iterator, List, Optional
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Optional
 
-import pytest
-import tarfile
-from git import Repo, Commit
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 import attr
+import pytest
+from git import Repo
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
-from neogit.config import settings, ObjectConfig
+from neogit.config import ObjectConfig, settings
 from neogit.model import DiffStatus
-from neogit.object_storage import TSObjectStorage, LibcloudObjectStorage
+from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
 LIMIT = 100
