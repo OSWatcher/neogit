@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "neogit"
-version = "0.2.0"
+version = "0.3.0"
 description = "Git-like tool backed by Neo4j"
 authors = ["Mathieu Tarral <mathieu.tarral@protonmail.com>"]
 readme = 'README.md'
