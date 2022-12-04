@@ -69,8 +69,11 @@ jobs:
         uses: ./.github/actions/common-setup
 
       # pass --externdb to use github actions service containers instead
+      # poetry run doesn't play well with our Makefile EXTRA_ARGS hack
       - name: Run integration tests
-        run: poetry run make integration_test -- --externdb
+        run: |
+          source $(poetry env info --path)/bin/activate
+          make integration_test -- --externdb
         env:
           NEOGIT_OBJECT__PROVIDER: minio
           NEOGIT_OBJECT__HOST: 127.0.0.1
