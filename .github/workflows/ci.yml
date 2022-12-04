@@ -24,10 +24,10 @@ jobs:
       - name: Project setup
         uses: ./.github/actions/common-setup
 
-      - name: Check format
+      - name: run make target
         run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
 
-  test:
+  unit_test:
     strategy:
       matrix:
         # TODO: add windows-latest and ditch Makefile
@@ -47,15 +47,22 @@ jobs:
 
   integration_test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        neo4j: ['4.2.4']
+        python: ['3.8', '3.11']
     services:
       minio:
         # need to use a custom image because Github Actions doesn't allow us to pass a CMD
         # and the official Minio image needs a "server" command
-        image: lazybit/minio
+        image: bitnami/minio:2022.12.2
         ports:
           - 9000:9000
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
       neo4j:
-        image: neo4j:4.2.4
+        image: neo4j:${{ matrix.neo4j }}
         ports:
           - 7687:7687
           # also expose the HTTP port since we use this to test whether the DB is ready
@@ -67,10 +74,15 @@ jobs:
 
       - name: Project setup
         uses: ./.github/actions/common-setup
+        with:
+          python_version: ${{ matrix.python }}
 
       # pass --externdb to use github actions service containers instead
+      # poetry run doesn't play well with our Makefile EXTRA_ARGS hack
       - name: Run integration tests
-        run: poetry run make integration_test -- --externdb
+        run: |
+          source $(poetry env info --path)/bin/activate
+          make integration_test -- --externdb
         env:
           NEOGIT_OBJECT__PROVIDER: minio
           NEOGIT_OBJECT__HOST: 127.0.0.1
@@ -97,7 +109,7 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [dev, test, build_image]
+    needs: [dev, unit_test, integration_test, build_image]
     # if push on master and tag starts with 'v*'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
