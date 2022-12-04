@@ -26,7 +26,7 @@ runs:
       id: cache-deps
       uses: actions/cache@v2
       with:
-        path: .venv
+        path: ~/.cache/pypoetry
         key: pydeps-${{ inputs.python_version }}-${{ hashFiles('**/poetry.lock') }}
 
     # shapely deps on Linux needs libgeos
