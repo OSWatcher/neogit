@@ -31,7 +31,7 @@ neomodel = "^4.0.5"
 types-PyYAML = "^6.0.0"
 
 [tool.poetry.dev-dependencies]
-black = "21.8b0"
+black = "22.10.0"
 flake8 = "3.9.2"
 isort = "5.9.3"
 mypy = "0.910"
