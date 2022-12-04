@@ -100,12 +100,33 @@ jobs:
           NEOGIT_OBJECT__SECURE: false
 
   build_image:
+    # build Docker image, but don't push it
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build and push Docker images
+      - name: Build Docker image
         uses: docker/build-push-action@v3.2.0
         with:
           push: false
           tags: wenzel/neogit:latest
+
+  release:
+    # if push on master and tag starts with 'v*'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [format, lint, type, vermin, unit_test, integration_test, build_image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Create a Release
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: ${{ steps.get_version.outputs.version }}
+          body_path: .github/RELEASE.md
