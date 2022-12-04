@@ -82,6 +82,9 @@ jobs:
   build_image:
     # build Docker image, but don't push it
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ['3.8', '3.11']
     steps:
       - uses: actions/checkout@v3
 
@@ -89,6 +92,8 @@ jobs:
         uses: docker/build-push-action@v3.2.0
         with:
           push: false
+          build-args: |
+            python_version=${{ matrix.python_version}}
           tags: wenzel/neogit:latest
 
   release:
