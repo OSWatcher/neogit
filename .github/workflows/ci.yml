@@ -98,3 +98,14 @@ jobs:
           NEOGIT_OBJECT__KEY: minioadmin
           NEOGIT_OBJECT__SECRET: minioadmin
           NEOGIT_OBJECT__SECURE: false
+
+  build_image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v3.2.0
+        with:
+          push: false
+          tags: wenzel/neogit:latest
