@@ -55,9 +55,12 @@ jobs:
       minio:
         # need to use a custom image because Github Actions doesn't allow us to pass a CMD
         # and the official Minio image needs a "server" command
-        image: lazybit/minio
+        image: bitnami/minio:2022.12.2
         ports:
           - 9000:9000
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
       neo4j:
         image: neo4j:${{ matrix.neo4j }}
         ports:
