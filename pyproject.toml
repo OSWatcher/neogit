@@ -35,7 +35,7 @@ black = "21.8b0"
 flake8 = "3.9.2"
 isort = "5.9.3"
 mypy = "0.910"
-vermin = "1.2.2"
+vermin = "1.5.1"
 pytest = "6.2.5"
 coverage = "5.5"
 # TODO: darglint, flake8-docstrings
