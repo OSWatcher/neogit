@@ -9,61 +9,22 @@ on:
   pull_request:
 
 jobs:
-  format:
+  dev:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        make_target: [fmt, lint, type, vermin, unit_test]
+        include:
+          - make_target: fmt
+            extra_args: --check
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Project setup
         uses: ./.github/actions/common-setup
 
       - name: Check format
-        run: poetry run make fmt -- --check
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check format
-        run: poetry run make lint
-
-  type:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check types
-        run: poetry run make type
-
-  vermin:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check minimum version
-        run: poetry run make vermin
-
-  unit_test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check unit test
-        run: poetry run make unit_test
+        run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
 
   integration_test:
     runs-on: ubuntu-latest
@@ -112,7 +73,7 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [format, lint, type, vermin, unit_test, integration_test, build_image]
+    needs: [dev, integration_test, build_image]
     # if push on master and tag starts with 'v*'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
