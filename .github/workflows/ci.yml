@@ -73,7 +73,7 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [dev, integration_test, build_image]
+    needs: [dev, build_image]
     # if push on master and tag starts with 'v*'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
