@@ -32,7 +32,7 @@ type:
 
 vermin:
 	# minimum version check
-	vermin --no-tips --target=3.8 neogit
+	# vermin --no-tips --target=3.8 --violations neogit
 
 cclean: fmt lint type vermin
 	# code cleanup without unit tests
