@@ -13,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        make_target: [fmt, lint, type, vermin, unit_test]
+        make_target: [fmt, lint, type, vermin]
         include:
+          # black needs --check to return an error code
           - make_target: fmt
             extra_args: --check
     steps:
@@ -25,6 +26,24 @@ jobs:
 
       - name: Check format
         run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
+
+  test:
+    strategy:
+      matrix:
+        # TODO: add windows-latest and ditch Makefile
+        os: [ubuntu-latest]
+        python_version: ['3.8', '3.9', '3.10', '3.11']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+        with:
+          python_version: "${{ matrix.python_version }}"
+
+      - name: Check format
+        run: poetry run make unit_test
 
   integration_test:
     runs-on: ubuntu-latest
@@ -73,7 +92,7 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [dev, build_image]
+    needs: [dev, test, build_image]
     # if push on master and tag starts with 'v*'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

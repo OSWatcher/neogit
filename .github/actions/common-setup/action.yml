@@ -29,6 +29,12 @@ runs:
         path: .venv
         key: pydeps-${{ inputs.python_version }}-${{ hashFiles('**/poetry.lock') }}
 
+    # shapely deps on Linux needs libgeos
+    - name: Install libgeos
+      run: sudo apt-get update && sudo apt-get install libgeos-dev
+      shell: bash
+      if: ${{ runner.os }} == "Linux"
+
     # Install dependencies. `--no-root` means "install all dependencies but not the project
     # itself", which is what you want to avoid caching _your_ code. The `if` statement
     # ensures this only runs on a cache miss.
