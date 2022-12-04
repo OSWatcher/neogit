@@ -24,7 +24,7 @@ jobs:
       - name: Project setup
         uses: ./.github/actions/common-setup
 
-      - name: Check format
+      - name: run make target
         run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
 
   unit_test:
