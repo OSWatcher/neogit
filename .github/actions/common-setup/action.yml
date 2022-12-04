@@ -1,38 +1,48 @@
 name: 'Project setup'
 description: 'This actions setup python, poetry, and installs the dependencies'
 author: 'Wenzel'
+inputs:
+  python_version:
+    description: 'Python version to setup'
+    required: true
+    default: '3.8'
 runs:
-    using: 'composite'
-    steps:
-      - name: Set up Python 🐍
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.8'
+  using: 'composite'
+  steps:
+    - name: Set up Python 🐍
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python_version }}
 
-      - name: Install Poetry Action
-        uses: snok/install-poetry@v1.2
-        with:
-          version: 1.2.2
+    - name: Install Poetry Action
+      uses: snok/install-poetry@v1.2
+      with:
+        version: 1.2.2
+    
+    # Cache your dependencies (i.e. all the stuff in your `pyproject.toml`). Note the cache
+    # key: if you're using multiple Python versions, or multiple OSes, you'd need to include
+    # them in the cache key. I'm not, so it can be simple and just depend on the poetry.lock.
+    - name: cache deps
+      id: cache-deps
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pypoetry
+        key: pydeps-${{ inputs.python_version }}-${{ hashFiles('**/poetry.lock') }}
 
-      
-      # Cache your dependencies (i.e. all the stuff in your `pyproject.toml`). Note the cache
-      # key: if you're using multiple Python versions, or multiple OSes, you'd need to include
-      # them in the cache key. I'm not, so it can be simple and just depend on the poetry.lock.
-      - name: cache deps
-        id: cache-deps
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+    # shapely deps on Linux needs libgeos
+    - name: Install libgeos
+      run: sudo apt-get update && sudo apt-get install libgeos-dev
+      shell: bash
+      if: ${{ runner.os }} == "Linux"
 
-      # Install dependencies. `--no-root` means "install all dependencies but not the project
-      # itself", which is what you want to avoid caching _your_ code. The `if` statement
-      # ensures this only runs on a cache miss.
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-root
-        shell: bash
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+    # Install dependencies. `--no-root` means "install all dependencies but not the project
+    # itself", which is what you want to avoid caching _your_ code. The `if` statement
+    # ensures this only runs on a cache miss.
+    - name: Install dependencies
+      run: poetry install --no-interaction --no-root
+      shell: bash
+      if: steps.cache-deps.outputs.cache-hit != 'true'
 
-      - name: Install project
-        run: poetry install --no-interaction
-        shell: bash
+    - name: Install project
+      run: poetry install --no-interaction
+      shell: bash

@@ -9,60 +9,40 @@ on:
   pull_request:
 
 jobs:
-  format:
+  dev:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        make_target: [fmt, lint, type, vermin]
+        include:
+          # black needs --check to return an error code
+          - make_target: fmt
+            extra_args: --check
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Project setup
         uses: ./.github/actions/common-setup
 
       - name: Check format
-        run: poetry run make fmt -- --check
+        run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
 
-  lint:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        # TODO: add windows-latest and ditch Makefile
+        os: [ubuntu-latest]
+        python_version: ['3.8', '3.9', '3.10', '3.11']
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Project setup
         uses: ./.github/actions/common-setup
+        with:
+          python_version: "${{ matrix.python_version }}"
 
       - name: Check format
-        run: poetry run make lint
-
-  type:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check types
-        run: poetry run make type
-
-  vermin:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check minimum version
-        run: poetry run make vermin
-
-  unit_test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Project setup
-        uses: ./.github/actions/common-setup
-
-      - name: Check unit test
         run: poetry run make unit_test
 
   integration_test:
@@ -102,6 +82,9 @@ jobs:
   build_image:
     # build Docker image, but don't push it
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ['3.8', '3.11']
     steps:
       - uses: actions/checkout@v3
 
@@ -109,10 +92,12 @@ jobs:
         uses: docker/build-push-action@v3.2.0
         with:
           push: false
+          build-args: |
+            python_version=${{ matrix.python_version}}
           tags: wenzel/neogit:latest
 
   release:
-    needs: [format, lint, type, vermin, unit_test, integration_test, build_image]
+    needs: [dev, test, build_image]
     # if push on master and tag starts with 'v*'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
