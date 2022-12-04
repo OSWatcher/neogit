@@ -21,6 +21,8 @@ COPY . .
 
 # # disable virtualenv in docker
 RUN poetry config virtualenvs.create false
+# install libgeos required by one dependency
+RUN apt-get install -y libgeos-dev
 # install project dependencies
 RUN poetry install --only main
 # # add stub for pyinstaller to find executable package entrypoint
