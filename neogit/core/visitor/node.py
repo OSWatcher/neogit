@@ -58,7 +58,7 @@ class NodeVisitor(object):
     (return value `None`) the `generic_visit` visitor is used instead.
     """
 
-    def __init__(self, queue: Union[Queue, List[Queue]] = None):
+    def __init__(self, queue: Optional[Union[Queue, List[Queue]]] = None):
         """Initialize a NodeVisitor
 
         Parameters:

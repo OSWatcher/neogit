@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import PurePath
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 from neo4j import Session, Transaction
@@ -22,7 +22,7 @@ def traverse_path_tree(session: Union[Session, Transaction], os_sha1: str, fs_pa
     return cur_tree.sha1sum
 
 
-def uri_to_py2neo_uri(uri: str, auth: Tuple[str, str] = None) -> str:
+def uri_to_py2neo_uri(uri: str, auth: Optional[Tuple[str, str]] = None) -> str:
     """
     convert a uri to py2neo uri, adding credentials information
 
@@ -39,7 +39,7 @@ def uri_to_py2neo_uri(uri: str, auth: Tuple[str, str] = None) -> str:
     return urlunparse(new_parts)
 
 
-def auth_to_netloc(netloc: str, auth: Tuple[str, str] = None) -> str:
+def auth_to_netloc(netloc: str, auth: Optional[Tuple[str, str]] = None) -> str:
     auth_str = ""
     if auth:
         auth_str = f"{auth[0]}:{auth[1]}@"

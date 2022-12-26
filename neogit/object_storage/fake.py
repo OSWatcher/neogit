@@ -2,7 +2,7 @@
 
 import os
 from functools import reduce
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 
 from .abstract import (
     AbstractObjectStorage,
@@ -51,7 +51,9 @@ class FakeObjectStorage(AbstractObjectStorage):
         except IndexError:
             raise ContainerDoesNotExistError
 
-    def upload_object(self, filepath: str, container: Container, object_name: str, extra: dict = None) -> Object:
+    def upload_object(
+        self, filepath: str, container: Container, object_name: str, extra: Optional[dict] = None
+    ) -> Object:
         if extra is None:
             extra = {}
         with open(filepath, "rb") as f:
@@ -62,7 +64,7 @@ class FakeObjectStorage(AbstractObjectStorage):
             return obj
 
     def upload_object_via_stream(
-        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: dict = None
+        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: Optional[dict] = None
     ) -> Object:
         if extra is None:
             extra = {}
@@ -78,7 +80,7 @@ class FakeObjectStorage(AbstractObjectStorage):
             f.write(data)
             return True
 
-    def download_object_as_stream(self, obj: Object, chunk_size: int = None) -> Iterator[bytes]:
+    def download_object_as_stream(self, obj: Object, chunk_size: Optional[int] = None) -> Iterator[bytes]:
         data, metadata = self._containers[obj.container][obj.name]
         # TODO: chunk size ?
         yield data

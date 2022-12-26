@@ -181,7 +181,7 @@ class Neogit:
         obj = self._object_driver.get_object(container, obj_sha1)
         return obj.size
 
-    def download_object_as_stream(self, obj_sha1: str, chunk_size: int = None) -> Iterator[bytes]:
+    def download_object_as_stream(self, obj_sha1: str, chunk_size: Optional[int] = None) -> Iterator[bytes]:
         container_name = settings.object.container_name
         container = self._object_driver.get_container(container_name)
         obj = self._object_driver.get_object(container, obj_sha1)
