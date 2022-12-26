@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from functools import wraps
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 
 from libcloud.common.types import LibcloudError
 from libcloud.storage.base import Container as LibCloudContainer
@@ -98,14 +98,16 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         return Container(c.name)
 
     @wraps_exception
-    def upload_object(self, filepath: str, container: Container, object_name: str, extra: dict = None) -> Object:
+    def upload_object(
+        self, filepath: str, container: Container, object_name: str, extra: Optional[dict] = None
+    ) -> Object:
         libcloud_container = LibCloudContainer(container.name, {}, self._driver)
         obj: LibCloudObject = self._driver.upload_object(filepath, libcloud_container, object_name, extra, True)
         return Object(obj.name, obj.size, obj.hash, container, obj.extra, obj.meta_data)
 
     @wraps_exception
     def upload_object_via_stream(
-        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: dict = None
+        self, iterator: Iterator[bytes], container: Container, object_name: str, extra: Optional[dict] = None
     ) -> Object:
         libcloud_container = LibCloudContainer(container.name, {}, self._driver)
         obj: LibCloudObject = self._driver.upload_object_via_stream(iterator, libcloud_container, object_name, extra)
@@ -120,7 +122,7 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         return self._driver.download_object(libcloud_object, destination_path, overwrite_existing)
 
     @wraps_exception
-    def download_object_as_stream(self, obj: Object, chunk_size: int = None) -> Iterator[bytes]:
+    def download_object_as_stream(self, obj: Object, chunk_size: Optional[int] = None) -> Iterator[bytes]:
         libcloud_container = LibCloudContainer(obj.container.name, {}, self._driver)
         libcloud_object = LibCloudObject(
             obj.name, obj.size, obj.hash, obj.extra, obj.meta_data, libcloud_container, self._driver

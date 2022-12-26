@@ -71,10 +71,12 @@ warn_unreachable = true
 # TODO: warn_return_any = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+disallow_untyped_defs = false
 show_error_context = true
 show_column_numbers = true
 show_error_codes = true
 pretty = true
+
 
 [[tool.mypy.overrides]]
 module = [
