@@ -14,7 +14,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8.1"
 neo4j = "4.2.1"
 py2neo = "2021.2.0"
 docopt = "0.6.2"
@@ -31,18 +31,19 @@ neomodel = "^4.0.5"
 types-PyYAML = "^6.0.0"
 
 [tool.poetry.dev-dependencies]
-black = "22.10.0"
-flake8 = "3.9.2"
-isort = "5.9.3"
-mypy = "0.910"
+black = "22.12.0"
+flake8 = "6.0.0"
+isort = "5.11.4"
+mypy = "0.991"
 vermin = "1.5.1"
-pytest = "6.2.5"
-coverage = "5.5"
+pytest = "7.2.0"
+coverage = "7.0.1"
 # TODO: darglint, flake8-docstrings
-types-docopt = "^0.6.3"
+types-docopt = "^0.6.11"
 appdirs-stubs = "^0.1.0"
-GitPython = "^3.1.14"
-pyfakefs = "^4.5.2"
+types-appdirs = "^1.4.3.1"
+GitPython = "^3.1.29"
+pyfakefs = "^5.0.0"
 
 [tool.black]
 line-length = 120
