@@ -21,10 +21,10 @@ def diff_trees(
         return
     # query their children
     query = """
-    MATCH (new_tree:Tree {sha1sum: $new_tree_sha1})-[r_new:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(new_child)
-    WITH apoc.map.fromLists(collect(r_new.name), collect([type(r_new), new_child.sha1sum])) as new
-    MATCH (old_tree:Tree {sha1sum: $old_tree_sha1})-[r_old:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(old_child)
-    RETURN new, apoc.map.fromLists(collect(r_old.name), collect([type(r_old), old_child.sha1sum])) as old
+    MATCH (new_tree:Tree {hash: $new_tree_sha1})-[r_new:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(new_child)
+    WITH apoc.map.fromLists(collect(r_new.name), collect([type(r_new), new_child.hash])) as new
+    MATCH (old_tree:Tree {hash: $old_tree_sha1})-[r_old:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(old_child)
+    RETURN new, apoc.map.fromLists(collect(r_old.name), collect([type(r_old), old_child.hash])) as old
     """
     cursor: Result = session.run(
         query, parameters={"new_tree_sha1": new_tree_sha1sum, "old_tree_sha1": old_tree_sha1sum}
