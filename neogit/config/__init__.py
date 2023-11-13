@@ -15,6 +15,7 @@ NEO4J_HTTP_PORT = 7474
 settings = Dynaconf(
     envvar_prefix="NEOGIT",
     environments=True,
+    load_dotenv=True,
     # use absolute paths to import the conf from parent modules
     # from neogit.config import settings
     settings_files=[
