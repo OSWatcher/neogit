@@ -27,6 +27,7 @@ rich = "10.2.0"
 attrs = "^21.2.0"
 neomodel = "^4.0.5"
 types-PyYAML = "^6.0.0"
+poethepoet = "^0.24.3"
 
 [tool.poetry.dev-dependencies]
 black = "22.12.0"
@@ -45,6 +46,32 @@ pyfakefs = "^5.0.0"
 
 [tool.poetry.scripts]
 neogit = 'neogit.entrypoint:handle_cmdline'
+
+[tool.poe.tasks]
+fmt = "black ."
+lint = "flake8 --show-source --statistics . && isort ."
+type = "mypy -p neogit"
+ccode = ["fmt", "lint", "type"]
+cov_report = "coverage report"
+_unit_test_task = "coverage run -m pytest -v tests/unit"
+unit_test = ["_unit_test_task", "cov_report"]
+_integration_test_task = "coverage run -m pytest -v tests/integration"
+integration_test = ["_integration_test_task", "cov_report"]
+bench_test = "coverage run -m pytest -v --durations=0 tests/bench"
+test = "coverage run -m pytest -v"
+
+[tool.poe.tasks.shutdown_dbs]
+shell = """
+docker stop neogit_neo4j_testdb
+docker stop neogit_minio_testdb
+"""
+
+[tool.poe.tasks.start_dbs]
+shell = """
+docker start neogit_neo4j_testdb
+docker start neogit_minio_testdb
+"""
+
 
 [tool.black]
 line-length = 120
