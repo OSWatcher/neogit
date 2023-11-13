@@ -13,6 +13,7 @@ Options:
   -d --debug            Toogle debug output
 """
 
+from functools import wraps
 from logging.config import dictConfig
 from pathlib import Path
 
@@ -24,6 +25,16 @@ from neogit.config import ObjectConfig, settings
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
+def post_mortem(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception:
+            import ipdb, sys
+            _, _, tb = sys.exc_info()
+            ipdb.post_mortem(tb)
+    return wrapper
 
 def setup_logging(debug_enabled: bool):
     log_config_path = Path(__file__).parent.parent / "logging.yaml"
@@ -42,6 +53,7 @@ def setup_logging(debug_enabled: bool):
     coloredlogs.install(level=root_level, fmt=settings.log_fmt)
 
 
+@post_mortem
 def handle_cmdline():
     args = docopt(__doc__)
     setup_logging(args["--debug"])
