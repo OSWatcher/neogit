@@ -277,10 +277,15 @@ def minio_db(pytestconfig):
             "run",
             "--detach",
             f"--publish=9000:{port}",
+            "--publish=9001:9001",
             f"--name={cont_name}",
             f"minio/minio:{MINIO_VERSION}",
             "server",
             "/data",
+            # minio web console uses a dynamic port by default
+            # force console to redirect to 9001
+            "--console-address",
+            ":9001",
         ]
         subprocess.check_call(cmdline)
     # update settings
