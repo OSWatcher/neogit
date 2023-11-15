@@ -25,6 +25,7 @@ from neogit.config import ObjectConfig, settings
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 
+
 def post_mortem(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -32,9 +33,12 @@ def post_mortem(f):
             return f(*args, **kwargs)
         except Exception:
             import ipdb, sys
+
             _, _, tb = sys.exc_info()
             ipdb.post_mortem(tb)
+
     return wrapper
+
 
 def setup_logging(debug_enabled: bool):
     log_config_path = Path(__file__).parent.parent / "logging.yaml"

@@ -5,21 +5,21 @@ from urllib.parse import ParseResult, urlparse, urlunparse
 
 from neo4j import Session, Transaction
 
-from neogit.model import Commit, Tree
+# from neogit.model import Commit, Tree
 
 
-@lru_cache()
-def traverse_path_tree(session: Union[Session, Transaction], os_sha1: str, fs_path: PurePath) -> str:
-    commit = Commit.get(session, os_sha1)
-    if commit is None:
-        raise RuntimeError(f"Commit not found: {os_sha1}")
-    cur_tree: Tree = commit.owns_filesystem()
-    # ['/', 'Program Files', 'Microsoft', ...]
-    # -> ['Program Files', 'Microsoft', ...]
-    for path_part in fs_path.parts[1:]:
-        # get next tree
-        cur_tree = cur_tree.has_child_tree(session, path_part)
-    return cur_tree.sha1sum
+# @lru_cache()
+# def traverse_path_tree(session: Union[Session, Transaction], os_sha1: str, fs_path: PurePath) -> str:
+#     commit = Commit.get(session, os_sha1)
+#     if commit is None:
+#         raise RuntimeError(f"Commit not found: {os_sha1}")
+#     cur_tree: Tree = commit.owns_filesystem()
+#     # ['/', 'Program Files', 'Microsoft', ...]
+#     # -> ['Program Files', 'Microsoft', ...]
+#     for path_part in fs_path.parts[1:]:
+#         # get next tree
+#         cur_tree = cur_tree.has_child_tree(session, path_part)
+#     return cur_tree.sha1sum
 
 
 def uri_to_py2neo_uri(uri: str, auth: Optional[Tuple[str, str]] = None) -> str:
