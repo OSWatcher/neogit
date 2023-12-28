@@ -75,6 +75,11 @@ docker start neogit_neo4j_testdb
 docker start neogit_minio_testdb
 """
 
+[tool.poe.tasks.destroy_dbs]
+shell = """
+docker rm -f neogit_neo4j_testdb neogit_minio_testdb
+"""
+
 
 [tool.black]
 line-length = 120
