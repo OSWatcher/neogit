@@ -122,3 +122,9 @@ ignore_missing_imports = true
 # ignore dev tests by default
 addopts = "--strict-markers -m 'not dev'"
 markers = 'dev: mark a test as only for development with IPDB purposes'
+filterwarnings = [
+    # neomodel < 5.2.1 imports pkg_resources
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    # neomodel v?? has invalid espace sequences
+    "ignore:invalid escape sequence:DeprecationWarning",
+]
