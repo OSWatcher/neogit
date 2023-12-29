@@ -63,6 +63,12 @@ integration_test = ["_integration_test_task", "cov_report"]
 bench_test = "coverage run -m pytest -v --durations=0 tests/bench"
 test = "coverage run -m pytest -v"
 
+[tool.poe.tasks.create_dbs]
+shell = """
+pytest -m dev --persistdb
+python -m neogit init
+"""
+
 [tool.poe.tasks.shutdown_dbs]
 shell = """
 docker stop neogit_neo4j_testdb
@@ -79,7 +85,6 @@ docker start neogit_minio_testdb
 shell = """
 docker rm -f neogit_neo4j_testdb neogit_minio_testdb
 """
-
 
 [tool.black]
 line-length = 120
