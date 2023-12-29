@@ -39,6 +39,14 @@ DEFAULT_NEO4J_DB_NAME = "neogit_neo4j_testdb"
 DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
 
 
+def pytest_configure(config):
+    # Set Neo4j and urllib3 loggers to WARNING to silence INFO and DEBUG messages
+    logging.getLogger("neo4j").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logging.getLogger("git.cmd").setLevel(logging.WARNING)
+    logging.getLogger("charset_normalizer").setLevel(logging.WARNING)
+
+
 def pytest_addoption(parser):
     parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
     parser.addoption(
