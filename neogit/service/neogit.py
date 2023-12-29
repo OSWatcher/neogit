@@ -9,15 +9,16 @@ from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 from neomodel import db
 
-from neogit.config import settings
+from neogit.config import settings, ObjectConfig
 from neogit.core.model import FSDirectoryNode
 from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
 from neogit.model.neo import Branch as NeoBranch
 from neogit.model.neo import Commit as NeoCommit
-from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage
+from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage, LibcloudObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
+
 
 # TODO: neomodel
 # from neogit.utils import traverse_path_tree
@@ -36,8 +37,11 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage=None, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
+        if object_driver_ts is None:
+            obj_config = ObjectConfig.from_settings(settings)
+            object_driver_ts = TSObjectStorage(LibcloudObjectStorage, obj_config)
         self._log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._gui_enabled = gui_enabled
         # dynaconf settings are list, need to convert to tuple
