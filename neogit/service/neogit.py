@@ -37,7 +37,7 @@ def measure_time(method):
 
 
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage=None, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage = None, gui_enabled: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         if object_driver_ts is None:
             obj_config = ObjectConfig.from_settings(settings)
@@ -82,14 +82,21 @@ class Neogit:
     def init(self):
         """Initialize a neogit repository by creating indexes and constraints"""
         with self._graph_driver.session() as session:
-            constraints = {"Blob": "hash", "Tree": "hash", "Commit": "hash", "Branch": "name"}
-            for label, unique_prop in constraints.items():
-                try:
-                    self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
-                    session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
-                except ClientError as e:
-                    if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
-                        continue
+            constraints = {
+                "Blob": ["hash", "sha1sum"],
+                "Tree": ["hash", "sha1sum"],
+                "Commit": ["hash", "sha1sum"],
+                "Branch": "name",
+            }
+            # constraints = {"Blob": ["hash"], "Tree": ["hash"], "Commit": ["hash"], "Branch": "name"}
+            for label, unique_prop_list in constraints.items():
+                for unique_prop in unique_prop_list:
+                    try:
+                        self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
+                        session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
+                    except ClientError as e:
+                        if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
+                            continue
         self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name

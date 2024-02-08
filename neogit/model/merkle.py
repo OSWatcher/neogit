@@ -19,6 +19,7 @@ class BaseMerkleNode(StructuredNode):
 
     __abstract_node__ = True
     hash = StringProperty(unique_index=True, required=True)
+    sha1sum = StringProperty(unique_index=True, required=True)
 
 
 class Blob(BaseMerkleNode):
@@ -143,22 +144,22 @@ class Tree(BaseMerkleNode):
         # create child blobs
         query = """
         UNWIND $unwind_param as blob
-        MERGE (b:Blob {hash: blob})
+        MERGE (b:Blob {hash: blob, sha1sum: blob})
         """
         blob_hash_list = [n.hash for n in node.children.values() if n.label == MerkleLabel.Blob]
         session.run(query, {"unwind_param": blob_hash_list})
         # create child trees
         query = """
         UNWIND $unwind_param as tree
-        MERGE (t:Tree {hash: tree})
+        MERGE (t:Tree {hash: tree, sha1sum: tree})
         """
         tree_hash_list = [n.hash for n in node.children.values() if n.label == MerkleLabel.Tree]
         session.run(query, {"unwind_param": tree_hash_list})
         # create parent
         query = """
-        MERGE (p:Tree {hash: $hash})
+        MERGE (p:Tree {hash: $hash, sha1sum: $hash})
         """
-        session.run(query, {"hash": node.hash})
+        session.run(query, {"hash": node.hash, "sha1sum": node.hash})
         # create blob relationship
         # [{"name": "xxx", "hash: "xxxx"
         rel_list = [
