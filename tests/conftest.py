@@ -27,7 +27,7 @@ from neogit.merkle.uploader import MerkleFile
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, ObjectStorageError, TSObjectStorage
 from neogit.service import Neogit
 
-NEO4J_VERSION = "4.2.4"
+NEO4J_VERSION = "4.4.30"
 MINIO_VERSION = "RELEASE.2021-10-23T03-28-24Z"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
