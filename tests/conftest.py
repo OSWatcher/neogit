@@ -63,6 +63,12 @@ def pytest_addoption(parser):
         "variables) instead. Useful to run the integration tests in Github Actions where the services containers "
         "already provides the databases we need.",
     )
+    parser.addoption(
+        "--minio-volume",
+        action="store_true",
+        default=False,
+        help="set a local path to be mounted as the main data volume for MiniIO Docker instance",
+    )
 
 
 @fixture
@@ -287,14 +293,26 @@ def minio_db(pytestconfig):
             f"--publish=9000:{port}",
             "--publish=9001:9001",
             f"--name={cont_name}",
-            f"minio/minio:{MINIO_VERSION}",
-            "server",
-            "/data",
-            # minio web console uses a dynamic port by default
-            # force console to redirect to 9001
-            "--console-address",
-            ":9001",
         ]
+        if pytestconfig.getoption("minio_volume"):
+            host_path = pytestconfig.getoption("minio_volume")
+            cmdline.extend(
+                [
+                    "--volume",
+                    "/media/wenzel/Toschiba/Minio:/data",
+                ]
+            )
+        cmdline.extend(
+            [
+                f"minio/minio:{MINIO_VERSION}",
+                "server",
+                "/data",
+                # minio web console uses a dynamic port by default
+                # force console to redirect to 9001
+                "--console-address",
+                ":9001",
+            ]
+        )
         subprocess.check_call(cmdline)
     # update settings
     settings.object.provider = provider
