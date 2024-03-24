@@ -9,17 +9,15 @@ description = "Git-like tool backed by Neo4j"
 authors = ["Mathieu Tarral <mathieu.tarral@protonmail.com>"]
 readme = 'README.md'
 license = 'Proprietary'
-classifiers = [
-    "Programming Language :: Python :: 3",
-]
+classifiers = ["Programming Language :: Python :: 3"]
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
 neo4j = "4.2.1"
-py2neo = "2021.2.0"
+py2neo-history = "2021.2.0"
 docopt = "0.6.2"
 dynaconf = "3.1.4"
-PyYAML = "5.4.1"
+PyYAML = "6.0.1"
 coloredlogs = "15.0"
 more-itertools = "8.7.0"
 apache-libcloud = "3.3.1"
@@ -29,12 +27,14 @@ rich = "10.2.0"
 attrs = "^21.2.0"
 neomodel = "^4.0.5"
 types-PyYAML = "^6.0.0"
+poethepoet = "^0.24.3"
+ipdb = "^0.13.13"
 
 [tool.poetry.dev-dependencies]
 black = "22.12.0"
 flake8 = "6.0.0"
 isort = "5.11.4"
-mypy = "0.991"
+mypy = "1.7.0"
 vermin = "1.5.1"
 pytest = "7.2.0"
 coverage = "7.0.1"
@@ -44,6 +44,47 @@ appdirs-stubs = "^0.1.0"
 types-appdirs = "^1.4.3.1"
 GitPython = "^3.1.29"
 pyfakefs = "^5.0.0"
+
+[tool.poetry.scripts]
+neogit = 'neogit.entrypoint:handle_cmdline'
+
+[tool.poe.tasks]
+fmt = "black ."
+_flake8 = "flake8 --show-source --statistics ."
+_isort = "isort ."
+lint = ["_flake8", "_isort"]
+type = "mypy -p neogit"
+ccode = ["fmt", "lint", "type"]
+cov_report = "coverage report"
+_unit_test_task = "coverage run -m pytest -v tests/unit"
+unit_test = ["_unit_test_task", "cov_report"]
+_integration_test_task = "coverage run -m pytest -v tests/integration"
+integration_test = ["_integration_test_task", "cov_report"]
+bench_test = "coverage run -m pytest -v --durations=0 tests/bench"
+test = "coverage run -m pytest -v"
+
+[tool.poe.tasks.create_dbs]
+shell = """
+pytest -m dev --persistdb
+python -m neogit init
+"""
+
+[tool.poe.tasks.shutdown_dbs]
+shell = """
+docker stop neogit_neo4j_testdb
+docker stop neogit_minio_testdb
+"""
+
+[tool.poe.tasks.start_dbs]
+shell = """
+docker start neogit_neo4j_testdb
+docker start neogit_minio_testdb
+"""
+
+[tool.poe.tasks.destroy_dbs]
+shell = """
+docker rm -f neogit_neo4j_testdb neogit_minio_testdb
+"""
 
 [tool.black]
 line-length = 120
@@ -79,16 +120,16 @@ pretty = true
 
 
 [[tool.mypy.overrides]]
-module = [
-    "neo4j.*",
-    "py2neo.*",
-    "neomodel.*",
-    "dynaconf.*",
-    "coloredlogs.*",
-]
+module = ["neo4j.*", "py2neo.*", "neomodel.*", "dynaconf.*", "coloredlogs.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 # ignore dev tests by default
 addopts = "--strict-markers -m 'not dev'"
 markers = 'dev: mark a test as only for development with IPDB purposes'
+filterwarnings = [
+    # neomodel < 5.2.1 imports pkg_resources
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    # neomodel v?? has invalid espace sequences
+    "ignore:invalid escape sequence:DeprecationWarning",
+]

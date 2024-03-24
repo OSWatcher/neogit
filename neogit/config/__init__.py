@@ -15,6 +15,7 @@ NEO4J_HTTP_PORT = 7474
 settings = Dynaconf(
     envvar_prefix="NEOGIT",
     environments=True,
+    load_dotenv=True,
     # use absolute paths to import the conf from parent modules
     # from neogit.config import settings
     settings_files=[
@@ -46,7 +47,7 @@ settings = Dynaconf(
         ),
         Validator("neo4j.http_url", default=lambda _settings, _url: f"http://{_settings.neo4j.host}:{NEO4J_HTTP_PORT}"),
         Validator("object.key", default=USER_DATA_DIR),
-        Validator("object.secret", default=None),
+        Validator("object.secret_key", default=None),
         Validator("object.host", default=None),
         Validator("object.port", default=None),
         Validator("object.secure", default=None),
@@ -63,7 +64,7 @@ settings = Dynaconf(
 class ObjectConfig:
     provider: str
     key: str
-    secret: Optional[str] = field(default=None)
+    secret_key: Optional[str] = field(default=None)
     host: Optional[str] = field(default=None)
     port: Optional[int] = field(default=None)
     secure: Optional[bool] = field(default=None)
@@ -77,7 +78,7 @@ class ObjectConfig:
         return ObjectConfig(
             settings.object.provider,
             settings.object.key,
-            settings.object.secret,
+            settings.object.secret_key,
             settings.object.host,
             settings.object.port,
             settings.object.secure,

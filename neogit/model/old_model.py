@@ -8,12 +8,12 @@ from neo4j import Record, Result, Session, Transaction
 
 @dataclass(init=False)
 class Blob:
-    sha1sum: str
+    hash: str
 
 
 @dataclass(init=False)
 class Tree:
-    sha1sum: str
+    hash: str
     children_blob: Dict[str, Blob]
     children_tree: Dict[str, "Tree"]
 
@@ -32,77 +32,77 @@ class Tree:
         # create child blobs
         query = """
         UNWIND $unwind_param as blob
-        MERGE (b:Blob {sha1sum: blob})
+        MERGE (b:Blob {hash: blob})
         """
-        blob_list = [b.sha1sum for b in self.children_blob.values()]
+        blob_list = [b.hash for b in self.children_blob.values()]
         # from IPython import embed
         # embed()
         session.run(query, {"unwind_param": blob_list})
         # create child trees
         query = """
         UNWIND $unwind_param as tree
-        MERGE (t:Tree {sha1sum: tree})
+        MERGE (t:Tree {hash: tree})
         """
-        tree_list = [t.sha1sum for t in self.children_tree.values()]
+        tree_list = [t.hash for t in self.children_tree.values()]
         session.run(query, {"unwind_param": tree_list})
         # create parent
         query = """
-        MERGE (p:Tree {sha1sum: $sha1sum})
+        MERGE (p:Tree {hash: $hash})
         """
-        session.run(query, {"sha1sum": self.sha1sum})
+        session.run(query, {"hash": self.hash})
         # create blob relationship
-        # [{"name": "xxx", "sha1sum: "xxxx"
-        rel_list = [{"name": filename, "sha1sum": blob.sha1sum} for filename, blob in self.children_blob.items()]
+        # [{"name": "xxx", "hash: "xxxx"
+        rel_list = [{"name": filename, "hash": blob.hash} for filename, blob in self.children_blob.items()]
         query = """
-        MATCH (p:Tree {sha1sum: $parent_sha1})
+        MATCH (p:Tree {hash: $parent_sha1})
         WITH p
         UNWIND $unwind_param as rel
-        MATCH (c:Blob {sha1sum: rel.sha1sum})
+        MATCH (c:Blob {hash: rel.hash})
         MERGE (p)-[:HAS_CHILD_BLOB {name: rel.name}]->(c)
         """
-        session.run(query, {"parent_sha1": self.sha1sum, "unwind_param": rel_list})
+        session.run(query, {"parent_sha1": self.hash, "unwind_param": rel_list})
         # create Tree relationship
-        rel_list = [{"name": filename, "sha1sum": tree.sha1sum} for filename, tree in self.children_tree.items()]
+        rel_list = [{"name": filename, "hash": tree.hash} for filename, tree in self.children_tree.items()]
         query = """
-        MATCH (p:Tree {sha1sum: $parent_sha1})
+        MATCH (p:Tree {hash: $parent_sha1})
         WITH p
         UNWIND $unwind_param as rel
-        MATCH (c:Tree {sha1sum: rel.sha1sum})
+        MATCH (c:Tree {hash: rel.hash})
         MERGE (p)-[:HAS_CHILD_TREE {name: rel.name}]->(c)
         """
-        session.run(query, {"parent_sha1": self.sha1sum, "unwind_param": rel_list})
+        session.run(query, {"parent_sha1": self.hash, "unwind_param": rel_list})
 
     def has_child_tree(self, session: Union[Session, Transaction], tree_name: str) -> "Tree":
         query = """
-        MATCH (p:Tree {sha1sum: $sha1sum})-[r:HAS_CHILD_TREE]->(t:Tree)
+        MATCH (p:Tree {hash: $hash})-[r:HAS_CHILD_TREE]->(t:Tree)
         WHERE r.name = $tree_name
         RETURN t
         """
-        cursor = session.run(query, {"sha1sum": self.sha1sum, "tree_name": tree_name})
+        cursor = session.run(query, {"hash": self.hash, "tree_name": tree_name})
         record_list = list(cursor)
         if not record_list:
-            raise RuntimeError(f"Tree {self.sha1sum}: No child tree for filename {tree_name}")
+            raise RuntimeError(f"Tree {self.hash}: No child tree for filename {tree_name}")
         record = record_list[0]
         tree = Tree()
-        tree.sha1sum = record["t"]["sha1sum"]
+        tree.hash = record["t"]["hash"]
         return tree
 
     def get_children(self, session: Union[Session, Transaction]):
         query = """
-        MATCH (p:Tree {sha1sum: $sha1sum})-[r]->(c)
-        return r.name, c.sha1sum, labels(c)[0]
+        MATCH (p:Tree {hash: $hash})-[r]->(c)
+        return r.name, c.hash, labels(c)[0]
         """
-        cursor = session.run(query, {"sha1sum": self.sha1sum})
+        cursor = session.run(query, {"hash": self.hash})
         for record in cursor:
-            filename, child_sha1sum, child_type = record
+            filename, child_hash, child_type = record
             esc_filename = filename
             if child_type == "Blob":
                 b = Blob()
-                b.sha1sum = child_sha1sum
+                b.hash = child_hash
                 self.children_blob[esc_filename] = b
             elif child_type == "Tree":
                 t = Tree()
-                t.sha1sum = child_sha1sum
+                t.hash = child_hash
                 self.children_tree[esc_filename] = t
             else:
                 raise RuntimeError(f"Unexpected child label {child_type}")
@@ -111,15 +111,15 @@ class Tree:
 @dataclass(init=False)
 class Commit:
     name: str
-    sha1sum: str
+    hash: str
     date: str
     filesystem: Tree
     previous_commit: "Commit"
 
-    def __init__(self, session: Union[Session, Transaction], name: str, sha1sum: str, date: str):
+    def __init__(self, session: Union[Session, Transaction], name: str, hash: str, date: str):
         self.session = session
         self.name = name
-        self.sha1sum = sha1sum
+        self.hash = hash
         self.date = date
 
     @staticmethod
@@ -134,74 +134,74 @@ class Commit:
         cursor = session.run(query, parameters={"branch_name": branch})
         record = list(cursor)[0]
         for commit in record["commit_log"]:
-            sha1sum = commit["sha1sum"]
+            hash = commit["hash"]
             name = commit["name"]
             date = commit["date"]
-            commit_obj = Commit(session, name, sha1sum, date)
+            commit_obj = Commit(session, name, hash, date)
             yield commit_obj
 
     @staticmethod
-    def get(session: Union[Session, Transaction], sha1sum: str) -> Optional["Commit"]:
+    def get(session: Union[Session, Transaction], hash: str) -> Optional["Commit"]:
         query = """
-        MATCH (o:Commit {sha1sum: $sha1sum})
+        MATCH (o:Commit {hash: $hash})
         RETURN o
         """
-        cursor = session.run(query, {"sha1sum": sha1sum})
+        cursor = session.run(query, {"hash": hash})
         record_list = list(cursor)
         if not record_list:
             return None
         record: Record = record_list[0]
-        sha1sum = record["o"]["sha1sum"]
+        hash = record["o"]["hash"]
         name = record["o"]["name"]
         date = record["o"]["date"]
-        commit = Commit(session, name, sha1sum, date)
+        commit = Commit(session, name, hash, date)
         return commit
 
     def owns_filesystem(self) -> Tree:
         query = """
-        MATCH (o:Commit {sha1sum: $sha1sum})-[:OWNS_FILESYSTEM]->(t:Tree)
+        MATCH (o:Commit {hash: $hash})-[:OWNS_FILESYSTEM]->(t:Tree)
         RETURN t
         """
-        cursor = self.session.run(query, {"sha1sum": self.sha1sum})
+        cursor = self.session.run(query, {"hash": self.hash})
         record_list = list(cursor)
         if not record_list:
             raise RuntimeError("No filesystem associated with commit")
         record: Record = record_list[0]
         t = Tree()
-        t.sha1sum = record["t"]["sha1sum"]
+        t.hash = record["t"]["hash"]
         return t
 
     def get_tree_sha1_from_commit_sha1(session: Union[Session, Transaction], sha1: str):
         query = """
-        MATCH (c:Commit {sha1sum: $sha1sum})-[:OWNS_FILESYSTEM]->(t:Tree)
+        MATCH (c:Commit {hash: $hash})-[:OWNS_FILESYSTEM]->(t:Tree)
         RETURN t
         """
-        cursor = session.run(query, {"sha1sum": sha1})
-        return list(cursor)[0]["t"]["sha1sum"]
+        cursor = session.run(query, {"hash": sha1})
+        return list(cursor)[0]["t"]["hash"]
 
     def create(self):
         query = """
-        MERGE (o:Commit {sha1sum: $sha1sum, name: $name, date: $date})
+        MERGE (o:Commit {hash: $hash, name: $name, date: $date})
         RETURN o
         """
-        cursor = self.session.run(query, {"sha1sum": self.sha1sum, "name": self.name, "date": self.date})
+        cursor = self.session.run(query, {"hash": self.hash, "name": self.name, "date": self.date})
         return True if cursor.single() is not None else False
 
     def add_filesystem(self, filesystem: Tree):
         query = """
-        MATCH (o:Commit {sha1sum: $comm_sha1sum}), (t:Tree {sha1sum: $tree_sha1sum})
+        MATCH (o:Commit {hash: $comm_hash}), (t:Tree {hash: $tree_hash})
         Merge (o)-[:OWNS_FILESYSTEM]->(t)
         RETURN o
         """
-        self.session.run(query, {"comm_sha1sum": self.sha1sum, "tree_sha1sum": filesystem.sha1sum})
+        self.session.run(query, {"comm_hash": self.hash, "tree_hash": filesystem.hash})
 
     def add_previous(self, previous_node: "Commit"):
         query = """
         MATCH (o:Commit), (p:Commit)
-        WHERE o.sha1sum = $current_sha1 AND p.sha1sum = $previous_sha1
+        WHERE o.hash = $current_sha1 AND p.hash = $previous_sha1
         MERGE (o)-[:HAS_PREVIOUS]->(p)
         """
-        params = {"current_sha1": self.sha1sum, "previous_sha1": previous_node.sha1sum}
+        params = {"current_sha1": self.hash, "previous_sha1": previous_node.hash}
         self.session.run(query, params)
 
     def __iter__(self):
@@ -211,19 +211,19 @@ class Commit:
             # get next commit
             query = """
             MATCH (a:Commit)-[:HAS_PREVIOUS]->(b:Commit)
-            WHERE a.sha1sum = $current_sha1sum
+            WHERE a.hash = $current_hash
             RETURN b
             """
-            result: Result = self.session.run(query, parameters={"current_sha1sum": current.sha1sum})
+            result: Result = self.session.run(query, parameters={"current_hash": current.hash})
             cursors = list(result)
             previous = cursors[0]
             if not previous:
                 break
             previous_commit = previous["b"]
             name = previous_commit["name"]
-            sha1sum = previous_commit["sha1sum"]
+            hash = previous_commit["hash"]
             date = previous_commit["date"]
-            yield Commit(self.session, name, sha1sum, date)
+            yield Commit(self.session, name, hash, date)
 
 
 @dataclass(init=False)

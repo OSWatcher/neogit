@@ -27,8 +27,8 @@ from neogit.merkle.uploader import MerkleFile
 from neogit.object_storage import FakeObjectStorage, LibcloudObjectStorage, ObjectStorageError, TSObjectStorage
 from neogit.service import Neogit
 
-NEO4J_VERSION = "4.2.4"
-MINIO_VERSION = "RELEASE.2021-10-23T03-28-24Z"
+NEO4J_VERSION = "4.4.30"
+MINIO_VERSION = "RELEASE.2024-02-13T15-35-11Z"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
 TEST_DATA = Path(__file__).parent / "data"
@@ -37,6 +37,14 @@ TEST_DATA_FS_DIR_EMPTY = TEST_DATA_FS / "dir_empty"
 ROOT_REPO = Path(__file__).parent.parent
 DEFAULT_NEO4J_DB_NAME = "neogit_neo4j_testdb"
 DEFAULT_MINIO_DB_NAME = "neogit_minio_testdb"
+
+
+def pytest_configure(config):
+    # Set Neo4j and urllib3 loggers to WARNING to silence INFO and DEBUG messages
+    logging.getLogger("neo4j").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logging.getLogger("git.cmd").setLevel(logging.WARNING)
+    logging.getLogger("charset_normalizer").setLevel(logging.WARNING)
 
 
 def pytest_addoption(parser):
@@ -54,6 +62,12 @@ def pytest_addoption(parser):
         help="do not create required containers (Neo4j/MinIO) with Docker. Use the provided values (and environment "
         "variables) instead. Useful to run the integration tests in Github Actions where the services containers "
         "already provides the databases we need.",
+    )
+    parser.addoption(
+        "--minio-volume",
+        action="store_true",
+        default=False,
+        help="set a local path to be mounted as the main data volume for MiniIO Docker instance",
     )
 
 
@@ -111,8 +125,6 @@ def start_neo4j_db(pytestconfig):
             "--publish=7687:7687",
             "--env",
             "NEO4J_AUTH=none",
-            "--env",
-            'NEO4JLABS_PLUGINS=["apoc"]',
             f"--name={cont_name}",
             f"neo4j:{NEO4J_VERSION}",
         ]
@@ -277,11 +289,28 @@ def minio_db(pytestconfig):
             "run",
             "--detach",
             f"--publish=9000:{port}",
+            "--publish=9001:9001",
             f"--name={cont_name}",
-            f"minio/minio:{MINIO_VERSION}",
-            "server",
-            "/data",
         ]
+        if pytestconfig.getoption("minio_volume"):
+            host_path = pytestconfig.getoption("minio_volume")
+            cmdline.extend(
+                [
+                    "--volume",
+                    "/media/wenzel/Toschiba/Minio:/data",
+                ]
+            )
+        cmdline.extend(
+            [
+                f"minio/minio:{MINIO_VERSION}",
+                "server",
+                "/data",
+                # minio web console uses a dynamic port by default
+                # force console to redirect to 9001
+                "--console-address",
+                ":9001",
+            ]
+        )
         subprocess.check_call(cmdline)
     # update settings
     settings.object.provider = provider

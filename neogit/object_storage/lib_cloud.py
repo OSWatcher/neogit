@@ -7,6 +7,7 @@ from libcloud.common.types import LibcloudError
 from libcloud.storage.base import Container as LibCloudContainer
 from libcloud.storage.base import Object as LibCloudObject
 from libcloud.storage.drivers.local import LocalStorageDriver
+from libcloud.storage.drivers.minio import MinIOStorageDriver
 from libcloud.storage.providers import get_driver
 from libcloud.storage.types import ContainerAlreadyExistsError as LibCloudContainerAlreadyExistsError
 from libcloud.storage.types import ContainerDoesNotExistError as LibCloudContainerDoesNotExistError
@@ -53,6 +54,10 @@ class LibcloudObjectStorage(AbstractObjectStorage):
             Path(config.key).mkdir(parents=True, exist_ok=True)
         # drop all keys whose values is None
         config_dict = {k: v for k, v in asdict(config).items() if v is not None}
+        if cls == MinIOStorageDriver:
+            # replace 'secret_key' key name by 'secret'
+            config_dict["secret"] = config_dict["secret_key"]
+            del config_dict["secret_key"]
         # drop provider as well (already used before)
         del config_dict["provider"]
         self._driver = cls(**config_dict)
