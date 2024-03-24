@@ -125,8 +125,6 @@ def start_neo4j_db(pytestconfig):
             "--publish=7687:7687",
             "--env",
             "NEO4J_AUTH=none",
-            "--env",
-            'NEO4JLABS_PLUGINS=["apoc"]',
             f"--name={cont_name}",
             f"neo4j:{NEO4J_VERSION}",
         ]
