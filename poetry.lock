@@ -739,59 +739,40 @@ files = [
 
 [[package]]
 name = "neo4j"
-version = "4.2.1"
+version = "5.15.0"
 description = "Neo4j Bolt driver for Python"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "neo4j-4.2.1.tar.gz", hash = "sha256:b6c49fbd60426e268ed4afbd414766444fe70aee1ac0376a0c871d75526b8251"},
+    {file = "neo4j-5.15.0.tar.gz", hash = "sha256:5c53eccf5192ac21463d3fac05cf58f1547ed231b953c837aa4393e2fc713ed3"},
 ]
 
 [package.dependencies]
 pytz = "*"
 
-[[package]]
-name = "neo4j-driver"
-version = "4.4.10"
-description = "Neo4j Bolt driver for Python"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "neo4j-driver-4.4.10.tar.gz", hash = "sha256:df5e3b96e6991f9de4b79e48c657b34596ec9784b78a00fc273b41af48f4fc4c"},
-]
-
-[package.dependencies]
-pytz = "*"
-
-[[package]]
-name = "neobolt"
-version = "1.7.17"
-description = "Neo4j Bolt connector for Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "neobolt-1.7.17.tar.gz", hash = "sha256:1d0d5efce7221fc4f0ffc4a315bc5272708be5aa2aef5434269e800372d8db89"},
-]
+[package.extras]
+numpy = ["numpy (>=1.7.0,<2.0.0)"]
+pandas = ["numpy (>=1.7.0,<2.0.0)", "pandas (>=1.1.0,<3.0.0)"]
+pyarrow = ["pyarrow (>=1.0.0)"]
 
 [[package]]
 name = "neomodel"
-version = "4.0.10"
+version = "5.2.1"
 description = "An object mapper for the neo4j graph database."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "neomodel-4.0.10-py3-none-any.whl", hash = "sha256:70ffddd58a393e87d18ab3ebbb4d677fa2d739de4411d5040208eb7e129d601e"},
-    {file = "neomodel-4.0.10.tar.gz", hash = "sha256:ca8ee1e14d00d9ad7519744bd8b26d2d4f1770e0c51038c3fe83ea799dcfec50"},
+    {file = "neomodel-5.2.1-py3-none-any.whl", hash = "sha256:f6c04259c601256fdf2640bc48409843573fc0e5b7dcffe35f28ca209fd80a00"},
+    {file = "neomodel-5.2.1.tar.gz", hash = "sha256:f7c388252afa65b03b6c7426728529f1511f3d4ba74b84ea0dbcd78ffe6748ab"},
 ]
 
 [package.dependencies]
-neo4j-driver = "4.4.10"
-neobolt = "1.7.17"
-pytz = ">=2021.1"
-six = "1.16.0"
+neo4j = ">=5.15.0,<5.16.0"
 
 [package.extras]
-dev = ["Shapely (>=1.8.1,<1.9)", "pre-commit", "pytest (>=7.1)"]
+dev = ["Shapely (>=2.0.0)", "black", "isort", "pre-commit", "pytest (>=7.1)", "pytest-cov (>=4.0)"]
+numpy = ["numpy"]
+pandas = ["pandas"]
 
 [[package]]
 name = "packaging"
@@ -1316,4 +1297,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "05b2b79ae3f17af511cc324fe79767affe4f6556e0f0eada9ceb2590c6ad76e7"
+content-hash = "22f0037f260265a1bc0ccbae3965302d57d43504fa1d7aec57e192c7079bba72"
