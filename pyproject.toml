@@ -13,7 +13,7 @@ classifiers = ["Programming Language :: Python :: 3"]
 
 [tool.poetry.dependencies]
 python = "^3.8.1"
-neo4j = "4.2.1"
+neo4j = "5.15"
 py2neo-history = "2021.2.0"
 docopt = "0.6.2"
 dynaconf = "3.1.4"
@@ -25,7 +25,7 @@ fasteners = "0.16"
 appdirs = "1.4.4"
 rich = "10.2.0"
 attrs = "^21.2.0"
-neomodel = "^4.0.5"
+neomodel = "5.2.1"
 types-PyYAML = "^6.0.0"
 poethepoet = "^0.24.3"
 ipdb = "^0.13.13"
