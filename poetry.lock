@@ -2,17 +2,22 @@
 
 [[package]]
 name = "apache-libcloud"
-version = "3.3.1"
+version = "3.8.0"
 description = "A standard Python library that abstracts away differences among multiple cloud provider APIs. For more information and documentation, please see https://libcloud.apache.org"
 optional = false
-python-versions = ">=3.5.*, <4"
+python-versions = ">=3.7"
 files = [
-    {file = "apache-libcloud-3.3.1.tar.gz", hash = "sha256:d7450453eaf5904eb4fb4f74cf9f37dc83721a719bce34f5abb336b1a1ab974d"},
-    {file = "apache_libcloud-3.3.1-py2.py3-none-any.whl", hash = "sha256:c3722c4dd58b0ee4beaf4e615e0ba82505d9a915e55319dc84383687166a3eed"},
+    {file = "apache-libcloud-3.8.0.tar.gz", hash = "sha256:75bf4c0b123bc225e24ca95fca1c35be30b19e6bb85feea781404d43c4276c91"},
+    {file = "apache_libcloud-3.8.0-py2.py3-none-any.whl", hash = "sha256:de65a8bd946f6532830f20a83f2eae2fa056f05a674fad30afe877cb78df6050"},
 ]
 
 [package.dependencies]
-requests = ">=2.5.0"
+requests = ">=2.26.0"
+
+[package.extras]
+build = ["build (==0.10.0)"]
+publish = ["twine (==4.0.2)"]
+test = ["pytest", "requests-mock"]
 
 [[package]]
 name = "appdirs"
@@ -1300,4 +1305,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "39497bccd924d59c3375585a9c6dd25683540e8ff1898b781b468d4b99f41a1c"
+content-hash = "1ed99da482a11233ef74e2db3a9d98abc3e6c455deb94ffd05ab1db4d52fad23"
