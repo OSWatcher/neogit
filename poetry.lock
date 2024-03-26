@@ -385,13 +385,13 @@ files = [
 
 [[package]]
 name = "dynaconf"
-version = "3.1.4"
+version = "3.2.5"
 description = "The dynamic configurator for your Python Project"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
-    {file = "dynaconf-3.1.4-py2.py3-none-any.whl", hash = "sha256:e6f383b84150b70fc439c8b2757581a38a58d07962aa14517292dcce1a77e160"},
-    {file = "dynaconf-3.1.4.tar.gz", hash = "sha256:b2f472d83052f809c5925565b8a2ba76a103d5dc1dbb9748b693ed67212781b9"},
+    {file = "dynaconf-3.2.5-py2.py3-none-any.whl", hash = "sha256:12202fc26546851c05d4194c80bee00197e7c2febcb026e502b0863be9cbbdd8"},
+    {file = "dynaconf-3.2.5.tar.gz", hash = "sha256:42c8d936b32332c4b84e4d4df6dd1626b6ef59c5a94eb60c10cd3c59d6b882f2"},
 ]
 
 [package.extras]
@@ -399,6 +399,7 @@ all = ["configobj", "hvac", "redis", "ruamel.yaml"]
 configobj = ["configobj"]
 ini = ["configobj"]
 redis = ["redis"]
+test = ["configobj", "django", "flask (>=0.12)", "hvac (>=1.1.0)", "pytest", "pytest-cov", "pytest-mock", "pytest-xdist", "python-dotenv", "radon", "redis", "toml"]
 toml = ["toml"]
 vault = ["hvac"]
 yaml = ["ruamel.yaml"]
@@ -1299,4 +1300,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "cd3726c2441bcf658fa09a9a7e9a76f98ffd18fcecc4412407d665a3917bda93"
+content-hash = "39497bccd924d59c3375585a9c6dd25683540e8ff1898b781b468d4b99f41a1c"
