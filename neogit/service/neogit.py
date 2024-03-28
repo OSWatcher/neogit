@@ -48,6 +48,7 @@ class Neogit:
         creds = tuple(settings.neo4j.creds) if settings.neo4j.creds is not None else None
         self._graph_driver = GraphDatabase.driver(settings.neo4j.url, auth=creds)
         db.set_connection(settings.neo4j.url_full)
+        self.db = db
         self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
 
