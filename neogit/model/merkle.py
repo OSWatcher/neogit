@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Dict, Union
+from typing import Dict, Generator, Union
 
 from neo4j import Session, Transaction
 from neomodel import DoesNotExist, RelationshipTo, StringProperty, StructuredNode, StructuredRel, db
@@ -189,6 +189,17 @@ class Tree(BaseMerkleNode):
         MERGE (p)-[:HAS_CHILD_TREE {name: rel.name}]->(c)
         """
         session.run(query, {"parent_hash": node.hash, "unwind_param": rel_list})
+
+    def all_blobs(self) -> Generator[Blob, None, None]:
+        """Retrieve all Blobs under this Tree, at any depth"""
+        query = """
+        MATCH path = (r:Tree)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(b:Blob)
+        WHERE r.hash = $root_hash
+        RETURN b
+        """
+        rows, _ = self.cypher(query, {"root_hash": self.hash})
+        for row in rows:
+            yield Blob.inflate(row[0])
 
     def asdict(self) -> Dict[str, Union[str, Dict]]:
         """Return a representation of the Tree as a dictionary"""
