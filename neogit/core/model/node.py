@@ -39,7 +39,3 @@ class Node(ABC):
     def accept(self, v: "NodeVisitor"):
         """Accepts a visitor"""
         v.visit(self)
-
-    def hashable_data(self) -> Iterator[bytes]:
-        """Return the node representation that can be hashed"""
-        raise NotImplementedError
