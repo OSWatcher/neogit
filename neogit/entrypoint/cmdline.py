@@ -13,6 +13,7 @@ Options:
   -d --debug            Toogle debug output
 """
 
+import logging
 from functools import wraps
 from logging.config import dictConfig
 from pathlib import Path
@@ -32,6 +33,7 @@ def post_mortem(f):
         try:
             return f(*args, **kwargs)
         except Exception:
+            logging.exception("Post Mortem: An unhandled exception occurred.")
             import sys
 
             import ipdb
