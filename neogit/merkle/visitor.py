@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 from neo4j import Session, Transaction
 
-from neogit.core.merkle import MerkleVisitor
+from neogit.core.merkle import FSMerkleVisitor
 from neogit.core.model import FSDirectoryNode, MerkleNode, Node
 from neogit.core.visitor import NodeVisitorThread, VisitedNode
 from neogit.merkle.uploaderthread import ObjectUploaderThread
@@ -21,7 +21,7 @@ class NeoMerkleTreeBuilder:
         self._uploader_queue: Queue = Queue()
         self._uploader_thread = ObjectUploaderThread(ts_object, self._uploader_queue)
         self._node_to_visit = node_to_visit
-        self._visitor = MerkleVisitor([self._main_queue, self._uploader_queue])
+        self._visitor = FSMerkleVisitor([self._main_queue, self._uploader_queue])
         self._visitor_thread = NodeVisitorThread(self._visitor, node_to_visit)
 
     def __enter__(self):
