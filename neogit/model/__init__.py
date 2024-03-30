@@ -1,1 +1,1 @@
-from .old_model import Blob, Tree, DiffStatus, DirInfo, FSDiffObject, FSSearchResult, FSSearchType, Tree
+from .old_model import Blob, DiffStatus, DirInfo, FSDiffObject, FSSearchResult, FSSearchType, Tree

@@ -2,24 +2,21 @@
 import logging
 from datetime import datetime
 from functools import wraps
-from pathlib import Path, PurePath
-from typing import Dict, Iterator, List, Optional
+from pathlib import Path
+from typing import Iterator, List, Optional
 
 from neo4j import GraphDatabase, Transaction
 from neo4j.exceptions import ClientError
 from neomodel import db
 
-from neogit.config import settings, ObjectConfig
+from neogit.config import ObjectConfig, settings
 from neogit.core.model import FSDirectoryNode
-from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
-from neogit.model import DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
+from neogit.model import FSSearchResult, FSSearchType
 from neogit.model.neo import Branch as NeoBranch
 from neogit.model.neo import Commit as NeoCommit
-from neogit.model.merkle import Blob as NeoBlob
-from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage, LibcloudObjectStorage
+from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
-
 
 # TODO: neomodel
 # from neogit.utils import traverse_path_tree
