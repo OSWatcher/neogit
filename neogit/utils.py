@@ -1,9 +1,5 @@
-from functools import lru_cache
-from pathlib import PurePath
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 from urllib.parse import ParseResult, urlparse, urlunparse
-
-from neo4j import Session, Transaction
 
 # from neogit.model import Commit, Tree
 

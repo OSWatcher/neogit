@@ -32,7 +32,9 @@ def post_mortem(f):
         try:
             return f(*args, **kwargs)
         except Exception:
-            import ipdb, sys
+            import sys
+
+            import ipdb
 
             _, _, tb = sys.exc_info()
             ipdb.post_mortem(tb)

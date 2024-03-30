@@ -61,10 +61,7 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         if cls == LocalStorageDriver:
             # bug when port value is set
             # just drop everything else except necessary
-            config_dict = {
-                'provider': 'local',
-                'key': config_dict['key']
-            }
+            config_dict = {"provider": "local", "key": config_dict["key"]}
         # drop provider as well (already used before)
         del config_dict["provider"]
         self._driver = cls(**config_dict)
