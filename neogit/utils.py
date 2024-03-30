@@ -1,5 +1,8 @@
+import logging
 from typing import Optional, Tuple
 from urllib.parse import ParseResult, urlparse, urlunparse
+
+from attrs import Factory
 
 # from neogit.model import Commit, Tree
 
@@ -16,6 +19,12 @@ from urllib.parse import ParseResult, urlparse, urlunparse
 #         # get next tree
 #         cur_tree = cur_tree.has_child_tree(session, path_part)
 #     return cur_tree.sha1sum
+
+
+DEFAULT_CLASS_LOGGER = Factory(
+    lambda self: logging.getLogger(f"{self.__module__}.{self.__class__.__name__}"),
+    takes_self=True,
+)
 
 
 def uri_to_py2neo_uri(uri: str, auth: Optional[Tuple[str, str]] = None) -> str:
