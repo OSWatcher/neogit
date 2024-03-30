@@ -4,12 +4,14 @@ from __future__ import annotations
 import hashlib
 import os
 
+from attrs import define
 from more_itertools import consume
 
 from ..model import FSDirectoryNode, FSFileNode, MerkleLabel, MerkleNode
 from .visitor import MerkleVisitor
 
 
+@define(auto_attribs=True)
 class FSMerkleVisitor(MerkleVisitor):
     """Visitor to compute MerkleNode hash from FSNode"""
 

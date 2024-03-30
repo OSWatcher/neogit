@@ -3,25 +3,15 @@ Domain model objects
 """
 import typing
 from abc import ABC
-from typing import Any, Dict, Iterator
+from typing import Iterator
 
-import attr
+from attrs import define
 
 if typing.TYPE_CHECKING:
     from neogit.core.visitor import NodeVisitor
 
 
-@attr.s
-class RelationshipTo:
-    """Oriented relationship between two nodes"""
-
-    name: str = attr.ib()
-    start_node: "Node" = attr.ib()
-    end_node: "Node" = attr.ib()
-    properties: Dict[str, Any] = attr.ib(factory=dict)
-
-
-@attr.s
+@define(auto_attribs=True)
 class Node(ABC):
     """Basic node representation"""
 

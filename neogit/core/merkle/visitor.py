@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import hashlib
 
+from attrs import define
+
 from neogit.core.model.node import Node
 from neogit.core.visitor import NodeVisitor
 
 
+@define(auto_attribs=True)
 class MerkleVisitor(NodeVisitor):
 
     # override visit method to define hashing algorithm
