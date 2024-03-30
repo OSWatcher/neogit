@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import PurePath
 from typing import Dict, Generator, Union
 
 from neo4j import Session, Transaction
@@ -200,6 +201,42 @@ class Tree(BaseMerkleNode):
         rows, _ = self.cypher(query, {"root_hash": self.hash})
         for row in rows:
             yield Blob.inflate(row[0])
+
+    def get_blob_at_path(self, path: PurePath) -> Blob:
+        """Return the blob at the specified path"""
+        idx = 1 if path.is_absolute() else 0
+        tree_parts = path.parts[idx:-1]
+        cur_tree = self
+        for tree_part in tree_parts:
+            # traverse HAS_CHILD_TREE
+            query = """
+            MATCH (p:Tree)-[r:HAS_CHILD_TREE]->(c:Tree)
+            WHERE p.hash = $parent_hash
+                AND r.name = $filename
+            RETURN c
+            """
+            rows, _ = self.cypher(query, {"parent_hash": cur_tree.hash, "filename": tree_part})
+            try:
+                node = rows[0][0]
+            except IndexError:
+                raise FileNotFoundError
+            else:
+                cur_tree = Tree.inflate(node)
+        # query blob
+        query = """
+        MATCH (p:Tree)-[r:HAS_CHILD_BLOB]->(c:Blob)
+        WHERE p.hash = $parent_hash
+            AND r.name = $filename
+        RETURN c
+        """
+        filename = path.name
+        rows, _ = self.cypher(query, {"parent_hash": cur_tree.hash, "filename": filename})
+        try:
+            blob = rows[0][0]
+        except IndexError:
+            raise FileNotFoundError
+        else:
+            return Blob.inflate(blob)
 
     def asdict(self) -> Dict[str, Union[str, Dict]]:
         """Return a representation of the Tree as a dictionary"""

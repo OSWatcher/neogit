@@ -16,6 +16,7 @@ from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import DiffStatus, FSDiffObject, FSSearchResult, FSSearchType, Tree
 from neogit.model.neo import Branch as NeoBranch
 from neogit.model.neo import Commit as NeoCommit
+from neogit.model.merkle import Blob as NeoBlob
 from neogit.object_storage import ContainerAlreadyExists, TSObjectStorage, LibcloudObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 
