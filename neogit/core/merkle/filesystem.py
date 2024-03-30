@@ -18,7 +18,7 @@ class FSMerkleVisitor(MerkleVisitor):
     def visit_FSFileNode(self, node: FSFileNode, hash_obj: hashlib._Hash, *args, **kwargs) -> MerkleNode:
         if node.path.is_symlink():
             # symlink, hash link target
-            data: bytes = os.readlink(str(self.path)).encode()
+            data: bytes = os.readlink(str(node.path)).encode()
             hash_obj.update(data)
         elif node.path.is_file():
             # file, hash content
