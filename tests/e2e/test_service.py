@@ -1,7 +1,7 @@
 # from neogit.model import Branch
 # from neogit.repo.py2neo import Py2NeoRepository
-from neogit.service import Neogit
-from tests.conftest import TEST_DATA_FS
+# from neogit.service import Neogit
+# from tests.conftest import TEST_DATA_FS
 
 
 # neogit.repo doesn't exist anymore
