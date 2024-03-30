@@ -12,16 +12,6 @@ if typing.TYPE_CHECKING:
 
 
 @attr.s
-class RelationshipTo:
-    """Oriented relationship between two nodes"""
-
-    name: str = attr.ib()
-    start_node: "Node" = attr.ib()
-    end_node: "Node" = attr.ib()
-    properties: Dict[str, Any] = attr.ib(factory=dict)
-
-
-@attr.s
 class Node(ABC):
     """Basic node representation"""
 
