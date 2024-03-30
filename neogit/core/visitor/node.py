@@ -6,8 +6,7 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 
 import logging
 from functools import wraps
-from queue import Queue
-from typing import Callable, List, Optional
+from typing import Callable, Generator, Optional
 
 from attrs import define, field
 from attrs.validators import instance_of
@@ -37,17 +36,11 @@ def visit_hook(f):
             pre_visit_f(node, *args, **kwargs)
         # call main func
         # this func needs self
-        visit_ret_val = f(self, node, *args, **kwargs)
+        yield from f(self, node, *args, **kwargs)
         # call post_visit hook, if any
         post_visit_f = self.get_visitor(node, "post_visit")
         if post_visit_f:
-            post_visit_f(node, visit_ret_val, *args, **kwargs)
-        # if queue defined, post visit return value there
-        if self.queue_list:
-            item = VisitedNode(node, visit_ret_val)
-            for q in self.queue_list:
-                q.put(item)
-        return visit_ret_val
+            post_visit_f(node, *args, **kwargs)
 
     return wrapper
 
@@ -65,11 +58,6 @@ class NodeVisitor:
     """
 
     logger: logging.Logger = field(default=DEFAULT_CLASS_LOGGER, init=False)
-    queue_list: List[Queue] = field(default=None)
-
-    def __attrs_post_init__(self):
-        if isinstance(self.queue_list, Queue):
-            self.queue_list = [self.queue_list]
 
     def get_visitor(self, node: Node, prefix="visit_") -> Optional[Callable]:
         """Return the visitor function for this node or `None` if no visitor
@@ -80,18 +68,19 @@ class NodeVisitor:
         return getattr(self, method, None)
 
     @visit_hook
-    def visit(self, node: Node, *args, **kwargs):
+    def visit(self, node: Node, *args, **kwargs) -> Generator[VisitedNode, None, None]:
         """Visit a node."""
         f = self.get_visitor(node)
         self.logger.debug("visit %s", node)
         if f is not None:
-            return f(node, *args, **kwargs)
-        return self.generic_visit(node, *args, **kwargs)
+            yield from f(node, *args, **kwargs)
+        else:
+            yield from self.generic_visit(node, *args, **kwargs)
 
-    def generic_visit(self, node: Node, *args, **kwargs):
+    def generic_visit(self, node: Node, *args, **kwargs) -> Generator[VisitedNode, None, None]:
         """Called if no explicit visitor function exists for a node."""
         for node in node.iter_child_nodes():
-            self.visit(node, *args, **kwargs)
+            yield from self.visit(node, *args, **kwargs)
 
     def done_visiting(self):
         """a workaround method to put the None object inside the queue, if any"""
