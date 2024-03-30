@@ -1,26 +1,21 @@
 import logging
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 from typing import Iterator
 
-import attr
+from attrs import define
 
 # avoid circular dependency
 from .node import Node
 
 
-@attr.s
+@define(auto_attribs=True)
 class FSNode(Node, ABC):
-    path: Path = attr.ib()
-
-    @abstractmethod
-    @path.validator
-    def validate_path(self, attribute, value):
-        pass
+    path: Path
 
 
-@attr.s
+@define(auto_attribs=True)
 class FSDirectoryNode(FSNode):
     def validate_path(self, attribute, value):
         if not value.is_dir():
@@ -43,7 +38,7 @@ class FSDirectoryNode(FSNode):
                 logger.warning("SKIP: %s (%s)", self.path, e)
 
 
-@attr.s
+@define(auto_attribs=True)
 class FSFileNode(FSNode):
     def validate_path(self, attribute, value):
         if value.is_dir():

@@ -3,15 +3,15 @@ Domain model objects
 """
 import typing
 from abc import ABC
-from typing import Any, Dict, Iterator
+from typing import Iterator
 
-import attr
+from attrs import define
 
 if typing.TYPE_CHECKING:
     from neogit.core.visitor import NodeVisitor
 
 
-@attr.s
+@define(auto_attribs=True)
 class Node(ABC):
     """Basic node representation"""
 

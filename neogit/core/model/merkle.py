@@ -4,7 +4,7 @@ from enum import Enum, auto
 from functools import lru_cache
 from typing import Dict, List
 
-import attr
+from attrs import define, field, validators
 
 # avoid circular dependency
 from .node import Node
@@ -26,16 +26,16 @@ def get_all_hash_digest_len() -> List[int]:
     return hash_digests_len
 
 
-@attr.s
+@define(auto_attribs=True)
 class MerkleNode(Node):
     """Represents a merkelized Node"""
 
     """The hexdigest of a hashing algorithm (SHA1, SHA256, SHA512)"""
-    hash: str = attr.ib()
+    hash: str = field()
     # label to differentiate Blob from Trees
-    label: MerkleLabel = attr.ib(validator=attr.validators.in_(MerkleLabel))
+    label: MerkleLabel = field(validator=validators.in_(MerkleLabel))
     # TODO: use iter_child_nodes
-    children: Dict[str, "MerkleNode"] = attr.ib(factory=dict)
+    children: Dict[str, "MerkleNode"] = field(factory=dict)
 
     @hash.validator
     def validate_hash(self, attribute, value: str):

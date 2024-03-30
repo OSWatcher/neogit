@@ -4,13 +4,13 @@ Visitor design pattern
 Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/jinja2/visitor.py (NodeJS)
 """
 
+import logging
 from functools import wraps
 from queue import Queue
-from typing import Any, Callable, List, Optional
-import logging
+from typing import Callable, List, Optional
 
-from attrs.validators import instance_of
 from attrs import define, field
+from attrs.validators import instance_of
 
 from neogit.core.model import Node
 from neogit.utils import DEFAULT_CLASS_LOGGER
@@ -19,6 +19,7 @@ from neogit.utils import DEFAULT_CLASS_LOGGER
 @define(auto_attribs=True)
 class VisitedNode:
     """A node that has been visited by a visitor and the return value of the visit function."""
+
     node: Node = field(validator=instance_of(Node))
     """The node that was visited."""
     return_value: Node = field()
