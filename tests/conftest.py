@@ -297,7 +297,7 @@ def minio_db(pytestconfig):
             cmdline.extend(
                 [
                     "--volume",
-                    "/media/wenzel/Toschiba/Minio:/data",
+                    f"{host_path}:/data",
                 ]
             )
         cmdline.extend(
