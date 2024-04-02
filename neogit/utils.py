@@ -1,8 +1,10 @@
 import logging
-from typing import Optional, Tuple
+from contextlib import AbstractContextManager, ExitStack, contextmanager
+from types import TracebackType
+from typing import Optional, Self, Tuple
 from urllib.parse import ParseResult, urlparse, urlunparse
 
-from attrs import Factory
+from attrs import Factory, define, field
 
 # from neogit.model import Commit, Tree
 
@@ -53,3 +55,35 @@ def auth_to_netloc(netloc: str, auth: Optional[Tuple[str, str]] = None) -> str:
 
 def cypher_unescape(string: str) -> str:
     return string.strip("`")
+
+
+@define(auto_attribs=True)
+class BetterContextManager(AbstractContextManager):
+    logger: logging.Logger = field(default=DEFAULT_CLASS_LOGGER, init=False)
+    ex: ExitStack = field(default=Factory(ExitStack), init=False)
+
+    def __enter__(self):
+        with self._cleanup_on_error():
+            return self.safe_enter()
+
+    def __exit__(
+        self,
+        __exc_type: type[BaseException] | None,
+        __exc_value: BaseException | None,
+        __traceback: TracebackType | None,
+    ) -> bool | None:
+        self.ex.__exit__(__exc_type, __exc_value, __traceback)
+        return super().__exit__(__exc_type, __exc_value, __traceback)
+
+    def safe_enter(self) -> Self:
+        return self
+
+    @contextmanager
+    def _cleanup_on_error(self):
+        with ExitStack() as stack:
+            stack.push(self)
+            yield
+            # The validation check passed and didn't raise an exception
+            # Accordingly, we want to keep the resource, and pass it
+            # back to our caller
+            stack.pop_all()

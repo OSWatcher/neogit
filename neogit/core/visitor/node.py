@@ -5,14 +5,15 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 """
 
 import logging
-from functools import wraps
-from typing import Callable, Generator, Optional
+from concurrent.futures import Future, ThreadPoolExecutor
+from queue import Queue
+from typing import Callable, Generator, Optional, Self
 
 from attrs import define, field
 from attrs.validators import instance_of
 
 from neogit.core.model import Node
-from neogit.utils import DEFAULT_CLASS_LOGGER
+from neogit.utils import DEFAULT_CLASS_LOGGER, BetterContextManager
 
 
 @define(auto_attribs=True)
@@ -25,28 +26,8 @@ class VisitedNode:
     """The return value of the visit function."""
 
 
-def visit_hook(f):
-    """Add pre/post hook on node visit"""
-
-    @wraps(f)
-    def wrapper(self, node: Node, *args, **kwargs):
-        # call pre_visit hook, if any
-        pre_visit_f = self.get_visitor(node, "pre_visit")
-        if pre_visit_f:
-            pre_visit_f(node, *args, **kwargs)
-        # call main func
-        # this func needs self
-        yield from f(self, node, *args, **kwargs)
-        # call post_visit hook, if any
-        post_visit_f = self.get_visitor(node, "post_visit")
-        if post_visit_f:
-            post_visit_f(node, *args, **kwargs)
-
-    return wrapper
-
-
 @define(auto_attribs=True)
-class NodeVisitor:
+class NodeVisitor(BetterContextManager):
     """Walks the abstract syntax tree and call visitor functions for every
     node found.  The visitor functions may return values which will be
     forwarded by the `visit` method.
@@ -57,7 +38,21 @@ class NodeVisitor:
     (return value `None`) the `generic_visit` visitor is used instead.
     """
 
+    # runs in a separate thread
+    thread: bool = field(kw_only=True, default=False)
+    thread_pool: Optional[ThreadPoolExecutor] = field(default=None, init=False)
     logger: logging.Logger = field(default=DEFAULT_CLASS_LOGGER, init=False)
+    # queue to put visited items when visitor runs in background
+    # items should be consumed by the generator
+    queue: Optional[Queue] = field(default=None, init=False)
+
+    def safe_enter(self) -> Self:
+        if self.thread:
+            self.thread_pool = self.ex.enter_context(
+                ThreadPoolExecutor(max_workers=1, thread_name_prefix=f"thread-{self.__class__.__name__}")
+            )
+            self.queue = Queue()
+        return self
 
     def get_visitor(self, node: Node, prefix="visit_") -> Optional[Callable]:
         """Return the visitor function for this node or `None` if no visitor
@@ -67,24 +62,44 @@ class NodeVisitor:
         method = prefix + node.__class__.__name__
         return getattr(self, method, None)
 
-    @visit_hook
-    def visit(self, node: Node, *args, **kwargs) -> Generator[VisitedNode, None, None]:
+    def run_visit(self, node: Node, *args, **kwargs) -> Optional[VisitedNode]:
+        """Start visiting a node."""
+        if self.thread:
+            future = self.thread_pool.submit(self.visit, node, *args, **kwargs)
+
+            def add_none_item(f: Future):
+                self.queue.put(None)
+
+            future.add_done_callback(add_none_item)
+            # add callback to existack to check future for exceptions
+            self.ex.callback(future.exception)
+            return None
+        return self.visit(node, *args, **kwargs)
+
+    def visit(self, node: Node, *args, **kwargs) -> VisitedNode:
         """Visit a node."""
         f = self.get_visitor(node)
         self.logger.debug("visit %s", node)
         if f is not None:
-            yield from f(node, *args, **kwargs)
+            visited_node = f(node, *args, **kwargs)
         else:
-            yield from self.generic_visit(node, *args, **kwargs)
+            visited_node = self.generic_visit(node, *args, **kwargs)
+        if self.queue:
+            self.queue.put(visited_node)
+        return visited_node
 
-    def generic_visit(self, node: Node, *args, **kwargs) -> Generator[VisitedNode, None, None]:
+    def generic_visit(self, node: Node, *args, **kwargs) -> VisitedNode:
         """Called if no explicit visitor function exists for a node."""
         for node in node.iter_child_nodes():
-            yield from self.visit(node, *args, **kwargs)
+            self.visit(node, *args, **kwargs)
+        return VisitedNode(node, None)
 
-    def done_visiting(self):
-        """a workaround method to put the None object inside the queue, if any"""
-        # TODO: better interface ?
-        if self.queue_list:
-            for q in self.queue_list:
-                q.put(None)
+    def as_gen(self) -> Generator[VisitedNode, None, None]:
+        # iterate over queue while not None item received
+        if self.queue is None:
+            return
+        while True:
+            item = self.queue.get()
+            if item is None:
+                break
+            yield item
