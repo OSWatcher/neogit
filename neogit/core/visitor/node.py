@@ -5,7 +5,6 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 """
 
 import logging
-from functools import wraps
 from typing import Callable, Generator, Optional
 
 from attrs import define, field
@@ -23,26 +22,6 @@ class VisitedNode:
     """The node that was visited."""
     return_value: Node = field()
     """The return value of the visit function."""
-
-
-def visit_hook(f):
-    """Add pre/post hook on node visit"""
-
-    @wraps(f)
-    def wrapper(self, node: Node, *args, **kwargs):
-        # call pre_visit hook, if any
-        pre_visit_f = self.get_visitor(node, "pre_visit")
-        if pre_visit_f:
-            pre_visit_f(node, *args, **kwargs)
-        # call main func
-        # this func needs self
-        yield from f(self, node, *args, **kwargs)
-        # call post_visit hook, if any
-        post_visit_f = self.get_visitor(node, "post_visit")
-        if post_visit_f:
-            post_visit_f(node, *args, **kwargs)
-
-    return wrapper
 
 
 @define(auto_attribs=True)
@@ -67,7 +46,6 @@ class NodeVisitor:
         method = prefix + node.__class__.__name__
         return getattr(self, method, None)
 
-    @visit_hook
     def visit(self, node: Node, *args, **kwargs) -> Generator[VisitedNode, None, None]:
         """Visit a node."""
         f = self.get_visitor(node)
