@@ -90,7 +90,7 @@ class Neogit:
             for label, unique_prop_list in constraints.items():
                 for unique_prop in unique_prop_list:
                     self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
-                    session.run(f"CREATE CONSTRAINT IF NOT EXISTS ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
+                    session.run(f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{unique_prop} IS UNIQUE")
         self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name
