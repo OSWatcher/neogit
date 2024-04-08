@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Iterator, List, Optional
 
 from neo4j import GraphDatabase, Transaction
-from neo4j.exceptions import ClientError
 from neomodel import db
 
 from neogit.config import ObjectConfig, settings
@@ -90,12 +89,8 @@ class Neogit:
             # constraints = {"Blob": ["hash"], "Tree": ["hash"], "Commit": ["hash"], "Branch": "name"}
             for label, unique_prop_list in constraints.items():
                 for unique_prop in unique_prop_list:
-                    try:
-                        self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
-                        session.run(f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
-                    except ClientError as e:
-                        if e.code == "Neo.ClientError.Schema.EquivalentSchemaRuleAlreadyExists":
-                            continue
+                    self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
+                    session.run(f"CREATE CONSTRAINT IF NOT EXISTS ON (n:{label}) ASSERT n.{unique_prop} IS UNIQUE")
         self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name
