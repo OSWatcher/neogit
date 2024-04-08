@@ -85,7 +85,7 @@ class Neogit:
                 "Blob": ["hash", "sha1sum"],
                 "Tree": ["hash", "sha1sum"],
                 "Commit": ["hash", "sha1sum"],
-                "Branch": "name",
+                "Branch": ["name"],
             }
             # constraints = {"Blob": ["hash"], "Tree": ["hash"], "Commit": ["hash"], "Branch": "name"}
             for label, unique_prop_list in constraints.items():
