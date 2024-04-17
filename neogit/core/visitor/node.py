@@ -79,7 +79,6 @@ class NodeVisitor(BetterContextManager):
     def visit(self, node: Node, *args, **kwargs) -> VisitedNode:
         """Visit a node."""
         f = self.get_visitor(node)
-        self.logger.debug("visit %s", node)
         if f is not None:
             visited_node = f(node, *args, **kwargs)
         else:
