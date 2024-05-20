@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import PurePath
-from typing import Dict, Generator, Union
+from typing import Dict, Generator, Tuple, Union
 
 from neo4j import Session, Transaction
 from neomodel import DoesNotExist, RelationshipTo, StringProperty, StructuredNode, StructuredRel, db
@@ -162,16 +162,16 @@ class Tree(BaseMerkleNode):
         ]
         session.run(query, {"hash": node.hash, "blob_hashes": blob_hashes, "tree_hashes": tree_hashes})
 
-    def all_blobs(self) -> Generator[Blob, None, None]:
+    def all_blobs(self) -> Generator[Tuple[PurePath, Blob], None, None]:
         """Retrieve all Blobs under this Tree, at any depth"""
         query = """
-        MATCH path = (r:Tree)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(b:Blob)
-        WHERE r.hash = $root_hash
-        RETURN b
+        MATCH path = (t:Tree)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(b:Blob)
+        WHERE t.hash = $root_hash
+        RETURN [rel IN relationships(path) | rel.name] AS parts, b
         """
         rows, _ = self.cypher(query, {"root_hash": self.hash})
         for row in rows:
-            yield Blob.inflate(row[0])
+            yield PurePath(*row[0]), Blob.inflate(row[1])
 
     def get_blob_at_path(self, path: PurePath) -> Blob:
         """Return the blob at the specified path"""
