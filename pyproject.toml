@@ -27,7 +27,7 @@ rich = "10.2.0"
 attrs = "^23.2.0"
 neomodel = "5.2.1"
 types-PyYAML = "^6.0.0"
-poethepoet = "^0.24.3"
+poethepoet = "^0.26.1"
 ipdb = "^0.13.13"
 
 [tool.poetry.dev-dependencies]
