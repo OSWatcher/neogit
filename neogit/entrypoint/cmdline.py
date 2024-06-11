@@ -15,11 +15,8 @@ Options:
 
 import logging
 from functools import wraps
-from logging.config import dictConfig
 from pathlib import Path
 
-import coloredlogs
-import yaml
 from docopt import docopt
 
 from neogit.config import ObjectConfig, settings
@@ -44,27 +41,9 @@ def post_mortem(f):
     return wrapper
 
 
-def setup_logging(debug_enabled: bool):
-    log_config_path = Path(__file__).parent.parent / "logging.yaml"
-    with open(log_config_path) as f:
-        config = yaml.safe_load(f)
-
-    try:
-        if debug_enabled:
-            config["root"]["level"] = "DEBUG"
-    except KeyError:
-        root_level = "INFO"
-    else:
-        root_level = config["root"]["level"]
-
-    dictConfig(config)
-    coloredlogs.install(level=root_level, fmt=settings.log_fmt)
-
-
 @post_mortem
 def handle_cmdline():
     args = docopt(__doc__)
-    setup_logging(args["--debug"])
     # handle root
     root_repo: Path = Path.cwd()
     if args["--root"]:
@@ -73,7 +52,7 @@ def handle_cmdline():
     # init TSObjectStorage and inject dependency
     obj_config = ObjectConfig.from_settings(settings)
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
-    git = Neogit(tsobj, gui_enabled)
+    git = Neogit(tsobj, gui_enabled, args["--debug"])
     if args["init"]:
         git.init()
     if args["commit"]:

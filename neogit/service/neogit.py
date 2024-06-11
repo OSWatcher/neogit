@@ -2,9 +2,12 @@
 import logging
 from datetime import datetime
 from functools import wraps
+from logging.config import dictConfig
 from pathlib import Path
 from typing import Iterator, List, Optional
 
+import coloredlogs
+import yaml
 from neo4j import GraphDatabase, Transaction
 from neomodel import db
 
@@ -33,9 +36,27 @@ def measure_time(method):
     return wrapper
 
 
+def setup_logging(debug_enabled: bool):
+    log_config_path = Path(__file__).parent.parent / "logging.yaml"
+    with open(log_config_path) as f:
+        config = yaml.safe_load(f)
+
+    try:
+        if debug_enabled:
+            config["root"]["level"] = "DEBUG"
+    except KeyError:
+        root_level = "INFO"
+    else:
+        root_level = config["root"]["level"]
+
+    dictConfig(config)
+    coloredlogs.install(level=root_level, fmt=settings.log_fmt)
+
+
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage = None, gui_enabled: bool = False):
+    def __init__(self, object_driver_ts: TSObjectStorage = None, gui_enabled: bool = False, debug: bool = False):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
+        setup_logging(debug)
         if object_driver_ts is None:
             obj_config = ObjectConfig.from_settings(settings)
             object_driver_ts = TSObjectStorage(LibcloudObjectStorage, obj_config)
