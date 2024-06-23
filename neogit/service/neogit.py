@@ -123,7 +123,7 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path, branch_name: str = None):
+    def commit(self, name: str, root: Path, branch_name: str = None) -> str:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         branch_name = branch_name or settings.branch
         if not root.exists():
@@ -151,6 +151,7 @@ class Neogit:
                 new_commit.previous.connect(prev_commit)
             # update main branch
             branch.tracks.replace(new_commit)
+            return new_commit.hash
 
     def create_branch(self, branch_name: str, commit_sha1: str):
         with db.write_transaction:
