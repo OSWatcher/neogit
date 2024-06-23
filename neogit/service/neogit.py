@@ -123,9 +123,28 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path, branch_name: str = None) -> str:
+    def commit(self, name: str, root: Path, branch_name: str = None, unique: bool = False) -> str:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         branch_name = branch_name or settings.branch
+        if unique:
+            # check if that commit already exists in that branch
+            with db.read_transaction:
+                try:
+                    branch = NeoBranch.nodes.get(name=branch_name)
+                except NeoBranch.DoesNotExist:
+                    raise ValueError(f"Branch {branch_name} not found")
+
+                def iter_commits():
+                    commit = branch.tracks.single()
+                    while commit:
+                        yield commit
+                        commit = commit.previous.single()
+
+                found = [commit for commit in iter_commits() if commit.name == name]
+                if len(found) > 1:
+                    raise ValueError(f"Multiple commits with name {name} found in branch {branch_name}")
+                if found:
+                    return found[0].hash
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
         with db.write_transaction as transaction_proxy:

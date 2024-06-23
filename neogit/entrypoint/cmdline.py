@@ -2,7 +2,7 @@
 
 Usage:
   neogit [options] init
-  neogit [options] commit <name> [branch <branch>]
+  neogit [options] commit <name> [branch <branch>] [--unique]
   neogit [options] branch <name> <commit>
   neogit [options] diff <ref1> <ref2>
 
@@ -59,7 +59,8 @@ def handle_cmdline():
     if args["commit"]:
         commit_name = args["<name>"]
         branch_name = args["<branch>"]
-        return git.commit(commit_name, root_repo, branch_name)
+        unique = args.get("--unique", False)
+        return git.commit(commit_name, root_repo, branch_name, unique)
     if args["branch"]:
         branch_name = args["<name>"]
         commit_name = args["<commit>"]
