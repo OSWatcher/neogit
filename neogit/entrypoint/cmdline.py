@@ -2,7 +2,8 @@
 
 Usage:
   neogit [options] init
-  neogit [options] commit <name>
+  neogit [options] commit <name> [branch <branch>]
+  neogit [options] branch <name> <commit>
   neogit [options] diff <ref1> <ref2>
 
 Options:
@@ -54,12 +55,18 @@ def handle_cmdline():
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
     git = Neogit(tsobj, gui_enabled, args["--debug"])
     if args["init"]:
-        git.init()
+        return git.init()
     if args["commit"]:
         commit_name = args["<name>"]
-        git.commit(commit_name, root_repo)
+        branch_name = args["<branch>"]
+        return git.commit(commit_name, root_repo, branch_name)
+    if args["branch"]:
+        branch_name = args["<name>"]
+        commit_name = args["<commit>"]
+        return git.create_branch(branch_name, commit_name)
     if args["diff"]:
         ref1 = args["<ref1>"]
         ref2 = args["<ref2>"]
         for diff_obj in git.diff(ref1, ref2):
             print(diff_obj)
+        return
