@@ -123,8 +123,9 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path):
+    def commit(self, name: str, root: Path, branch_name: str = None):
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
+        branch_name = branch_name or settings.branch
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
         with db.write_transaction as transaction_proxy:
@@ -135,9 +136,9 @@ class Neogit:
                 root_tree = builder.run()
             # ensure Branch is created
             try:
-                branch = NeoBranch.nodes.get(name=settings.branch)
+                branch = NeoBranch.nodes.get(name=branch_name)
             except NeoBranch.DoesNotExist:
-                branch = NeoBranch(name=settings.branch)
+                branch = NeoBranch(name=branch_name)
                 branch.save()
             # get previous commit
             prev_commit = None
@@ -150,6 +151,18 @@ class Neogit:
                 new_commit.previous.connect(prev_commit)
             # update main branch
             branch.tracks.replace(new_commit)
+
+    def create_branch(self, branch_name: str, commit_sha1: str):
+        with db.write_transaction:
+            try:
+                branch = NeoBranch.nodes.get(name=branch_name)
+            except NeoBranch.DoesNotExist:
+                branch = NeoBranch(name=branch_name)
+                commit = NeoCommit.nodes.get(hash=commit_sha1)
+                branch.save()
+                branch.tracks.replace(commit)
+            else:
+                raise ValueError(f"Branch {branch_name} already exists")
 
     # def log(self):
     #     branch_name: str = settings.branch
