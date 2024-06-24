@@ -2,12 +2,9 @@
 import logging
 from datetime import datetime
 from functools import wraps
-from logging.config import dictConfig
 from pathlib import Path
 from typing import Iterator, List, Optional
 
-import coloredlogs
-import yaml
 from neo4j import GraphDatabase, Transaction
 from neomodel import db
 
@@ -19,6 +16,7 @@ from neogit.model.neo import Branch as NeoBranch
 from neogit.model.neo import Commit as NeoCommit
 from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
+from neogit.utils import setup_logging
 
 # TODO: neomodel
 # from neogit.utils import traverse_path_tree
@@ -34,23 +32,6 @@ def measure_time(method):
         return res
 
     return wrapper
-
-
-def setup_logging(debug_enabled: bool):
-    log_config_path = Path(__file__).parent.parent / "logging.yaml"
-    with open(log_config_path) as f:
-        config = yaml.safe_load(f)
-
-    try:
-        if debug_enabled:
-            config["root"]["level"] = "DEBUG"
-    except KeyError:
-        root_level = "INFO"
-    else:
-        root_level = config["root"]["level"]
-
-    dictConfig(config)
-    coloredlogs.install(level=root_level, fmt=settings.log_fmt)
 
 
 class Neogit:

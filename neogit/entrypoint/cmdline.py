@@ -23,6 +23,7 @@ from docopt import docopt
 from neogit.config import ObjectConfig, settings
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
+from neogit.utils import setup_logging
 
 
 def post_mortem(f):
@@ -50,6 +51,7 @@ def handle_cmdline():
     if args["--root"]:
         root_repo = Path(args["--root"])
     gui_enabled = args["--gui"]
+    setup_logging(args["--debug"], basic_config=True)
     # init TSObjectStorage and inject dependency
     obj_config = ObjectConfig.from_settings(settings)
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)

@@ -1,10 +1,16 @@
 import logging
 from contextlib import AbstractContextManager, ExitStack, contextmanager
+from logging.config import dictConfig
+from pathlib import Path
 from types import TracebackType
 from typing import Optional, Self, Tuple
 from urllib.parse import ParseResult, urlparse, urlunparse
 
+import coloredlogs
+import yaml
 from attrs import Factory, define, field
+
+from neogit.config import settings
 
 # from neogit.model import Commit, Tree
 
@@ -87,3 +93,21 @@ class BetterContextManager(AbstractContextManager):
             # Accordingly, we want to keep the resource, and pass it
             # back to our caller
             stack.pop_all()
+
+
+def setup_logging(debug_enabled: bool, basic_config: bool = False):
+    log_config_path = Path(__file__).parent / "logging.yaml"
+    with open(log_config_path) as f:
+        config = yaml.safe_load(f)
+
+    try:
+        if debug_enabled:
+            config["root"]["level"] = "DEBUG"
+    except KeyError:
+        root_level = "INFO"
+    else:
+        root_level = config["root"]["level"]
+
+    dictConfig(config)
+    if basic_config:
+        coloredlogs.install(level=root_level, fmt=settings.log_fmt)
