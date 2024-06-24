@@ -43,7 +43,7 @@ class NeoMerkleTreeBuilder(BetterContextManager):
                 continue
             # directory, upload it to Neo4j
             Tree.create_from_merkle_node_cypher(self.session, item.return_value)
-            self.logger.info("Tree %s created from %s", item.return_value.hash, item.node.path)
+            self.logger.debug("Tree %s created from %s", item.return_value.hash, item.node.path)
             last_item = item
         root_merkle_node = last_item.return_value
         # put None in queue to stop uploader_thread
