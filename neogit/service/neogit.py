@@ -113,19 +113,19 @@ class Neogit:
                 try:
                     branch = NeoBranch.nodes.get(name=branch_name)
                 except NeoBranch.DoesNotExist:
-                    raise ValueError(f"Branch {branch_name} not found")
+                    pass
+                else:
+                    def iter_commits():
+                        commit = branch.tracks.single()
+                        while commit:
+                            yield commit
+                            commit = commit.previous.single()
 
-                def iter_commits():
-                    commit = branch.tracks.single()
-                    while commit:
-                        yield commit
-                        commit = commit.previous.single()
-
-                found = [commit for commit in iter_commits() if commit.name == name]
-                if len(found) > 1:
-                    raise ValueError(f"Multiple commits with name {name} found in branch {branch_name}")
-                if found:
-                    return found[0].hash
+                    found = [commit for commit in iter_commits() if commit.name == name]
+                    if len(found) > 1:
+                        raise ValueError(f"Multiple commits with name {name} found in branch {branch_name}")
+                    if found:
+                        return found[0].hash
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
         with db.write_transaction as transaction_proxy:
