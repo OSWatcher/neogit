@@ -115,6 +115,7 @@ class Neogit:
                 except NeoBranch.DoesNotExist:
                     pass
                 else:
+
                     def iter_commits():
                         commit = branch.tracks.single()
                         while commit:

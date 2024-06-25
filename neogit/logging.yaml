@@ -1,10 +1,13 @@
 version: 1
 disable_existing_loggers: false
-# formatters: log format is handled via coloredlogs
+formatters:
+  simple:
+    format: "%(asctime)s %(levelname)s:%(name)s:%(message)s"
 handlers:
   console:
     class: logging.StreamHandler
     level: NOTSET
+    formatter: simple
     stream: ext://sys.stderr
 root:
   level: INFO

@@ -10,8 +10,6 @@ import coloredlogs
 import yaml
 from attrs import Factory, define, field
 
-from neogit.config import settings
-
 # from neogit.model import Commit, Tree
 
 
@@ -108,6 +106,8 @@ def setup_logging(debug_enabled: bool, basic_config: bool = False):
     else:
         root_level = config["root"]["level"]
 
+    formatter = config["formatters"]["simple"]["format"]
+
     dictConfig(config)
     if basic_config:
-        coloredlogs.install(level=root_level, fmt=settings.log_fmt)
+        coloredlogs.install(level=root_level, fmt=formatter)

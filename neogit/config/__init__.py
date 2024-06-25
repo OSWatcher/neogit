@@ -7,7 +7,6 @@ from dynaconf import Dynaconf, LazySettings, Validator
 
 APPNAME = "Neogit"
 CUR_DIR = Path(__file__).parent
-LOG_FMT = "%(asctime)s:%(name)s:%(levelname)s:%(message)s"
 USER_DATA_DIR = Path(user_data_dir(APPNAME))
 CONTAINER_NAME = "objects"
 NEO4J_HTTP_PORT = 7474
@@ -25,7 +24,6 @@ settings = Dynaconf(
     ],
     validators=[
         Validator("branch", must_exist=True),
-        Validator("log_fmt", default=LOG_FMT),
         Validator("neo4j.proto", "neo4j.host", "neo4j.port", must_exist=True),
         Validator("neo4j.user", default=None),
         Validator("neo4j.password", default=None),
