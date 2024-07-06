@@ -164,13 +164,18 @@ class Tree(BaseMerkleNode):
 
     def all_blobs(self) -> Generator[Tuple[PurePath, Blob], None, None]:
         """Retrieve all Blobs under this Tree, at any depth"""
+        # bug: https://github.com/neo4j/neo4j/issues/13483
+        # need to add Commit in the MATCH pattern, otherwise the query will return nothing (cartesian product)
         query = """
-        MATCH path = (t:Tree)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(b:Blob)
+        MATCH (c:Commit)-[:OWNS_FILESYSTEM]->(t:Tree)
         WHERE t.hash = $root_hash
+        WITH t
+        MATCH path = (t:Tree)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(b:Blob)
         RETURN [rel IN relationships(path) | rel.name] AS parts, b
         """
         rows, _ = self.cypher(query, {"root_hash": self.hash})
         for row in rows:
+            # skip the first element of the parts list, which is the null value from OWNS_FILESYSTEM
             yield PurePath(*row[0]), Blob.inflate(row[1])
 
     def get_blob_at_path(self, path: PurePath) -> Blob:
