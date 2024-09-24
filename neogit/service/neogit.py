@@ -1,11 +1,12 @@
 """Contains main Neogit class"""
 import logging
+import time
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
-from neo4j import GraphDatabase, Transaction
+from neo4j import GraphDatabase, Transaction, exceptions
 from neomodel import db
 
 from neogit.config import ObjectConfig, settings
@@ -32,6 +33,25 @@ def measure_time(method):
         return res
 
     return wrapper
+
+
+# a wrapper on db.cypher_query with exponential backoff
+# when DeadlockDetected is raised
+def cypher_query_with_backoff(
+    query: str, params: Dict[str, Any], max_retries: int = 10, initial_retry_delay=0.5
+) -> List[Dict[str, Any]]:
+    retries = 0
+    while True:
+        try:
+            return db.cypher_query(query, params)
+        except exceptions.TransientError as e:
+            if e.code != "Neo.TransientError.Transaction.DeadlockDetected":
+                raise
+            logging.info("Deadlock detected, retrying (%s)", retries)
+            retries += 1
+            if retries > max_retries:
+                raise e
+            time.sleep(initial_retry_delay * (2**retries))
 
 
 class Neogit:
