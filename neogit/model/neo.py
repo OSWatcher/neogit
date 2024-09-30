@@ -1,10 +1,19 @@
 from datetime import datetime
+from typing import Set
 
-from neomodel import DateTimeProperty, RelationshipTo, StringProperty, StructuredNode
+from neomodel import DateTimeProperty, RelationshipTo, StringProperty, StructuredNode, db
 
 from neogit.merkle.hasher import Hasher
 
 from .merkle import Tree
+from enum import Enum, auto
+
+class CommitCapabilities(Enum):
+    Blob = auto()
+    Tree = auto()
+    MimeType = auto()
+    WinRegKey = auto()
+    WinRegValue = auto()
 
 
 class Commit(StructuredNode):
@@ -27,6 +36,20 @@ class Commit(StructuredNode):
         commit.save()
         commit.filesystem.connect(filesystem_root)
         return commit
+
+    def get_capabilities(self) -> Set[CommitCapabilities]:
+        query = """
+        MATCH path=(c:Commit {hash: $commit_hash})-[*]->(n)
+        WHERE NONE(rel IN relationships(path) WHERE type(rel) = 'HAS_PREVIOUS')
+        WITH n, labels(n) AS labels_list
+        UNWIND labels_list AS label
+        RETURN COLLECT(DISTINCT label) AS uniqueLabels
+        """.strip()
+        result, _ = db.cypher_query(query, {"commit_hash": self.hash})
+        label_set = set()
+        for label in result[0][0]:
+            label_set.add(CommitCapabilities[label])
+        return label_set
 
 
 class Branch(StructuredNode):
