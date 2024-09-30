@@ -71,16 +71,6 @@ class Neogit:
         self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
 
-    # def iter_commit(self) -> Iterator[Commit]:
-    #     """Enumerate all commits in the database"""
-    #     with self._graph_driver.session() as session:
-    #         yield from Commit.iter(session, settings.branch)
-
-    # def get_commit(self, sha1sum: str) -> Optional[Commit]:
-    #     """Retrieve a specific commit from the database"""
-    #     with self._graph_driver.session() as session:
-    #         return Commit.get(session, sha1sum)
-
     # TODO: neomodel
     # def list_filesystem_at(self, os_sha1_list: List[str], fs_path: PurePath) -> Dict[str, Tree]:
     #     """List the filesystem entries at fs_path for a specific OS sha1sum"""
