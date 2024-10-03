@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum, auto
 from typing import Set
 
 from neomodel import DateTimeProperty, RelationshipTo, StringProperty, StructuredNode, db
@@ -6,7 +7,7 @@ from neomodel import DateTimeProperty, RelationshipTo, StringProperty, Structure
 from neogit.merkle.hasher import Hasher
 
 from .merkle import Tree
-from enum import Enum, auto
+
 
 class CommitCapabilities(Enum):
     Blob = auto()
@@ -25,6 +26,7 @@ class Commit(StructuredNode):
 
     previous = RelationshipTo("Commit", "HAS_PREVIOUS")
     filesystem = RelationshipTo("Tree", "OWNS_FILESYSTEM")
+    plugin = RelationshipTo("PluginRun", "HAS_PLUGIN_RUN")
 
     @classmethod
     def from_name(cls, name: str, filesystem_root: Tree, description: str = None):
@@ -50,6 +52,13 @@ class Commit(StructuredNode):
         for label in result[0][0]:
             label_set.add(CommitCapabilities[label])
         return label_set
+
+
+class PluginRun(StructuredNode):
+    """A node to represents which plugins have been run on a commit"""
+
+    filetype = DateTimeProperty()
+    winreg = DateTimeProperty()
 
 
 class Branch(StructuredNode):
