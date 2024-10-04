@@ -59,6 +59,7 @@ class PluginRun(StructuredNode):
 
     filetype = DateTimeProperty()
     winreg = DateTimeProperty()
+    symbols = DateTimeProperty()
 
 
 class Branch(StructuredNode):
