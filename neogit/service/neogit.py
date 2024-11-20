@@ -117,40 +117,28 @@ class Neogit:
     def commit(self, name: str, root: Path, desc: str = None, branch_name: str = None, unique: bool = False) -> str:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         branch_name = branch_name or settings.branch
-        if unique:
-            # check if that commit already exists in that branch
-            with db.read_transaction:
-                try:
-                    branch = NeoBranch.nodes.get(name=branch_name)
-                except NeoBranch.DoesNotExist:
-                    pass
-                else:
-
-                    def iter_commits():
-                        commit = branch.tracks.single()
-                        while commit:
-                            yield commit
-                            commit = commit.previous.single()
-
-                    found = [commit for commit in iter_commits() if commit.name == name]
-                    if len(found) > 1:
-                        raise ValueError(f"Multiple commits with name {name} found in branch {branch_name}")
-                    if found:
-                        return found[0].hash
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
         with db.write_transaction as transaction_proxy:
+            try:
+                branch = NeoBranch.nodes.get(name=branch_name)
+            except NeoBranch.DoesNotExist:
+                # ensure branch is created
+                branch = NeoBranch(name=branch_name)
+                branch.save()
+            else:
+                if unique:
+                    # check if that commit already exists in that branch
+                    found = branch.commit_exists(name)
+                    if found:
+                        return found.hash
+
             trans: Transaction = transaction_proxy.db._active_transaction
             # build merkle tree
             root_node = FSDirectoryNode(root)
             with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
                 root_tree = builder.run()
-            # ensure Branch is created
-            try:
-                branch = NeoBranch.nodes.get(name=branch_name)
-            except NeoBranch.DoesNotExist:
-                branch = NeoBranch(name=branch_name)
-                branch.save()
+
             # get previous commit
             prev_commit = None
             if branch.tracks:
