@@ -114,7 +114,9 @@ class Neogit:
         self._log.info("Object: created container: '%s'", container_name)
 
     @measure_time
-    def commit(self, name: str, root: Path, desc: str = None, branch_name: str = None, unique: bool = False) -> str:
+    def commit(
+        self, name: str, root: Path, desc: str = None, branch_name: str = None, unique: bool = False, before: str = None
+    ) -> str:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         branch_name = branch_name or settings.branch
         if not root.exists():
@@ -133,23 +135,39 @@ class Neogit:
                     if found:
                         return found.hash
 
+            # commit should be created
             trans: Transaction = transaction_proxy.db._active_transaction
+            # check before exists
+            if before:
+                # check before exists
+                before_commit = branch.commit_exists(before)
+                if not before_commit:
+                    raise ValueError(f"Commit {before} not found")
+
             # build merkle tree
             root_node = FSDirectoryNode(root)
             with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
                 root_tree = builder.run()
 
-            # get previous commit
-            prev_commit = None
-            if branch.tracks:
-                prev_commit = branch.tracks[0]
             # create new commit
             new_commit = NeoCommit.from_name(name, root_tree, description=desc)
-            # connect to previous, if any
-            if prev_commit:
-                new_commit.previous.connect(prev_commit)
-            # update main branch
-            branch.tracks.replace(new_commit)
+            # where should it be inserted ?
+            if before:
+                # save before's previous
+                before_prev = before_commit.previous.single()
+                if before_prev:
+                    # connect new commit to before's previous
+                    new_commit.previous.connect(before_prev)
+                # connect before's previous to new commit
+                before_commit.previous.replace(new_commit)
+            else:
+                # save current branch head
+                branch_head = branch.tracks.single()
+                # insert at the beginning
+                branch.tracks.replace(new_commit)
+                # connect new commit to branch head
+                new_commit.previous.connect(branch_head)
+
             return new_commit.hash
 
     def create_branch(self, branch_name: str, commit_sha1: str):
