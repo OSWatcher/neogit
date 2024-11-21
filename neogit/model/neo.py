@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum, auto
-from typing import Set
+from typing import Iterator, Optional, Set
 
 from neomodel import DateTimeProperty, RelationshipTo, StringProperty, StructuredNode, db
 
@@ -66,3 +66,15 @@ class Branch(StructuredNode):
     name = StringProperty(required=True)
 
     tracks = RelationshipTo(Commit, "TRACKS_COMMIT")
+
+    def iter_commits(self) -> Iterator[Commit]:
+        commit = self.tracks.single()
+        while commit:
+            yield commit
+            commit = commit.previous.single()
+
+    def commit_exists(self, commit_name: str) -> Optional[Commit]:
+        found = [commit for commit in self.iter_commits() if commit_name == commit.name]
+        if len(found) > 1:
+            raise ValueError(f"Multiple commits with name {commit_name} found in branch {self.name}")
+        return found[0] if found else None
