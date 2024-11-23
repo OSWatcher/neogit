@@ -165,8 +165,9 @@ class Neogit:
                 branch_head = branch.tracks.single()
                 # insert at the beginning
                 branch.tracks.replace(new_commit)
-                # connect new commit to branch head
-                new_commit.previous.connect(branch_head)
+                if branch_head:
+                    # connect new commit to branch head
+                    new_commit.previous.connect(branch_head)
 
             return new_commit.hash
 
