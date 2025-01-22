@@ -23,10 +23,12 @@ class FSDirectoryNode(FSNode):
 
     def iter_child_nodes(self) -> Iterator[FSNode]:
         if self.path.is_dir() and not self.path.is_symlink():
+
             try:
                 with os.scandir(self.path) as scan_it:
                     for entry in scan_it:
-                        entry_path = self.path / entry.name
+                        # sanitize entry name and ignore surrogates characters to remain utf-8 compliant
+                        entry_path = self.path / entry.name.encode("utf-8", "ignore").decode("utf-8")
                         if entry.is_dir(follow_symlinks=False):
                             yield FSDirectoryNode(entry_path)
                         else:
