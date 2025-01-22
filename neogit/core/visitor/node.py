@@ -72,7 +72,7 @@ class NodeVisitor(BetterContextManager):
 
             future.add_done_callback(add_none_item)
             # add callback to existack to check future for exceptions
-            self.ex.callback(future.exception)
+            self.ex.callback(future.result)
             return None
         return self.visit(node, *args, **kwargs)
 
