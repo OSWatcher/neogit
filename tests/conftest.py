@@ -315,7 +315,7 @@ def minio_db(pytestconfig):
     # update settings
     settings.object.provider = provider
     settings.object.key = key
-    settings.object.secret = secret
+    settings.object.secret_key = secret
     settings.object.host = host
     settings.object.port = port
     settings.object.secure = secure

@@ -1,8 +1,8 @@
-ARG python_version=3.8
+ARG python_version=3.11
 ARG baseimage=python:${python_version}-slim
-FROM ${baseimage} as build
+FROM ${baseimage} AS build
 
-ARG poetry_version=1.2.2
+ARG poetry_version=2.2.1
 ARG pyinstaller_version=5.7.0
 # don't check for pip upgrade
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -36,13 +36,13 @@ RUN pyinstaller \
     --add-data neogit/config/settings.toml:neogit/config \
     stub.py
 
-FROM ${baseimage} as run
+FROM ${baseimage} AS run
 WORKDIR /app
 COPY --from=build /code/dist/neogit .
 
 # env var to run Dockerized Python app
-ENV LANG C.UTF-8 \
-    LC_ALL C.UTF-8 \
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
     # dump Python stacktrace on fault
     PYTHONFAULTHANDLER=1 \
     # always flush output to container logs
