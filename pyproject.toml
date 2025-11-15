@@ -12,7 +12,7 @@ license = 'Proprietary'
 classifiers = ["Programming Language :: Python :: 3"]
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = "^3.11"
 neo4j = "5.19"
 py2neo-history = "2021.2.0"
 docopt = "0.6.2"
@@ -54,6 +54,7 @@ _flake8 = "flake8 --show-source --statistics ."
 _isort = "isort ."
 lint = ["_flake8", "_isort"]
 type = "mypy -p neogit"
+vermin = "vermin --no-tips --target=3.11 --violations neogit"
 ccode = ["fmt", "lint", "type"]
 cov_report = "coverage report"
 _unit_test_task = "coverage run -m pytest -v tests/unit"

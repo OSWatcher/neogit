@@ -19,23 +19,23 @@ jobs:
           - make_target: fmt
             extra_args: --check
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
 
       - name: run make target
-        run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
+        run: poetry run poe ${{ matrix.make_target }} ${{ matrix.extra_args }}
 
   unit_test:
     strategy:
       matrix:
         # TODO: add windows-latest and ditch Makefile
         os: [ubuntu-latest]
-        python_version: ['3.8', '3.9', '3.10', '3.11']
+        python_version: ['3.11']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
@@ -43,19 +43,17 @@ jobs:
           python_version: "${{ matrix.python_version }}"
 
       - name: Check format
-        run: poetry run make unit_test
+        run: poetry run poe unit_test
 
   integration_test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         neo4j: ['4.2.4']
-        python: ['3.8', '3.11']
+        python: ['3.11']
     services:
       minio:
-        # need to use a custom image because Github Actions doesn't allow us to pass a CMD
-        # and the official Minio image needs a "server" command
-        image: bitnami/minio:2022.12.2
+        image: minio/minio:RELEASE.2024-12-05T15-54-02Z
         ports:
           - 9000:9000
         env:
@@ -70,7 +68,7 @@ jobs:
         env:
           NEO4J_AUTH: none
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
@@ -82,7 +80,7 @@ jobs:
       - name: Run integration tests
         run: |
           source $(poetry env info --path)/bin/activate
-          make integration_test -- --externdb
+          poe integration_test -- --externdb
         env:
           NEOGIT_OBJECT__PROVIDER: minio
           NEOGIT_OBJECT__HOST: 127.0.0.1
@@ -96,12 +94,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ['3.8', '3.11']
+        python_version: ['3.11']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build Docker image
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v4
         with:
           push: false
           build-args: |
@@ -114,7 +112,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get the version
         id: get_version
@@ -122,7 +120,7 @@ jobs:
 
       - name: Create a Release
         id: create_release
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           body_path: ${{ github.workspace }}/.github/RELEASE.md
