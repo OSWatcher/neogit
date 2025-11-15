@@ -171,6 +171,7 @@ class Commit:
         t.hash = record["t"]["hash"]
         return t
 
+    @staticmethod
     def get_tree_sha1_from_commit_sha1(session: Union[Session, Transaction], sha1: str):
         query = """
         MATCH (c:Commit {hash: $hash})-[:OWNS_FILESYSTEM]->(t:Tree)
@@ -282,7 +283,7 @@ class Branch:
         WHERE b.name = $name AND new_os.sha1sum = $sha1sum
         MERGE (b)-[:TRACKS_COMMIT]->(new_os)
         """
-        params = {"name": self.name, "sha1sum": commit.sha1sum}
+        params = {"name": self.name, "sha1sum": commit.hash}
         self.session.run(query, params)
 
 

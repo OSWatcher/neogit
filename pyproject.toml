@@ -30,7 +30,7 @@ types-PyYAML = "^6.0.0"
 poethepoet = "^0.26.1"
 ipdb = "^0.13.13"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "22.12.0"
 flake8 = "6.0.0"
 isort = "5.11.4"
@@ -132,4 +132,14 @@ filterwarnings = [
     "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
     # neomodel v?? has invalid espace sequences
     "ignore:invalid escape sequence:DeprecationWarning",
+    # libcloud AWS datetime warnings
+    "ignore:datetime.datetime.utcnow\\(\\) is deprecated:DeprecationWarning:libcloud",
+    # neo4j driver session warnings
+    "ignore:Relying on Driver's destructor to close the session:DeprecationWarning:neo4j",
+    # neomodel datetime warnings
+    "ignore:datetime.datetime.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:neomodel",
+    # pytest AST warnings (not our code)
+    "ignore:ast.Str is deprecated:DeprecationWarning:_pytest",
+    "ignore:Attribute s is deprecated:DeprecationWarning:_pytest",
+    "ignore:ast.NameConstant is deprecated:DeprecationWarning:_pytest",
 ]

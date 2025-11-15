@@ -49,5 +49,5 @@ class NodeVisitorThread:
         value = visitor.visit(node_to_visit)
         # put None in queue
         visitor.done_visiting()
-        self._logger.debug("Thread %s done", current_thread().getName())
+        self._logger.debug("Thread %s done", current_thread().name)
         return value

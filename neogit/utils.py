@@ -53,7 +53,7 @@ def uri_to_py2neo_uri(uri: str, auth: Optional[Tuple[str, str]] = None) -> str:
 def auth_to_netloc(netloc: str, auth: Optional[Tuple[str, str]] = None) -> str:
     auth_str = ""
     if auth:
-        auth_str = f"{auth[0]}:{auth[1]}@"
+        auth_str = f"{auth[0]}:{auth[1]}@"  # noqa: E231
     return f"{auth_str}{netloc}"
 
 

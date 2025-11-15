@@ -29,7 +29,7 @@ class Commit(StructuredNode):
     plugin = RelationshipTo("PluginRun", "HAS_PLUGIN_RUN")
 
     @classmethod
-    def from_name(cls, name: str, filesystem_root: Tree, description: str = None):
+    def from_name(cls, name: str, filesystem_root: Tree, description: Optional[str] = None):
         hasher = Hasher()
         date_now = datetime.now()
         commit_hash = hasher.commit(name, date_now.strftime("%Y-%m-%d %H:%M:%S"), filesystem_root.hash).digest()

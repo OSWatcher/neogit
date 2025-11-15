@@ -5,7 +5,6 @@ import hashlib
 import os
 
 from attrs import define
-from more_itertools import consume
 
 from ..model import FSDirectoryNode, FSFileNode, MerkleLabel, MerkleNode
 from ..visitor import VisitedNode
@@ -24,7 +23,8 @@ class FSMerkleVisitor(MerkleVisitor):
         elif node.path.is_file():
             # file, hash content
             with open(node.path, "rb") as f:
-                consume(hash_obj.update(chunk) for chunk in iter(lambda: f.read(4096), b""))
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_obj.update(chunk)
         else:
             # treat as empty file
             hash_obj.update(b"")

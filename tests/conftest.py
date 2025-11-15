@@ -126,7 +126,7 @@ def start_neo4j_db(pytestconfig):
             "--env",
             "NEO4J_AUTH=none",
             f"--name={cont_name}",
-            f"neo4j:{NEO4J_VERSION}",
+            f"neo4j:{NEO4J_VERSION}",  # noqa: E231
         ]
         subprocess.check_call(cmdline)
     # update dynaconf settings for tests
@@ -297,7 +297,7 @@ def minio_db(pytestconfig):
             cmdline.extend(
                 [
                     "--volume",
-                    f"{host_path}:/data",
+                    f"{host_path}:/data",  # noqa: E231
                 ]
             )
         cmdline.extend(
