@@ -60,3 +60,7 @@ neogit/config/.secrets.toml
 
 # ignore tests cache
 tests/data/cache
+
+# Environment and local scripts
+.env
+capture_git.sh
