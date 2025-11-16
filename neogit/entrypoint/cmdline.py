@@ -35,7 +35,7 @@ def post_mortem(f):
             logging.exception("Post Mortem: An unhandled exception occurred.")
             import sys
 
-            import ipdb
+            import ipdb  # type: ignore
 
             _, _, tb = sys.exc_info()
             ipdb.post_mortem(tb)

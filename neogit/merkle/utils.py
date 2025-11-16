@@ -40,7 +40,7 @@ def merkelize_dir(cur_dir: Path, filename_to_sha1: Dict[str, str], tree_fs: Dict
     for filename, sha1 in filename_to_sha1.items():
         # create and insert a new Blob
         blob = Blob()
-        blob.sha1sum = sha1
+        blob.hash = sha1
         tree.children_blob[filename] = blob
     with os.scandir(cur_dir) as it:
         for subdir in filter(lambda entry: entry.is_dir(follow_symlinks=False), it):
@@ -57,13 +57,13 @@ def merkelize_dir(cur_dir: Path, filename_to_sha1: Dict[str, str], tree_fs: Dict
     # IMPORTANT: sort the keys before using them
     # directories first
     for entry_name in sorted(tree.children_tree):
-        child_sha1sum = tree.children_tree[entry_name].sha1sum
+        child_sha1sum = tree.children_tree[entry_name].hash
         data = f"{entry_name}{child_sha1sum}\n"
         hasher.string(data.encode())
     # then files
     for entry_name in sorted(tree.children_blob):
-        child_sha1sum = tree.children_blob[entry_name].sha1sum
+        child_sha1sum = tree.children_blob[entry_name].hash
         data = f"{entry_name}{child_sha1sum}\n"
         hasher.string(data.encode())
-    tree.sha1sum = hasher.digest()
+    tree.hash = hasher.digest()
     return tree

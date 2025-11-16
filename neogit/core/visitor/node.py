@@ -22,7 +22,7 @@ class VisitedNode:
 
     node: Node = field(validator=instance_of(Node))
     """The node that was visited."""
-    return_value: Node = field()
+    return_value: Optional[Node] = field()
     """The return value of the visit function."""
 
 
@@ -64,11 +64,12 @@ class NodeVisitor(BetterContextManager):
 
     def run_visit(self, node: Node, *args, **kwargs) -> Optional[VisitedNode]:
         """Start visiting a node."""
-        if self.thread:
+        if self.thread and self.thread_pool is not None and self.queue is not None:
             future = self.thread_pool.submit(self.visit, node, *args, **kwargs)
 
             def add_none_item(f: Future):
-                self.queue.put(None)
+                if self.queue is not None:
+                    self.queue.put(None)
 
             future.add_done_callback(add_none_item)
             # add callback to existack to check future for exceptions
@@ -92,6 +93,11 @@ class NodeVisitor(BetterContextManager):
         for node in node.iter_child_nodes():
             self.visit(node, *args, **kwargs)
         return VisitedNode(node, None)
+
+    def done_visiting(self):
+        """Insert None sentinel in queue to signal completion."""
+        if self.queue:
+            self.queue.put(None)
 
     def as_gen(self) -> Generator[VisitedNode, None, None]:
         # iterate over queue while not None item received

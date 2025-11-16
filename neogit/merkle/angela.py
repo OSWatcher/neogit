@@ -55,7 +55,7 @@ class MerkleFSTree:
                     continue
                 filename_to_sha1[filepath.name] = sha1sum
             tree: Tree = merkelize_dir(dir_info.dir, filename_to_sha1, self._tree_fs)
-            self._logger.debug("📁 %s: %s", dir_info.dir, tree.sha1sum)
+            self._logger.debug("📁 %s: %s", dir_info.dir, tree.hash)
             yield tree
             # update gui
             self._console.advance_main_bar_progress()

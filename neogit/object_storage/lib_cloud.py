@@ -55,9 +55,10 @@ class LibcloudObjectStorage(AbstractObjectStorage):
         # drop all keys whose values is None
         config_dict = {k: v for k, v in asdict(config).items() if v is not None}
         if cls == MinIOStorageDriver:
-            # replace 'secret_key' key name by 'secret'
-            config_dict["secret"] = config_dict["secret_key"]
-            del config_dict["secret_key"]
+            # replace 'secret_key' key name by 'secret' if present
+            if "secret_key" in config_dict:
+                config_dict["secret"] = config_dict["secret_key"]
+                del config_dict["secret_key"]
         if cls == LocalStorageDriver:
             # bug when port value is set
             # just drop everything else except necessary
@@ -103,6 +104,12 @@ class LibcloudObjectStorage(AbstractObjectStorage):
 
     @wraps_exception
     def get_container(self, name: str) -> Container:
+        # Check if container exists first by iterating through containers
+        # This prevents auto-creation behavior in newer MinIO versions
+        existing_containers = {c.name for c in self._driver.iterate_containers()}
+        if name not in existing_containers:
+            raise ContainerDoesNotExistError(f"Container '{name}' does not exist")
+
         c: LibCloudContainer = self._driver.get_container(name)
         return Container(c.name)
 

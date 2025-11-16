@@ -178,13 +178,44 @@ class Tree(BaseMerkleNode):
             # skip the first element of the parts list, which is the null value from OWNS_FILESYSTEM
             yield PurePath(*row[0]), Blob.inflate(row[1])
 
-    def get_blob_at_path(self, path: PurePath) -> Blob:
-        """Return the blob at the specified path"""
+    def list_children(self) -> list[str]:
+        """Return list of child names (both trees and blobs)."""
+        child_names = []
+
+        # Get blob children names
+        for blob in self.children_blob.all():
+            rel = self.children_blob.relationship(blob)
+            child_names.append(rel.name)
+
+        # Get tree children names
+        for tree in self.children_tree.all():
+            rel = self.children_tree.relationship(tree)
+            child_names.append(rel.name)
+
+        return sorted(child_names)
+
+    def iter_children(self) -> Generator[Tuple[str, Union["Tree", Blob]], None, None]:
+        """Iterate over all children (trees and blobs) with their names."""
+        for blob in self.children_blob.all():
+            rel = self.children_blob.relationship(blob)
+            yield rel.name, blob
+
+        for tree in self.children_tree.all():
+            rel = self.children_tree.relationship(tree)
+            yield rel.name, tree
+
+    def get_child_at_path(self, path: PurePath) -> Union["Tree", Blob]:
+        """Return the child (tree or blob) at the specified path."""
         idx = 1 if path.is_absolute() else 0
-        tree_parts = path.parts[idx:-1]
+        path_parts = path.parts[idx:]
+
+        if not path_parts:
+            return self
+
+        # Navigate to parent directory using cypher for efficiency
+        tree_parts = path_parts[:-1]
         cur_tree = self
         for tree_part in tree_parts:
-            # traverse HAS_CHILD_TREE
             query = """
             MATCH (p:Tree)-[r:HAS_CHILD_TREE]->(c:Tree)
             WHERE p.hash = $parent_hash
@@ -195,24 +226,50 @@ class Tree(BaseMerkleNode):
             try:
                 node = rows[0][0]
             except IndexError:
-                raise FileNotFoundError
+                raise FileNotFoundError(f"Tree not found: {tree_part}")
             else:
                 cur_tree = Tree.inflate(node)
-        # query blob
+
+        # Get final child (blob or tree)
+        filename = path_parts[-1]
+
+        # Try blob first
         query = """
         MATCH (p:Tree)-[r:HAS_CHILD_BLOB]->(c:Blob)
         WHERE p.hash = $parent_hash
             AND r.name = $filename
         RETURN c
         """
-        filename = path.name
         rows, _ = self.cypher(query, {"parent_hash": cur_tree.hash, "filename": filename})
-        try:
-            blob = rows[0][0]
-        except IndexError:
-            raise FileNotFoundError
-        else:
-            return Blob.inflate(blob)
+        if rows:
+            return Blob.inflate(rows[0][0])
+
+        # Try tree
+        query = """
+        MATCH (p:Tree)-[r:HAS_CHILD_TREE]->(c:Tree)
+        WHERE p.hash = $parent_hash
+            AND r.name = $filename
+        RETURN c
+        """
+        rows, _ = self.cypher(query, {"parent_hash": cur_tree.hash, "filename": filename})
+        if rows:
+            return Tree.inflate(rows[0][0])
+
+        raise FileNotFoundError(f"Child not found: {filename}")
+
+    def get_tree_at_path(self, path: PurePath) -> "Tree":
+        """Return the tree at the specified path."""
+        child = self.get_child_at_path(path)
+        if not isinstance(child, Tree):
+            raise FileNotFoundError(f"Path is not a tree: {path}")
+        return child
+
+    def get_blob_at_path(self, path: PurePath) -> Blob:
+        """Return the blob at the specified path"""
+        child = self.get_child_at_path(path)
+        if not isinstance(child, Blob):
+            raise FileNotFoundError(f"Path is not a blob: {path}")
+        return child
 
     def asdict(self) -> Dict[str, Union[str, Dict]]:
         """Return a representation of the Tree as a dictionary"""

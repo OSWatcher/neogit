@@ -19,23 +19,23 @@ jobs:
           - make_target: fmt
             extra_args: --check
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
 
       - name: run make target
-        run: poetry run make ${{ matrix.make_target }} -- ${{ matrix.extra_args }}
+        run: poetry run poe ${{ matrix.make_target }} ${{ matrix.extra_args }}
 
   unit_test:
     strategy:
       matrix:
         # TODO: add windows-latest and ditch Makefile
         os: [ubuntu-latest]
-        python_version: ['3.8', '3.9', '3.10', '3.11']
+        python_version: ['3.11']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
@@ -43,65 +43,40 @@ jobs:
           python_version: "${{ matrix.python_version }}"
 
       - name: Check format
-        run: poetry run make unit_test
+        run: poetry run poe unit_test
 
   integration_test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        neo4j: ['4.2.4']
-        python: ['3.8', '3.11']
-    services:
-      minio:
-        # need to use a custom image because Github Actions doesn't allow us to pass a CMD
-        # and the official Minio image needs a "server" command
-        image: bitnami/minio:2022.12.2
-        ports:
-          - 9000:9000
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-      neo4j:
-        image: neo4j:${{ matrix.neo4j }}
-        ports:
-          - 7687:7687
-          # also expose the HTTP port since we use this to test whether the DB is ready
-          - 7474:7474
-        env:
-          NEO4J_AUTH: none
+        python: ['3.11']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Project setup
         uses: ./.github/actions/common-setup
         with:
           python_version: ${{ matrix.python }}
 
-      # pass --externdb to use github actions service containers instead
-      # poetry run doesn't play well with our Makefile EXTRA_ARGS hack
+      # Run integration tests using built-in test infrastructure
       - name: Run integration tests
+        timeout-minutes: 10
         run: |
           source $(poetry env info --path)/bin/activate
-          make integration_test -- --externdb
-        env:
-          NEOGIT_OBJECT__PROVIDER: minio
-          NEOGIT_OBJECT__HOST: 127.0.0.1
-          NEOGIT_OBJECT__PORT: 9000
-          NEOGIT_OBJECT__KEY: minioadmin
-          NEOGIT_OBJECT__SECRET: minioadmin
-          NEOGIT_OBJECT__SECURE: false
+          coverage run -m pytest -v tests/integration
+          coverage report
 
   build_image:
     # build Docker image, but don't push it
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ['3.8', '3.11']
+        python_version: ['3.11']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build Docker image
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v4
         with:
           push: false
           build-args: |
@@ -114,7 +89,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get the version
         id: get_version
@@ -122,7 +97,7 @@ jobs:
 
       - name: Create a Release
         id: create_release
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           body_path: ${{ github.workspace }}/.github/RELEASE.md

@@ -55,7 +55,9 @@ def cypher_query_with_backoff(
 
 
 class Neogit:
-    def __init__(self, object_driver_ts: TSObjectStorage = None, gui_enabled: bool = False, debug: bool = False):
+    def __init__(
+        self, object_driver_ts: Optional[TSObjectStorage] = None, gui_enabled: bool = False, debug: bool = False
+    ):
         """Initializes a Neogit instance, connects to Neo4j DB and Object Storage"""
         setup_logging(debug)
         if object_driver_ts is None:
@@ -102,7 +104,9 @@ class Neogit:
             for label, unique_prop_list in constraints.items():
                 for unique_prop in unique_prop_list:
                     self._log.debug("Graph: creating unique contraint on %s:%s", label, unique_prop)
-                    session.run(f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{unique_prop} IS UNIQUE")
+                    session.run(
+                        f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{unique_prop} IS UNIQUE"  # noqa: E231,E501
+                    )
         self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name
@@ -115,7 +119,13 @@ class Neogit:
 
     @measure_time
     def commit(
-        self, name: str, root: Path, desc: str = None, branch_name: str = None, unique: bool = False, before: str = None
+        self,
+        name: str,
+        root: Path,
+        desc: Optional[str] = None,
+        branch_name: Optional[str] = None,
+        unique: bool = False,
+        before: Optional[str] = None,
     ) -> str:
         """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
         branch_name = branch_name or settings.branch

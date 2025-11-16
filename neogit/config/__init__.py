@@ -36,14 +36,17 @@ settings = Dynaconf(
         # compute the URL from the settings if not provided by env var NEOGIT_NEO4J__URL
         Validator(
             "neo4j.url",
-            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",
+            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.host}:{_settings.neo4j.port}",  # noqa: E231,E501
         ),
         Validator(
             "neo4j.url_full",
-            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.user}:"
-            f"{_settings.neo4j.password}@{_settings.neo4j.host}:{_settings.neo4j.port}",
+            default=lambda _settings, _url: f"{_settings.neo4j.proto}://{_settings.neo4j.user}:"  # noqa: E231
+            f"{_settings.neo4j.password}@{_settings.neo4j.host}:{_settings.neo4j.port}",  # noqa: E231
         ),
-        Validator("neo4j.http_url", default=lambda _settings, _url: f"http://{_settings.neo4j.host}:{NEO4J_HTTP_PORT}"),
+        Validator(
+            "neo4j.http_url",
+            default=lambda _settings, _url: f"http://{_settings.neo4j.host}:{NEO4J_HTTP_PORT}",  # noqa: E231
+        ),
         Validator("object.key", default=USER_DATA_DIR),
         Validator("object.secret_key", default=None),
         Validator("object.host", default=None),
