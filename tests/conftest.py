@@ -46,6 +46,12 @@ def pytest_configure(config):
     logging.getLogger("git.cmd").setLevel(logging.WARNING)
     logging.getLogger("charset_normalizer").setLevel(logging.WARNING)
 
+    # Silence deprecation warnings from third-party libraries
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning, module="libcloud.common.aws")
+    warnings.filterwarnings("ignore", category=DeprecationWarning, module="neo4j._sync.driver")
+    warnings.filterwarnings("ignore", category=DeprecationWarning, module="neomodel.properties")
+
 
 def pytest_addoption(parser):
     parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
