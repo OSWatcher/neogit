@@ -31,7 +31,10 @@ NEO4J_VERSION = "4.4.30"
 MINIO_VERSION = "RELEASE.2024-02-13T15-35-11Z"
 DEFAULT_USERNAME = "neo4j"
 DEFAULT_PASSWORD = "admin"
-TEST_DATA = Path(__file__).parent / "data"
+# Point to tests/data directory from neogit/testing/fixtures.py
+# Go up to repo root: neogit/testing -> neogit -> repo_root
+# Then down to tests/data
+TEST_DATA = Path(__file__).parent.parent.parent / "tests" / "data"
 TEST_DATA_FS = TEST_DATA / "fs"
 TEST_DATA_FS_DIR_EMPTY = TEST_DATA_FS / "dir_empty"
 ROOT_REPO = Path(__file__).parent.parent
