@@ -29,9 +29,22 @@ class Commit(StructuredNode):
     plugin = RelationshipTo("PluginRun", "HAS_PLUGIN_RUN")
 
     @classmethod
-    def from_name(cls, name: str, filesystem_root: Tree, description: Optional[str] = None):
+    def from_name(
+        cls, name: str, filesystem_root: Tree, description: Optional[str] = None, date: Optional[datetime] = None
+    ):
+        """Create a new commit from a name and filesystem tree.
+
+        Args:
+            name: Commit name/identifier
+            filesystem_root: Root Tree node of the filesystem
+            description: Optional commit description
+            date: Optional commit date. If None, uses datetime.now()
+
+        Returns:
+            Newly created Commit instance
+        """
         hasher = Hasher()
-        date_now = datetime.now()
+        date_now = date if date is not None else datetime.now()
         commit_hash = hasher.commit(name, date_now.strftime("%Y-%m-%d %H:%M:%S"), filesystem_root.hash).digest()
         commit = cls(name=name, date=date_now, hash=commit_hash, sha1sum=commit_hash, description=description)
         # must save node before connecting it
