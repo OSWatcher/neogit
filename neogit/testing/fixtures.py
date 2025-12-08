@@ -19,7 +19,7 @@ import pytest
 from neo4j import BoltDriver, GraphDatabase
 from neomodel import db as neomodel_db
 from pytest import fixture
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError  # type: ignore[import-untyped]
 
 from neogit.config import ObjectConfig, settings
 from neogit.core.model import MerkleLabel, MerkleNode
@@ -389,13 +389,21 @@ def fakefs_one_empty_file(fs):
 
 
 # instantiate Neogit
-@fixture(scope="function", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+@fixture(
+    scope="function",
+    params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
+    ids=lambda val: f"workers-{val}",
+)
 def max_workers(request):
     nb_workers = request.param
     return nb_workers
 
 
-@fixture(scope="class", params=[1, os.cpu_count(), os.cpu_count() * 2], ids=lambda val: f"workers-{val}")
+@fixture(
+    scope="class",
+    params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
+    ids=lambda val: f"workers-{val}",
+)
 def max_workers_per_class(request):
     nb_workers = request.param
     return nb_workers
@@ -516,7 +524,7 @@ class VirtualFSDirectory:
     children: Dict[str, Union["VirtualFSDirectory", VirtualFSBlob]] = attr.ib(factory=dict)
 
 
-def gen_root_fs() -> Iterator[VirtualFSDirectory]:
+def gen_root_fs() -> Iterator:
     """This generator will yield every filesystem representation for each
     test that we want to perform on the MerkleTree generator.
 
