@@ -126,8 +126,22 @@ class Neogit:
         branch_name: Optional[str] = None,
         unique: bool = False,
         before: Optional[str] = None,
+        date: Optional[datetime] = None,
     ) -> str:
-        """Compute the Merkle TreeNode for the root directory and insert a new commit in the database"""
+        """Compute the Merkle TreeNode for the root directory and insert a new commit in the database.
+
+        Args:
+            name: Commit name/identifier
+            root: Root directory path to commit
+            desc: Optional commit description
+            branch_name: Branch to commit to (defaults to settings.branch)
+            unique: If True, don't create duplicate commits with same name on branch
+            before: Insert commit before this commit name (for history rewriting)
+            date: Optional commit date. If None, uses datetime.now()
+
+        Returns:
+            Commit hash of the created commit
+        """
         branch_name = branch_name or settings.branch
         if not root.exists():
             raise ValueError(f"Root directory {root} does not exist")
@@ -160,7 +174,7 @@ class Neogit:
                 root_tree = builder.run()
 
             # create new commit
-            new_commit = NeoCommit.from_name(name, root_tree, description=desc)
+            new_commit = NeoCommit.from_name(name, root_tree, description=desc, date=date)
             # where should it be inserted ?
             if before:
                 # save before's previous
