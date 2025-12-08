@@ -487,6 +487,7 @@ def ts_object_storage(
 def fake_ts_object_storage():
     # Clear global state before creating instance (FakeObjectStorage uses global CONTAINERS dict)
     from neogit.object_storage.fake import CONTAINERS
+
     CONTAINERS.clear()
 
     ts_object_storage = TSObjectStorage(FakeObjectStorage, None)
