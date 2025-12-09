@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Iterator, Optional, Set
 
-from neomodel import DateTimeProperty, RelationshipTo, StringProperty, StructuredNode, db
+from neomodel import DateTimeNeo4jFormatProperty, RelationshipTo, StringProperty, StructuredNode, db
 
 from neogit.merkle.hasher import Hasher
 
@@ -19,7 +19,7 @@ class CommitCapabilities(Enum):
 
 class Commit(StructuredNode):
     name = StringProperty(required=True)
-    date = DateTimeProperty(required=True)
+    date = DateTimeNeo4jFormatProperty(required=True)
     hash = StringProperty(required=True, unique_index=True)
     sha1sum = StringProperty(required=True, unique_index=True)
     description = StringProperty()
@@ -70,9 +70,9 @@ class Commit(StructuredNode):
 class PluginRun(StructuredNode):
     """A node to represents which plugins have been run on a commit"""
 
-    filetype = DateTimeProperty()
-    winreg = DateTimeProperty()
-    symbols = DateTimeProperty()
+    filetype = DateTimeNeo4jFormatProperty()
+    winreg = DateTimeNeo4jFormatProperty()
+    symbols = DateTimeNeo4jFormatProperty()
 
 
 class Branch(StructuredNode):
