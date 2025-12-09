@@ -1,7 +1,7 @@
 """
 Test the Neogit service class
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import reduce
 
 import pytest
@@ -53,33 +53,33 @@ def test_branch_is_updated(neogit_init):
 def test_commit_is_created(neogit_init):
     neogit = neogit_init
     commit_name = "first commit"
-    test_date = datetime(2024, 1, 15, 10, 30, 0)
+    test_date = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
     commit_hash = neogit.commit(commit_name, TEST_DATA_FS.dir_one_file.path, date=test_date)
     commit = Commit.nodes.get(name=commit_name)
     # assert
     assert commit.name == commit_name
     assert len(commit.hash) == 40
     assert commit.hash == commit_hash
-    assert commit.date.replace(tzinfo=None) == test_date
+    assert commit.date == test_date
 
 
 def test_new_commit_is_created(neogit_init):
     neogit = neogit_init
     # create first commit
     prev_commit_name = "first commit"
-    date1 = datetime(2024, 1, 15, 10, 30, 0)
+    date1 = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
     hash1 = neogit.commit(prev_commit_name, TEST_DATA_FS.dir_one_file.path, date=date1)
     prev_commit = Commit.nodes.get(name=prev_commit_name)
     # create second commit
     new_commit_name = "second commit"
-    date2 = datetime(2024, 1, 16, 10, 30, 0)
+    date2 = datetime(2024, 1, 16, 10, 30, 0, tzinfo=timezone.utc)
     hash2 = neogit.commit(new_commit_name, TEST_DATA_FS.dir_one_file.path, date=date2)
     new_commit = Commit.nodes.get(name=new_commit_name)
     # assert
     assert new_commit.name == new_commit_name
     assert len(new_commit.hash) == 40
     assert new_commit.hash == hash2
-    assert new_commit.date.replace(tzinfo=None) == date2
+    assert new_commit.date == date2
     assert new_commit.previous[0] == prev_commit
     # Verify different dates produce different hashes
     assert hash1 != hash2
@@ -98,12 +98,12 @@ def gen_pytest_param_test_data_fs():
 def test_commit_filesystem_data_fs(neogit_init, fs_root: TestFSRoot):
     neogit = neogit_init
     commit_name = "first commit"
-    test_date = datetime(2024, 1, 15, 10, 30, 0)
+    test_date = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
     neogit.commit(commit_name, fs_root.path, date=test_date)
     commit = Commit.nodes.get(name=commit_name)
     assert len(commit.filesystem) == 1
     assert commit.filesystem[0].asdict() == fs_root.tree.asdict()
-    assert commit.date.replace(tzinfo=None) == test_date
+    assert commit.date == test_date
 
 
 # get_object_size
@@ -133,13 +133,12 @@ def test_commit_with_custom_date(neogit_init):
     """Test that custom date is properly used in commit creation and hash calculation."""
     neogit = neogit_init
     commit_name = "dated_commit"
-    custom_date = datetime(2023, 6, 15, 14, 30, 0)
+    custom_date = datetime(2023, 6, 15, 14, 30, 0, tzinfo=timezone.utc)
 
     commit_hash = neogit.commit(commit_name, TEST_DATA_FS.dir_one_file.path, date=custom_date)
 
     commit = Commit.nodes.get(name=commit_name)
-    # Neo4j stores dates with UTC timezone, so compare just the date values
-    assert commit.date.replace(tzinfo=None) == custom_date
+    assert commit.date == custom_date
     assert commit.hash == commit_hash
     assert len(commit.hash) == 40
 
@@ -148,8 +147,8 @@ def test_same_commit_different_dates_different_hashes(neogit_init):
     """Test that same content with different dates produces different hashes."""
     neogit = neogit_init
 
-    date1 = datetime(2023, 1, 1, 0, 0, 0)
-    date2 = datetime(2023, 1, 2, 0, 0, 0)
+    date1 = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    date2 = datetime(2023, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
 
     hash1 = neogit.commit("commit1", TEST_DATA_FS.dir_one_file.path, date=date1)
     hash2 = neogit.commit("commit2", TEST_DATA_FS.dir_one_file.path, date=date2)
@@ -157,26 +156,34 @@ def test_same_commit_different_dates_different_hashes(neogit_init):
     # Different dates should produce different hashes even with same filesystem
     assert hash1 != hash2
 
-    # Verify dates are stored correctly (Neo4j stores with UTC timezone)
+    # Verify dates are stored correctly with timezone
     commit1 = Commit.nodes.get(hash=hash1)
     commit2 = Commit.nodes.get(hash=hash2)
-    assert commit1.date.replace(tzinfo=None) == date1
-    assert commit2.date.replace(tzinfo=None) == date2
+    assert commit1.date == date1
+    assert commit2.date == date2
 
 
 def test_commit_without_date_uses_now(neogit_init):
-    """Test backward compatibility: commits without date parameter use datetime.now()."""
+    """Test backward compatibility: commits without date parameter use datetime.now(timezone.utc)."""
     neogit = neogit_init
     commit_name = "auto_dated_commit"
 
-    # Capture time before and after
-    before = datetime.now()
+    # Capture time before and after (in UTC)
+    before = datetime.now(timezone.utc)
     commit_hash = neogit.commit(commit_name, TEST_DATA_FS.dir_one_file.path)
-    after = datetime.now()
+    after = datetime.now(timezone.utc)
 
     commit = Commit.nodes.get(name=commit_name)
-    # Verify the date was set automatically and is between before and after (remove timezone for comparison)
-    commit_date_naive = commit.date.replace(tzinfo=None)
-    assert before <= commit_date_naive <= after
+    # Verify the date was set automatically and is between before and after
+    assert before <= commit.date <= after
     assert commit.hash == commit_hash
     assert len(commit.hash) == 40
+
+
+def test_commit_rejects_naive_datetime(neogit_init):
+    """Test that naive datetimes are rejected with clear error."""
+    neogit = neogit_init
+    naive_date = datetime(2024, 1, 1, 12, 0, 0)  # No tzinfo
+
+    with pytest.raises(ValueError, match="must be timezone-aware"):
+        neogit.commit("test", TEST_DATA_FS.dir_one_file.path, date=naive_date)
