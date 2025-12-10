@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 
 from attrs import define
@@ -9,6 +10,22 @@ from attrs import define
 from ..model import FSDirectoryNode, FSFileNode, MerkleLabel, MerkleNode
 from ..visitor import VisitedNode
 from .visitor import MerkleVisitor
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_is_dir_key(node):
+    """
+    Safe sorting key that handles I/O errors from FUSE mounts.
+
+    Returns tuple (is_file, name) for sorting directories before files.
+    On OSError, treats entry as a file and logs warning.
+    """
+    try:
+        return (not node.path.is_dir(), node.path.name)
+    except OSError as e:
+        logger.warning("SKIP is_dir check: %s (%s)", node.path, e)
+        return (True, node.path.name)  # Treat as file
 
 
 @define(auto_attribs=True)
@@ -38,7 +55,7 @@ class FSMerkleVisitor(MerkleVisitor):
         # - filename
         # "not e.path.is_dir" because False is inferior to True and will be sorted first
         merkle_children = {}
-        for child_node in sorted(node.iter_child_nodes(), key=lambda e: (not e.path.is_dir(), e.path.name)):
+        for child_node in sorted(node.iter_child_nodes(), key=_safe_is_dir_key):
             child_visited_node = self.visit(child_node)
             merkle_node = child_visited_node.return_value
             data = f"{child_node.path.name}{merkle_node.hash}\n".encode()
