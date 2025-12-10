@@ -33,18 +33,23 @@ class FSMerkleVisitor(MerkleVisitor):
     """Visitor to compute MerkleNode hash from FSNode"""
 
     def visit_FSFileNode(self, node: FSFileNode, hash_obj: hashlib._Hash, *args, **kwargs) -> VisitedNode:
-        if node.path.is_symlink():
-            # symlink, hash link target
-            data: bytes = os.readlink(str(node.path)).encode()
-            hash_obj.update(data)
-        elif node.path.is_file():
-            # file, hash content
-            with open(node.path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hash_obj.update(chunk)
-        else:
-            # treat as empty file
-            hash_obj.update(b"")
+        try:
+            if node.path.is_symlink():
+                # symlink, hash link target
+                data: bytes = os.readlink(str(node.path)).encode()
+                hash_obj.update(data)
+            elif node.path.is_file():
+                # file, hash content
+                with open(node.path, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        hash_obj.update(chunk)
+            else:
+                # treat as empty file
+                hash_obj.update(b"")
+        except OSError as e:
+            # Handle I/O errors from FUSE mounts (e.g., Windows reparse points)
+            logger.warning("SKIP file: %s (%s)", node.path, e)
+            hash_obj.update(b"")  # treat as empty file
         # build merkle node and return it
         merkle_node = MerkleNode(hash=hash_obj.hexdigest(), label=MerkleLabel.Blob)
         return VisitedNode(node=node, return_value=merkle_node)
