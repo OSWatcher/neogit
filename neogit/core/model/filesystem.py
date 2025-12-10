@@ -22,9 +22,8 @@ class FSDirectoryNode(FSNode):
             raise ValueError(f"Path {value} is not a directory")
 
     def iter_child_nodes(self) -> Iterator[FSNode]:
-        if self.path.is_dir() and not self.path.is_symlink():
-
-            try:
+        try:
+            if self.path.is_dir() and not self.path.is_symlink():
                 with os.scandir(self.path) as scan_it:
                     for entry in scan_it:
                         # sanitize entry name and ignore surrogates characters to remain utf-8 compliant
@@ -33,11 +32,11 @@ class FSDirectoryNode(FSNode):
                             yield FSDirectoryNode(entry_path)
                         else:
                             yield FSFileNode(entry_path)
-            # TODO: how to put try except only on with statement ?
-            except OSError as e:
-                # log warning and return
-                logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
-                logger.warning("SKIP: %s (%s)", self.path, e)
+        except OSError as e:
+            # Handle I/O errors from FUSE mounts (e.g., Windows reparse points)
+            # This includes errors from is_dir(), is_symlink(), scandir(), and entry processing
+            logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
+            logger.warning("SKIP: %s (%s)", self.path, e)
 
 
 @define(auto_attribs=True)
