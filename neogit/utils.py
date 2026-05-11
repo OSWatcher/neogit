@@ -10,23 +10,6 @@ import coloredlogs
 import yaml
 from attrs import Factory, define, field
 
-# from neogit.model import Commit, Tree
-
-
-# @lru_cache()
-# def traverse_path_tree(session: Union[Session, Transaction], os_sha1: str, fs_path: PurePath) -> str:
-#     commit = Commit.get(session, os_sha1)
-#     if commit is None:
-#         raise RuntimeError(f"Commit not found: {os_sha1}")
-#     cur_tree: Tree = commit.owns_filesystem()
-#     # ['/', 'Program Files', 'Microsoft', ...]
-#     # -> ['Program Files', 'Microsoft', ...]
-#     for path_part in fs_path.parts[1:]:
-#         # get next tree
-#         cur_tree = cur_tree.has_child_tree(session, path_part)
-#     return cur_tree.sha1sum
-
-
 DEFAULT_CLASS_LOGGER = Factory(
     lambda self: logging.getLogger(f"{self.__module__}.{self.__class__.__name__}"),
     takes_self=True,
