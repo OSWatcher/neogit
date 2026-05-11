@@ -1,5 +1,5 @@
 """
-Benchmarks for MerkleFS builder and Neogit commit
+Benchmarks for NeoMerkleTreeBuilder and Neogit commit
 (desired) fixture parameters
 - settings.max_workers
     - 1
@@ -91,7 +91,7 @@ def extract_archive_workdir_impl(archive_git_repo: Path):
 def test_merkle_workdir(
     mocked_tree, tmp_path, init_libcloud_object_storage_per_module, extract_archive_workdir_per_func, nb_repeat
 ):
-    """Only test the MerkleFSTree builder speed"""
+    """Only test the NeoMerkleTreeBuilder speed"""
     ts_object = init_libcloud_object_storage_per_module
     workdir = extract_archive_workdir_per_func
     # arrange

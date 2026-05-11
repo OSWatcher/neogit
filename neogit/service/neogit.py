@@ -19,9 +19,6 @@ from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage,
 from neogit.search import search_by_filename, search_by_path, search_by_sha1
 from neogit.utils import setup_logging
 
-# TODO: neomodel
-# from neogit.utils import traverse_path_tree
-
 
 def measure_time(method):
     @wraps(method)
@@ -72,24 +69,6 @@ class Neogit:
         self.db = db
         self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
-
-    # TODO: neomodel
-    # def list_filesystem_at(self, os_sha1_list: List[str], fs_path: PurePath) -> Dict[str, Tree]:
-    #     """List the filesystem entries at fs_path for a specific OS sha1sum"""
-    #     with self._graph_driver.session() as session:
-    #         target_tree_list: Dict[str, Tree] = {}
-    #         for os_sha1 in os_sha1_list:
-    #             commit: Optional[Commit] = Commit.get(session, os_sha1)
-    #             if not commit:
-    #                 raise RuntimeError("Commit not found")
-    #             tree_sha1 = traverse_path_tree(session, os_sha1, fs_path)
-    #             final_tree = Tree()
-    #             final_tree.sha1sum = tree_sha1
-    #             target_tree_list[os_sha1] = final_tree
-    #         for tree in target_tree_list.values():
-    #             tree.get_children(session)
-    #         # get children
-    #         return target_tree_list
 
     def init(self):
         """Initialize a neogit repository by creating indexes and constraints"""
@@ -206,59 +185,6 @@ class Neogit:
                 branch.tracks.replace(commit)
             else:
                 raise ValueError(f"Branch {branch_name} already exists")
-
-    # def log(self):
-    #     branch_name: str = settings.branch
-    #     with self._graph_driver.session() as session:
-    #         branch = Branch(session, branch_name)
-    #         if not branch:
-    #             raise RuntimeError(f"Branch {branch_name} not found")
-    #         # get last commit
-    #         # TODO commit: Optional[Commit] = branch.os_commit
-    #         raise NotImplementedError
-
-    # def diff(self, ref1: str, ref2: str):
-    #     # check if both refs exists
-    #     with self._graph_driver.session() as session:
-    #         ref1_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref1)
-    #         ref2_tree_sha1 = Commit.get_tree_sha1_from_commit_sha1(session, ref2)
-    #         yield from diff_trees(session, ref1_tree_sha1, ref2_tree_sha1)
-
-    # def diff_filesystem_at(self, os1_sha1: str, os2_sha1: str, fs_path: Path) -> Iterator[FSDiffObject]:
-    #     with self._graph_driver.session() as session:
-    #         try:
-    #             os1_final_tree_sha1 = traverse_path_tree(session, os1_sha1, fs_path)
-    #         except RuntimeError:
-    #             os1_final_tree = None
-    #         else:
-    #             os1_final_tree = Tree()
-    #             os1_final_tree.sha1sum = os1_final_tree_sha1
-    #         try:
-    #             os2_final_tree_sha1 = traverse_path_tree(session, os2_sha1, fs_path)
-    #         except RuntimeError:
-    #             os2_final_tree = None
-    #         else:
-    #             os2_final_tree = Tree()
-    #             os2_final_tree.sha1sum = os2_final_tree_sha1
-    #         if os1_final_tree is None and os2_final_tree:
-    #             # path is a new directory on OS2
-    #             # get fs entries
-    #             fs_entries = self.list_filesystem_at([os2_sha1], fs_path)[os2_sha1]
-    #             for child_name, child_tree in fs_entries.children_tree.items():
-    #                 yield FSDiffObject(DiffStatus.NEW, True, fs_path / child_name, None, child_tree.sha1sum)
-    #             for child_name, child_blob in fs_entries.children_blob.items():
-    #                 yield FSDiffObject(DiffStatus.NEW, False, fs_path / child_name, None, child_blob.sha1sum)
-    #         elif os1_final_tree and os2_final_tree is None:
-    #             # path is deleted directory on OS2
-    #             fs_entries = self.list_filesystem_at([os1_sha1], fs_path)[os1_sha1]
-    #             for child_name, child_tree in fs_entries.children_tree.items():
-    #                 yield FSDiffObject(DiffStatus.DEL, True, fs_path / child_name, child_tree.sha1sum, None)
-    #             for child_name, child_blob in fs_entries.children_blob.items():
-    #                 yield FSDiffObject(DiffStatus.DEL, False, fs_path / child_name, child_blob.sha1sum, None)
-    #         elif os1_final_tree and os2_final_tree:
-    #             yield from diff_trees(session, os1_final_tree.sha1sum, os2_final_tree.sha1sum, fs_path)
-    #         else:
-    #             raise RuntimeError(f"Path {fs_path} not found OS commits")
 
     def get_object_size(self, obj_sha1: str) -> int:
         container_name = settings.object.container_name
