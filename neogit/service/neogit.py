@@ -10,6 +10,7 @@ from neo4j import GraphDatabase, Transaction, exceptions
 from neomodel import db
 
 from neogit.config import ObjectConfig, settings
+from neogit.console import DEFAULT_ADAPTER, RichConsoleAdapter
 from neogit.core.model import FSDirectoryNode
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import FSSearchResult, FSSearchType
@@ -149,7 +150,12 @@ class Neogit:
 
             # build merkle tree
             root_node = FSDirectoryNode(root)
-            with NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans) as builder:
+            console = (
+                RichConsoleAdapter(root=root, max_workers=settings.get("max_workers"))
+                if self._gui_enabled
+                else DEFAULT_ADAPTER
+            )
+            with console, NeoMerkleTreeBuilder(self._object_driver_ts, root_node, trans, console=console) as builder:
                 root_tree = builder.run()
 
             # create new commit

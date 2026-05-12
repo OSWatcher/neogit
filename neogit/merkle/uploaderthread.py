@@ -4,6 +4,7 @@ from queue import Queue
 from threading import current_thread
 from typing import Optional
 
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter
 from neogit.core.model import FSFileNode, MerkleNode
 from neogit.core.visitor import VisitedNode
 from neogit.merkle.uploader import ObjectUploader
@@ -11,10 +12,15 @@ from neogit.object_storage import TSObjectStorage
 
 
 class ObjectUploaderThread:
-    def __init__(self, ts_object: TSObjectStorage, queue: Queue):
+    def __init__(
+        self,
+        ts_object: TSObjectStorage,
+        queue: Queue,
+        console: AbstractConsoleAdapter = DEFAULT_ADAPTER,
+    ):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._queue = queue
-        self._uploader = ObjectUploader(ts_object)
+        self._uploader = ObjectUploader(ts_object, console=console)
         # this class is a thread, represented by a "ThreadPoolExecutor" with one worker
         # Future are much easier to handle with result values and exceptions support
         self._submit_thread = ThreadPoolExecutor(thread_name_prefix="submit-upload-thread", max_workers=1)

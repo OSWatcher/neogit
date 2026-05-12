@@ -1,1 +1,1 @@
-from .old_model import DiffStatus, DirInfo, FSDiffObject, FSSearchResult, FSSearchType
+from .old_model import DiffStatus, FSDiffObject, FSSearchResult, FSSearchType

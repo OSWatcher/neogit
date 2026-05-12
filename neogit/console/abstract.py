@@ -1,43 +1,47 @@
 from abc import ABC, abstractmethod
-from enum import Enum, auto
-
-from neogit.model import DirInfo
-
-
-class TaskPool(Enum):
-    SHA1 = auto()
-    Storage = auto()
+from pathlib import Path
 
 
 class AbstractConsoleAdapter(ABC):
+    """Console adapter for live progress display during ``neogit commit``.
+
+    Adapters are used as context managers. Hook methods may be called from
+    background threads (the single hasher/visitor thread, the N uploader
+    pool threads, the main thread for Cypher merges) and implementations
+    must be thread-safe.
+    """
+
     @abstractmethod
-    def __enter__(self):
-        pass
+    def __enter__(self) -> "AbstractConsoleAdapter":
+        ...
 
     @abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        ...
+
+    # Hashing stage (fired from the single visitor thread)
+    @abstractmethod
+    def on_file_hashed(self, path: Path) -> None:
+        ...
 
     @abstractmethod
-    def increase_main_bar_total(self):
-        """Increases the main bar progress bar total"""
-        pass
+    def on_dir_merkelized(self, path: Path) -> None:
+        ...
+
+    # Cypher merge stage (fired from the main thread)
+    @abstractmethod
+    def on_tree_merged(self) -> None:
+        ...
+
+    # Upload stage (fired from N uploader pool threads)
+    @abstractmethod
+    def on_upload_started(self, worker_id: int, path: Path, size: int) -> None:
+        ...
 
     @abstractmethod
-    def advance_main_bar_progress(self):
-        """Advance the main progress bar by 1 unit"""
-        pass
+    def on_upload_progress(self, worker_id: int, advance: int) -> None:
+        ...
 
     @abstractmethod
-    def set_cur_tree(self, dir_info: DirInfo):
-        pass
-
-    @abstractmethod
-    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
-        """Update the per-thread task information associated with the pool. Create the task if necessary"""
-        pass
-
-    @abstractmethod
-    def update_pool_task(self, pool: TaskPool, advance: int):
-        """Advance the per-thread task associated with the pool"""
-        pass
+    def on_upload_finished(self, worker_id: int, was_skipped: bool) -> None:
+        ...
