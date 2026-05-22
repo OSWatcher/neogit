@@ -1,14 +1,14 @@
 """This module takes care of uploading objects to the object storage"""
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
-from functools import partial
 from pathlib import Path
 from threading import Lock, get_ident, local
-from typing import Dict, Optional
+from typing import Dict, Iterator, Optional
 
 import attr
 
 from neogit.config import settings
+from neogit.console import DEFAULT_ADAPTER, AbstractConsoleAdapter
 from neogit.merkle.utils import BUFFER_SIZE, filepath_merkle_ctx
 from neogit.object_storage import ObjectDoesNotExistError, TSObjectStorage
 
@@ -20,15 +20,21 @@ class MerkleFile:
 
 
 class ObjectUploader:
-    def __init__(self, ts_object: TSObjectStorage):
+    def __init__(
+        self,
+        ts_object: TSObjectStorage,
+        console: AbstractConsoleAdapter = DEFAULT_ADAPTER,
+    ):
         self._logger = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
         self._ts_object = ts_object
+        self._console = console
         max_workers: Optional[int] = settings.get("max_workers")
         self._upload_pool = ThreadPoolExecutor(thread_name_prefix="upload-pool", max_workers=max_workers)
         # cache container object per thread
         self._th_local = local()
         # give human readable worker count for each worker
         self._tid_to_number: Dict[int, int] = {}
+        self._tid_lock = Lock()
         # future to upload object
         self._fut_to_upobj: Dict[Future, MerkleFile] = {}
         # if any exception was raised by one of the future
@@ -83,30 +89,61 @@ class ObjectUploader:
             self._th_local.container = container
         return container
 
+    def _worker_number(self) -> int:
+        """Return a stable per-thread worker number (1-indexed)."""
+        tid = get_ident()
+        try:
+            return self._tid_to_number[tid]
+        except KeyError:
+            with self._tid_lock:
+                if tid not in self._tid_to_number:
+                    self._tid_to_number[tid] = len(self._tid_to_number) + 1
+            return self._tid_to_number[tid]
+
+    def _reporting_chunk_iter(self, io, worker_number: int) -> Iterator[bytes]:
+        """Yield chunks from ``io`` and report each chunk size to the console."""
+        while True:
+            chunk = io.read(BUFFER_SIZE)
+            if not chunk:
+                break
+            self._console.on_upload_progress(worker_number, len(chunk))
+            yield chunk
+
     def _storage_upload(self, to_upload_obj: MerkleFile):
         """pipeline stage to upload a given object to the object storage"""
         # get per-thread object storage instance
         obj_adapter = self._ts_object.instance
-        tid = get_ident()
-        try:
-            worker_number = self._tid_to_number[tid]
-        except KeyError:
-            self._tid_to_number[tid] = len(self._tid_to_number) + 1
-            worker_number = self._tid_to_number[tid]
+        worker_number = self._worker_number()
 
         # get container
         container = self._get_container()
 
         # upload to object storage if necessary
         obj_name = to_upload_obj.hash
+        filepath = to_upload_obj.filepath
         try:
-            obj_adapter.get_object(container, obj_name)
-        except ObjectDoesNotExistError:
-            # get an IO object from filepath, depending on file type
-            with filepath_merkle_ctx(to_upload_obj.filepath) as io:
-                read_chunk_iter = iter(partial(io.read, BUFFER_SIZE), b"")
-                obj_adapter.upload_object_via_stream(read_chunk_iter, container, obj_name)
-            self._logger.debug("[%s]%s Uploaded", worker_number, to_upload_obj.hash)
+            size = filepath.stat().st_size
+        except OSError:
+            size = 0
+
+        # Fire ``on_upload_started`` unconditionally so the worker row
+        # reflects what this thread is about to process — even when most
+        # files end up dedup'd, the panel still shows activity.
+        self._console.on_upload_started(worker_number, filepath, size)
+        was_skipped = False
+        try:
+            try:
+                obj_adapter.get_object(container, obj_name)
+                was_skipped = True
+            except ObjectDoesNotExistError:
+                with filepath_merkle_ctx(filepath) as io:
+                    obj_adapter.upload_object_via_stream(
+                        self._reporting_chunk_iter(io, worker_number), container, obj_name
+                    )
+        finally:
+            self._console.on_upload_finished(worker_number, was_skipped=was_skipped)
+        if was_skipped:
+            self._logger.debug("[%s]%s Exists", worker_number, obj_name)
         else:
-            self._logger.debug("[%s]%s Exists", worker_number, to_upload_obj.hash)
+            self._logger.debug("[%s]%s Uploaded", worker_number, obj_name)
         return True

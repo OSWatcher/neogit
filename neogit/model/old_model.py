@@ -1,14 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import List, Optional
-
-
-@dataclass
-class DirInfo:
-    dir: Path
-    files: List[str]
-    subdirs: List[str]
+from typing import Optional
 
 
 class DiffStatus(Enum):

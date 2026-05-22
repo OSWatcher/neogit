@@ -1,7 +1,9 @@
-from threading import local
-from typing import Dict
+import os
+from pathlib import Path
+from threading import Lock
+from typing import Dict, Optional
 
-from rich.layout import Layout
+from rich.console import Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import (
@@ -9,126 +11,178 @@ from rich.progress import (
     FileSizeColumn,
     Progress,
     SpinnerColumn,
+    TaskID,
     TextColumn,
-    TimeElapsedColumn,
     TotalFileSizeColumn,
     TransferSpeedColumn,
 )
 from rich.table import Column
-from rich.tree import Tree
+from rich.text import Text
 
-from neogit.model import DirInfo
-
-from .abstract import AbstractConsoleAdapter, TaskPool
+from .abstract import AbstractConsoleAdapter
 
 
 class RichConsoleAdapter(AbstractConsoleAdapter):
-    """This adapter will use Rich library for console output"""
+    """Rich-based adapter: one ``Live`` display with a spinner line, a
+    counters line, and a per-uploader-thread progress panel.
 
-    def __init__(self):
-        # main progress bar
-        self._main_progress = Progress(
+    Paths reported through the hooks are converted for display to be
+    relative to ``root`` while still rendered with a leading ``/`` so they
+    look absolute (matching how a committed tree is conceptually rooted
+    at the commit root, like git).
+    """
+
+    def __init__(self, root: Path, max_workers: Optional[int] = None) -> None:
+        self._lock = Lock()
+        self._root = root
+        # Mirror ThreadPoolExecutor's default so the pre-allocated row count
+        # matches the actual upload pool size.
+        self._n_workers = max_workers if max_workers is not None else min(32, (os.cpu_count() or 1) + 4)
+
+        # top: a spinner-style progress with a single task acting as the
+        # "currently hashing X" indicator
+        self._hash_progress = Progress(
             SpinnerColumn(),
-            "{task.description}",
-            BarColumn(bar_width=None),
-            "{task.completed} / {task.total}",
-            "[progress.percentage]{task.percentage:>3.0f}%",
-            TimeElapsedColumn(),
+            TextColumn("Hashing {task.description}"),
         )
-        self._main_progress_total = 0
-        self._main_task = self._main_progress.add_task("Neogit commit ", total=self._main_progress_total)
-        # sha1 computation progress bar
-        self._sha1_progress = Progress(
-            SpinnerColumn(),
-            TextColumn("{task.description}", table_column=Column(ratio=10)),
-            BarColumn(bar_width=None, table_column=Column(ratio=7)),
-            FileSizeColumn(table_column=Column(ratio=2)),
-            TotalFileSizeColumn(table_column=Column(ratio=2)),
-            "[progress.percentage]{task.percentage:>3.0f}%",
+        self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
+
+        # middle: a single-line counters Text rendered inside a Panel
+        self._counters = Text()
+        self._files = 0
+        self._dirs = 0
+        self._trees = 0
+        self._uploaded = 0
+        self._skipped = 0
+        self._render_counters()
+
+        # bottom: per-worker upload rows
+        self._upload_progress = Progress(
+            TextColumn("[bold]#{task.fields[worker_id]:>2}[/]"),
+            TextColumn("{task.description}", table_column=Column(ratio=8, no_wrap=True)),
+            BarColumn(bar_width=None, table_column=Column(ratio=4)),
+            FileSizeColumn(),
+            TextColumn("/"),
+            TotalFileSizeColumn(),
+            TransferSpeedColumn(),
             expand=True,
         )
-        # object storage upload progress bar
-        self._storage_progress = Progress(
-            SpinnerColumn(),
-            TextColumn("{task.description}", table_column=Column(ratio=10)),
-            BarColumn(bar_width=None, table_column=Column(ratio=7)),
-            TransferSpeedColumn(table_column=Column(ratio=2)),
-            TotalFileSizeColumn(table_column=Column(ratio=2)),
-            "[progress.percentage]{task.percentage:>3.0f}%",
-            expand=True,
-        )
-        self._pool_to_progress: Dict[TaskPool, Progress] = {
-            TaskPool.SHA1: self._sha1_progress,
-            TaskPool.Storage: self._storage_progress,
-        }
-        # add progress bar into panels
-        self._sha1_panel = Panel(self._sha1_progress, title="SHA1 Pool")
-        self._storage_panel = Panel(self._storage_progress, title="Object Storage Pool")
-        # pipeline layout
-        self._pipeline_layout = Layout(name="pipeline", ratio=2)
-        self._pipeline_layout.split_column(
-            self._sha1_panel,
-            self._storage_panel,
-        )
-        # tree view layout
-        self._tree = Tree("tree")
-        self._tree_panel = Panel(self._tree, title="Tree View")
-        self._tree_layout = Layout(self._tree_panel, name="tree", ratio=1)
-        # build main
-        self._app_layout = Layout(name="main")
-        center_layout = Layout(name="center")
-        center_layout.split_row(self._tree_layout, self._pipeline_layout)
-        self._app_layout.split_column(
-            # progress bar is only 1 row
-            Layout(self._main_progress, name="main_progress", size=1),
-            center_layout,
-        )
-        self._live = Live(
-            self._app_layout,
-            refresh_per_second=10,
-        )
-        # thread-local tasks
-        self._local = local()
+        self._worker_to_task: Dict[int, TaskID] = {}
+        # Pre-allocate one (idle) row per upload worker. Otherwise the
+        # Uploaders panel stays empty until the first upload reaches the
+        # pool, which only happens after the visitor has hashed at least
+        # one file — that can be a noticeable wait on cold trees.
+        for wid in range(1, self._n_workers + 1):
+            task_id = self._upload_progress.add_task("(idle)", total=None, worker_id=wid)
+            self._worker_to_task[wid] = task_id
 
-    def __enter__(self):
+        # assemble the live layout
+        layout = Group(
+            self._hash_progress,
+            Panel(self._counters, title="Stats", padding=(0, 1)),
+            Panel(self._upload_progress, title="Uploaders", padding=(0, 1)),
+        )
+        self._live = Live(layout, refresh_per_second=10)
+
+    def _format_path(self, path: Path) -> str:
+        """Render an absolute filesystem path as if rooted at ``self._root``."""
+        try:
+            rel = path.relative_to(self._root)
+        except ValueError:
+            return str(path)
+        rel_str = str(rel)
+        if rel_str == ".":
+            return "/"
+        return "/" + rel_str
+
+    def _render_counters(self) -> None:
+        # noqa-line below: flake8 E231 dislikes the ``{x:,}`` format spec
+        files = f"{self._files:,}"  # noqa: E231
+        dirs = f"{self._dirs:,}"  # noqa: E231
+        trees = f"{self._trees:,}"  # noqa: E231
+        uploaded = f"{self._uploaded:,}"  # noqa: E231
+        skipped = f"{self._skipped:,}"  # noqa: E231
+        self._counters.plain = (
+            f"files: {files}  dirs: {dirs}  trees: {trees}  uploaded: {uploaded}  skipped (dedup): {skipped}"
+        )
+
+    # context manager
+
+    def __enter__(self) -> "RichConsoleAdapter":
         self._live.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._live.stop()
+        return None
 
-    def increase_main_bar_total(self):
-        self._main_progress_total += 1
-        self._main_progress.update(self._main_task, total=self._main_progress_total)
+    # hashing hooks (main thread, consuming visitor.as_gen())
 
-    def advance_main_bar_progress(self):
-        self._main_progress.update(self._main_task, advance=1)
+    def on_file_hashed(self, path: Path) -> None:
+        with self._lock:
+            self._files += 1
+            self._render_counters()
+            self._hash_progress.update(self._hash_task, description=self._format_path(path))
 
-    def set_cur_tree(self, dir_info: DirInfo):
-        self._tree.label = f"📁 {dir_info.dir.name}"
-        self._tree.children.clear()
-        for filename in dir_info.files:
-            self._tree.add(f"📄 {filename}")
-        for subdir in dir_info.subdirs:
-            self._tree.add(f"📁 {subdir}")
+    def on_dir_merkelized(self, path: Path) -> None:
+        with self._lock:
+            self._dirs += 1
+            self._render_counters()
 
-    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
-        progress = self._pool_to_progress[pool]
-        try:
-            task = getattr(self._local, f"{pool.name.lower()}_task")
-        except AttributeError:
-            # create new task for this thread
-            task = progress.add_task(description=task_name, total=size)
-            setattr(self._local, f"{pool.name.lower()}_task", task)
-        else:
-            # set description and total, and reset completion
-            progress.update(task, description=task_name, total=size, completed=0)
+    # cypher merge hook (main thread)
 
-    def update_pool_task(self, pool: TaskPool, advance: int):
-        try:
-            task = getattr(self._local, f"{pool.name.lower()}_task")
-        except AttributeError:
-            raise RuntimeError(f"task not created for pool {pool}")
-        else:
-            progress = self._pool_to_progress[pool]
-            progress.update(task, advance=advance)
+    def on_tree_merged(self) -> None:
+        with self._lock:
+            self._trees += 1
+            self._render_counters()
+
+    # upload hooks (N uploader pool threads)
+
+    def _ensure_worker_row(self, worker_id: int) -> TaskID:
+        # Worker IDs are assigned 1..N in first-arrival order inside ObjectUploader,
+        # but workers reach ``on_upload_started`` in non-deterministic order
+        # (e.g. #10 before #9 depending on scheduling).
+        # Gap-fill any missing rows below ``worker_id`` so the panel stays
+        # sorted regardless of arrival order.
+        while len(self._worker_to_task) < worker_id:
+            next_wid = len(self._worker_to_task) + 1
+            task_id = self._upload_progress.add_task(
+                "(idle)",
+                total=None,
+                worker_id=next_wid,
+            )
+            self._worker_to_task[next_wid] = task_id
+        return self._worker_to_task[worker_id]
+
+    def on_upload_started(self, worker_id: int, path: Path, size: int) -> None:
+        with self._lock:
+            task_id = self._ensure_worker_row(worker_id)
+            self._upload_progress.reset(
+                task_id,
+                description=self._format_path(path),
+                total=size,
+                worker_id=worker_id,
+            )
+
+    def on_upload_progress(self, worker_id: int, advance: int) -> None:
+        task_id = self._worker_to_task.get(worker_id)
+        if task_id is None:
+            return
+        self._upload_progress.update(task_id, advance=advance)
+
+    def on_upload_finished(self, worker_id: int, was_skipped: bool) -> None:
+        with self._lock:
+            if was_skipped:
+                self._skipped += 1
+            else:
+                self._uploaded += 1
+            # Snap the bar to 100% in both cases: for real uploads in case
+            # chunk rounding left it short, and for skipped files so the
+            # row visually shows the dedup happened (rather than freezing
+            # at 0/SIZE).
+            task_id = self._worker_to_task.get(worker_id)
+            if task_id is not None:
+                task = self._upload_progress.tasks[task_id]
+                if task.total is not None:
+                    self._upload_progress.update(task_id, completed=task.total)
+            self._render_counters()

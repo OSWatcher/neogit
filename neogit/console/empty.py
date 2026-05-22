@@ -1,29 +1,31 @@
-from neogit.model import DirInfo
+from pathlib import Path
 
-from . import TaskPool
 from .abstract import AbstractConsoleAdapter
 
 
 class EmptyConsoleAdapter(AbstractConsoleAdapter):
-    """This adapter will simply ignore any console output"""
+    """No-op adapter used when ``--gui`` is off."""
 
-    def __enter__(self):
+    def __enter__(self) -> "EmptyConsoleAdapter":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        return None
+
+    def on_file_hashed(self, path: Path) -> None:
         pass
 
-    def increase_main_bar_total(self):
+    def on_dir_merkelized(self, path: Path) -> None:
         pass
 
-    def advance_main_bar_progress(self):
+    def on_tree_merged(self) -> None:
         pass
 
-    def set_cur_tree(self, dir_info: DirInfo):
+    def on_upload_started(self, worker_id: int, path: Path, size: int) -> None:
         pass
 
-    def set_pool_task(self, pool: TaskPool, task_name: str, size: int):
+    def on_upload_progress(self, worker_id: int, advance: int) -> None:
         pass
 
-    def update_pool_task(self, pool: TaskPool, advance: int):
+    def on_upload_finished(self, worker_id: int, was_skipped: bool) -> None:
         pass
