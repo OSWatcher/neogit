@@ -116,7 +116,7 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._live.stop()
         return None
 
-    # hashing hooks (visitor thread)
+    # hashing hooks (main thread, consuming visitor.as_gen())
 
     def on_file_hashed(self, path: Path) -> None:
         with self._lock:
@@ -139,10 +139,9 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
     # upload hooks (N uploader pool threads)
 
     def _ensure_worker_row(self, worker_id: int) -> TaskID:
-        # Worker IDs are assigned 1..N in arrival order inside ObjectUploader,
-        # but the ``on_upload_started`` hook fires only *after* a per-file
-        # ``get_object`` existence check, so rows can arrive out of order
-        # (e.g. #10 before #9 if #9 paid an extra network round-trip).
+        # Worker IDs are assigned 1..N in first-arrival order inside ObjectUploader,
+        # but workers reach ``on_upload_started`` in non-deterministic order
+        # (e.g. #10 before #9 depending on scheduling).
         # Gap-fill any missing rows below ``worker_id`` so the panel stays
         # sorted regardless of arrival order.
         while len(self._worker_to_task) < worker_id:

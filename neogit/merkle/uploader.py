@@ -34,6 +34,7 @@ class ObjectUploader:
         self._th_local = local()
         # give human readable worker count for each worker
         self._tid_to_number: Dict[int, int] = {}
+        self._tid_lock = Lock()
         # future to upload object
         self._fut_to_upobj: Dict[Future, MerkleFile] = {}
         # if any exception was raised by one of the future
@@ -94,9 +95,10 @@ class ObjectUploader:
         try:
             return self._tid_to_number[tid]
         except KeyError:
-            worker_number = len(self._tid_to_number) + 1
-            self._tid_to_number[tid] = worker_number
-            return worker_number
+            with self._tid_lock:
+                if tid not in self._tid_to_number:
+                    self._tid_to_number[tid] = len(self._tid_to_number) + 1
+            return self._tid_to_number[tid]
 
     def _reporting_chunk_iter(self, io, worker_number: int) -> Iterator[bytes]:
         """Yield chunks from ``io`` and report each chunk size to the console."""

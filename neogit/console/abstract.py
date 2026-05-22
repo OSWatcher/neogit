@@ -19,7 +19,7 @@ class AbstractConsoleAdapter(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         ...
 
-    # Hashing stage (fired from the single visitor thread)
+    # Hashing stage (fired from the main thread, consuming visitor.as_gen())
     @abstractmethod
     def on_file_hashed(self, path: Path) -> None:
         ...
