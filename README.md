@@ -37,11 +37,13 @@ MATCH (c:Commit)-[r]->(t:Tree) RETURN c, r, t LIMIT 25
 
 ```bash
 neogit init                                    # initialize database constraints
-neogit commit <name> -r <path>                 # snapshot a directory
-neogit commit <name> branch <branch> -r <path> # snapshot on a named branch
-neogit branch <name> <commit_hash>             # create a branch pointing at a commit
-neogit diff <ref1> <ref2>                      # diff two commits
+neogit commit <name> -r <path>                 # snapshot a directory on the default branch
+neogit branch <name> <commit_hash>             # create a branch pointing at a commit hash
 ```
+
+> **Note:** the `branch <branch>` sub-argument of `commit` and the `diff` subcommand
+> are present in the docopt usage but not yet wired through to the service layer —
+> see [docs/reference/cli.md](docs/reference/cli.md) for the current status.
 
 See [docs/reference/cli.md](docs/reference/cli.md) for the full reference.
 
@@ -70,7 +72,8 @@ Full documentation lives under [`docs/`](docs/) and follows the [Divio framework
 To preview the docs locally:
 
 ```bash
-poetry run mkdocs serve
+poetry install --with docs       # one-time, installs mkdocs into the venv
+poetry run poe docs_serve        # equivalent to: poetry run mkdocs serve
 ```
 
 ## Development

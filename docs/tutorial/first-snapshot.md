@@ -26,7 +26,7 @@ poetry run poe create_dbs
 
 When this finishes you should see:
 
-- a Neo4j instance on <http://localhost:7474> (login `neo4j` / `password`)
+- a Neo4j instance on <http://localhost:7474> — the test container runs with `NEO4J_AUTH=none`, so click **Connect** with no username / password
 - a MinIO instance on <http://localhost:9001> (login `minioadmin` / `minioadmin`)
 
 Leave both browser tabs open — we'll come back to them.
@@ -62,17 +62,22 @@ You'll see a `Branch` node pointing at your `Commit`, which owns a root `Tree`. 
 
 **In MinIO** (<http://localhost:9001>), browse the bucket. Each object is one file's content, named by its SHA-1.
 
-## 6. Take a second snapshot and diff
+## 6. Take a second snapshot
 
 Touch a file, then snapshot again:
 
 ```bash
 echo "hello" >> README.md
 poetry run neogit commit my-second-snapshot -r .
-poetry run neogit diff my-first-snapshot my-second-snapshot
 ```
 
-The diff tells you which paths added, removed, or changed between the two commits.
+Run the same Cypher query again — you'll now see two `Commit` nodes linked by a `HAS_PREVIOUS` edge, and the file's old and new content will be two distinct `Blob` nodes hanging off two distinct `Tree` nodes for `README.md`.
+
+!!! note "Diffing two commits"
+
+    A `neogit diff` subcommand is declared in the CLI's docopt usage but is not
+    yet implemented in the service layer. Until it's wired up, compare commits
+    by walking the graph in Cypher — see [Reference / Data model](../reference/data-model.md).
 
 ## Where to next
 

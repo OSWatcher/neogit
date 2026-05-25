@@ -30,12 +30,14 @@ Nested keys use `__` (double underscore) in env vars: `NEOGIT_NEO4J__HOST` maps 
 | Key | Env var | Default | Description |
 |---|---|---|---|
 | `provider` | `NEOGIT_OBJECT__PROVIDER` | `local` | `local`, `minio`, or any libcloud provider id (e.g. `s3`) |
-| `key` | `NEOGIT_OBJECT__KEY` | — | For `local`: storage path. For S3/MinIO: access key |
-| `secret_key` | `NEOGIT_OBJECT__SECRET_KEY` | — | S3/MinIO secret key |
-| `host` | `NEOGIT_OBJECT__HOST` | — | S3/MinIO endpoint |
-| `port` | `NEOGIT_OBJECT__PORT` | — | S3/MinIO port |
-| `secure` | `NEOGIT_OBJECT__SECURE` | — | TLS toggle for S3/MinIO |
-| `container_name` | `NEOGIT_OBJECT__CONTAINER_NAME` | — | Bucket / container name |
+| `key` | `NEOGIT_OBJECT__KEY` | `appdirs.user_data_dir("neogit")` | For `local`: storage path. For S3/MinIO: access key |
+| `secret_key` | `NEOGIT_OBJECT__SECRET_KEY` | `None` | S3/MinIO secret key |
+| `host` | `NEOGIT_OBJECT__HOST` | `None` | S3/MinIO endpoint |
+| `port` | `NEOGIT_OBJECT__PORT` | `None` | S3/MinIO port |
+| `secure` | `NEOGIT_OBJECT__SECURE` | `None` | TLS toggle for S3/MinIO |
+| `container_name` | `NEOGIT_OBJECT__CONTAINER_NAME` | `"objects"` | Bucket / container name |
+
+With these defaults you can run neogit against a local Neo4j (just `proto`, `host`, `port` need to be set) without configuring object storage at all — file content goes to a user-local appdirs path.
 
 ## Example: full MinIO setup via env
 

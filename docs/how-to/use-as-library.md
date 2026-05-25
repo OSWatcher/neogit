@@ -39,13 +39,23 @@ for c in Commit.nodes.all():
     print(c.hash, c.name)
 ```
 
-You can run arbitrary Cypher via the service helper:
+You can run arbitrary Cypher via the service helper. It retries deadlocked
+transactions with exponential backoff, and (unlike `neomodel.db.cypher_query`)
+its `params` argument is **required** — pass an empty dict for parameter-less
+queries:
 
 ```python
 from neogit.service.neogit import cypher_query_with_backoff
 
 rows, _ = cypher_query_with_backoff(
-    "MATCH (b:Blob) RETURN b.sha1sum AS hash LIMIT 5"
+    "MATCH (b:Blob) RETURN b.sha1sum AS hash LIMIT 5",
+    {},
+)
+
+# Parameterised:
+rows, _ = cypher_query_with_backoff(
+    "MATCH (c:Commit {name: $name}) RETURN c",
+    {"name": "snap-1"},
 )
 ```
 

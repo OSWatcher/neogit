@@ -13,7 +13,6 @@ Usage:
 | Option | Description |
 |---|---|
 | `-h`, `--help` | Show help and exit |
-| `--version` | Show neogit version |
 | `-r ROOT`, `--root=ROOT` | Repository root directory (defaults to CWD) |
 | `-g`, `--gui` | Enable the rich console progress GUI |
 | `-d`, `--debug` | Enable debug logging |
@@ -26,22 +25,33 @@ Creates uniqueness constraints in Neo4j and the storage bucket/container. Idempo
 
 ### `neogit commit <name>`
 
-Snapshot the directory tree at `--root` into a new commit named `<name>` on the current branch.
+Snapshot the directory tree at `--root` into a new commit named `<name>`.
 
 | Flag | Effect |
 |---|---|
-| `branch <branch>` | Commit to the named branch instead of the default (`master`) |
+| `branch <branch>` | **Planned.** Intended to commit to the named branch; the docopt usage exposes the argument but the CLI does not yet forward it to `Neogit.commit()` — currently the value is silently dropped. Commits land on the default branch (`master`, configurable via `NEOGIT_BRANCH`). |
 | `--unique` | If a commit with the same name already exists on this branch, return its hash instead of creating a duplicate |
 | `--before=<commit>` | Insert this commit *before* the named commit (rewrites history) |
 
 ### `neogit branch <name> <commit>`
 
-Create a new branch named `<name>` pointing at the commit identified by `<commit>` (hash or commit name).
+Create a new branch named `<name>` pointing at the commit identified by `<commit>`. **`<commit>` must be a full SHA-1 hash** — the implementation looks the commit up by `hash`, not by commit name.
 
 ### `neogit diff <ref1> <ref2>`
 
-Compare two commits and print added / removed / modified paths. Each ref can be a hash or a commit name.
+!!! warning "Planned — not yet implemented"
+
+    The `diff` subcommand is declared in the docopt usage block but `Neogit.diff()`
+    does not exist yet; invoking it raises `AttributeError`. See
+    [How-to / Diff two commits](../how-to/diff-commits.md) for a Cypher workaround
+    and the intended design.
 
 ## Exit behavior
 
 On any unhandled exception the CLI drops into an `ipdb` post-mortem session (see `neogit/entrypoint/cmdline.py::post_mortem`). Combine with `--debug` to see the full stack trace.
+
+!!! note "`--version` flag"
+
+    The docopt usage block lists a `--version` option, but `handle_cmdline()`
+    invokes `docopt()` without a `version=` argument, so the flag is parsed
+    but never produces output. Treat it as not implemented.

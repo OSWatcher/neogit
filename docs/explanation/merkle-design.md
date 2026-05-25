@@ -4,17 +4,50 @@ A [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) is a tree where every
 
 ## Three node kinds
 
-Neogit's Merkle tree has three kinds of node:
+Neogit's Merkle tree has three kinds of node. The canonical serializations live
+in `neogit/core/merkle/filesystem.py` (Blob, Tree) and `neogit/merkle/hasher.py`
+(Commit). The contract is: same inputs, same hash, always.
 
-- **Blob** — leaf. Identity = `SHA-1(file bytes)`.
-- **Tree** — internal node = a directory. Identity = `SHA-1(sorted list of (name, child_hash, kind) tuples)`.
-- **Commit** — root with metadata. Identity = `SHA-1(root_tree_hash + name + date + description + previous_hash)`.
+### Blob — `SHA-1(file_bytes)`
 
-The exact canonical serialization lives in `neogit/core/` — the contract is: same inputs, same hash, always.
+Leaves. The identity is just the SHA-1 of the raw file content.
+
+### Tree — `SHA-1(sorted child entries)`
+
+A directory. `FSMerkleVisitor.visit_FSDirectoryNode` walks the directory's
+children, sorted **directories first, then by name**, and for each child feeds
+the bytes `f"{child_name}{child_hash}\n"` into the running SHA-1. The final
+digest is the tree's hash.
+
+```python
+# Equivalent of the canonical form, for one directory:
+for child in sorted(children, key=lambda c: (not c.is_dir, c.name)):
+    h.update(f"{child.name}{child.hash}\n".encode())
+tree_hash = h.hexdigest()
+```
+
+Note that the entry contains only `name` and `child_hash` — there is no
+explicit "kind" byte. The hash is unambiguous because each directory commits
+to its sorted, newline-delimited child list.
+
+### Commit — `SHA-1(name + date + tree_sha1)`
+
+A snapshot. From `hasher.py`:
+
+```python
+COMMIT_STRING = "\n{name}{date}{tree_sha1}\n"
+```
+
+Note what is **not** in the commit hash: the description, the previous-commit
+pointer, the branch. Two commits with the same name, same date, and the same
+root tree therefore hash identically — and Neo4j's uniqueness constraint on
+`Commit.hash` deduplicates them. If you need the description or the history
+edge to participate in identity, that's a deliberate change to the canonical
+form.
 
 ## Why the children are sorted
 
-If we hashed children in insertion order, two directories with the same files in different filesystem-walk orders would get different hashes. Sorting by name makes the hash a true function of the *set* of children, which is what we want.
+If we hashed children in insertion order, two directories with the same files in different filesystem-walk orders would get different hashes. The deterministic sort (dirs-first, then by name) makes the hash a true function of the *content* of the directory, not the order the OS happened to return entries in.
 
 ## What dedup buys us
 

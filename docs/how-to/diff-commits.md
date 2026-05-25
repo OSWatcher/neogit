@@ -1,41 +1,44 @@
 # Diff two commits
 
-`neogit diff` compares two commit references and reports paths that were added, removed, or modified between them.
+!!! warning "Planned feature — not yet implemented"
 
-## From the CLI
+    A `neogit diff <ref1> <ref2>` subcommand is declared in the CLI's docopt usage
+    block, but the service layer has no matching `Neogit.diff()` method yet.
+    Invoking `neogit diff` today raises `AttributeError`. This page documents the
+    intended shape so the design is on record; the implementation will follow
+    in a separate PR.
+
+## Intended CLI shape
 
 ```bash
 neogit diff <ref1> <ref2>
 ```
 
-`ref1` and `ref2` can be either:
+`ref1` and `ref2` will be resolvable from either:
 
 - a **commit hash** (full SHA-1), or
-- a **commit name** (the `<name>` you passed to `neogit commit`)
+- a **commit name** (the `<name>` passed to `neogit commit`)
 
-Example workflow:
+Planned output: paths grouped by added / removed / modified, relative to the commit root.
 
-```bash
-neogit commit snap-before -r /etc
-# ... change files ...
-neogit commit snap-after  -r /etc
-neogit diff snap-before snap-after
+## Workaround today: query the graph
+
+Until `diff` lands, you can compare two commits in Cypher. Each commit owns a
+`Tree`, and the Merkle property guarantees that subtrees with identical content
+share a node — so the diff is "find paths that disagree":
+
+```cypher
+// Children present in commit A but not B (added in A, or removed from B)
+MATCH (a:Commit {name: $a})-[:OWNS_FILESYSTEM]->(rootA:Tree),
+      (b:Commit {name: $b})-[:OWNS_FILESYSTEM]->(rootB:Tree)
+MATCH (rootA)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(n)
+WHERE NOT (rootB)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(n)
+RETURN n
 ```
 
-Output groups changes by kind (added / removed / modified) and prints paths relative to the commit root.
-
-## From Python
-
-```python
-from neogit.service import Neogit
-
-git = Neogit()
-diff = git.diff("snap-before", "snap-after")
-```
-
-The `diff` object exposes the same add / remove / modify partitions, suitable for feeding into downstream tools or reports.
+This is what the `diff` implementation will lean on internally.
 
 ## See also
 
-- [Reference / CLI](../reference/cli.md) for the full flag list
-- [Explanation / Merkle design](../explanation/merkle-design.md) — why the diff is cheap
+- [Explanation / Merkle design](../explanation/merkle-design.md) — why content-addressed diffs are cheap
+- [Reference / Data model](../reference/data-model.md) — node and edge shapes
