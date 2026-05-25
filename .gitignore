@@ -64,3 +64,6 @@ tests/data/cache
 # Environment and local scripts
 .env
 capture_git.sh
+
+# MkDocs build output
+/site

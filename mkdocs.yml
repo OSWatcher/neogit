@@ -1,0 +1,66 @@
+site_name: neogit
+site_description: A Git-like tool for filesystems, backed by a Neo4j graph and pluggable object storage.
+site_url: https://oswatcher.github.io/neogit/
+repo_url: https://github.com/OSWatcher/neogit
+repo_name: OSWatcher/neogit
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+nav:
+  - Home: index.md
+  - Tutorial:
+      - Your first snapshot: tutorial/first-snapshot.md
+  - How-to guides:
+      - Use MinIO or S3 storage: how-to/use-minio-storage.md
+      - Embed neogit as a library: how-to/use-as-library.md
+      - Diff two commits: how-to/diff-commits.md
+      - Contribute: how-to/contributing.md
+  - Reference:
+      - CLI: reference/cli.md
+      - Configuration: reference/configuration.md
+      - Data model: reference/data-model.md
+  - Explanation:
+      - Architecture overview: explanation/architecture.md
+      - Why Neo4j?: explanation/why-neo4j.md
+      - Merkle tree design: explanation/merkle-design.md
