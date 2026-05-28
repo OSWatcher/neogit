@@ -84,8 +84,9 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [dev, unit_test, integration_test, build_image]
-    # if push on master and tag starts with 'v*'
+    # publish to PyPI first; only create the GitHub release if that succeeds
+    needs: [publish_pypi]
+    # only on push of a tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -93,7 +94,7 @@ jobs:
 
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo "version=${GITHUB_REF/refs\/tags\//}" >> "$GITHUB_OUTPUT"
 
       - name: Create a Release
         id: create_release
@@ -101,3 +102,31 @@ jobs:
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           body_path: ${{ github.workspace }}/.github/RELEASE.md
+
+  publish_pypi:
+    needs: [dev, unit_test, integration_test, build_image]
+    # only on push of a tag starting with 'v'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Project setup
+        uses: ./.github/actions/common-setup
+
+      - name: Check tag matches package version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(poetry version --short)"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME ($TAG_VERSION) does not match pyproject version ($PKG_VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Build and publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: poetry publish --build --no-interaction --skip-existing
