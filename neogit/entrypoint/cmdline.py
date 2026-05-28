@@ -16,6 +16,7 @@ Options:
 
 import logging
 from functools import wraps
+from importlib.metadata import version
 from pathlib import Path
 
 from docopt import docopt
@@ -45,7 +46,7 @@ def post_mortem(f):
 
 @post_mortem
 def handle_cmdline():
-    args = docopt(__doc__)
+    args = docopt(__doc__, version=f"neogit {version('neogit')}")
     # handle root
     root_repo: Path = Path.cwd()
     if args["--root"]:
