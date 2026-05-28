@@ -4,6 +4,9 @@ site_url: https://oswatcher.github.io/neogit/
 repo_url: https://github.com/OSWatcher/neogit
 repo_name: OSWatcher/neogit
 edit_uri: edit/master/docs/
+copyright: >
+  Copyright &copy; 2021&ndash;2026 Mathieu Tarral &mdash;
+  licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
 
 theme:
   name: material
