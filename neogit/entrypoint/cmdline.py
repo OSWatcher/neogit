@@ -67,8 +67,8 @@ def handle_cmdline():
         return git.commit(commit_name, root_repo, branch_name=branch_name, unique=unique, before=before)
     if args["branch"]:
         branch_name = args["<name>"]
-        commit_name = args["<commit>"]
-        return git.create_branch(branch_name, commit_name)
+        commit_hash = args["<commit>"]
+        return git.create_branch(branch_name, commit_hash)
     if args["diff"]:
         ref1 = args["<ref1>"]
         ref2 = args["<ref2>"]
