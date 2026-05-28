@@ -35,7 +35,7 @@ Snapshot the directory tree at `--root` into a new commit named `<name>`.
 
 ### `neogit branch <name> <commit>`
 
-Create a new branch named `<name>` pointing at the commit identified by `<commit>`. **`<commit>` must be a full SHA-1 hash** — the implementation looks the commit up by `hash`, not by commit name.
+Create a new branch named `<name>` pointing at `<commit>`, where `<commit>` is the SHA-1 hash returned by `neogit commit`. This mirrors Git, where branches are created from a commit ID rather than a commit message.
 
 ### `neogit diff <ref1> <ref2>`
 
