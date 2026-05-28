@@ -33,6 +33,13 @@ types-PyYAML = "^6.0.0"
 poethepoet = "^0.26.1"
 ipdb = "^0.13.13"
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.0"
+
 [tool.poetry.group.dev.dependencies]
 black = "22.12.0"
 flake8 = "6.0.0"
@@ -66,6 +73,8 @@ _integration_test_task = "coverage run -m pytest -v tests/integration"
 integration_test = ["_integration_test_task", "cov_report"]
 bench_test = "coverage run -m pytest -v --durations=0 tests/bench"
 test = "coverage run -m pytest -v"
+docs_serve = "mkdocs serve"
+docs_build = "mkdocs build --strict"
 
 [tool.poe.tasks.create_dbs]
 shell = """
