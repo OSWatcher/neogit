@@ -84,8 +84,9 @@ jobs:
           tags: wenzel/neogit:latest
 
   release:
-    needs: [dev, unit_test, integration_test, build_image]
-    # if push on master and tag starts with 'v*'
+    # publish to PyPI first; only create the GitHub release if that succeeds
+    needs: [publish_pypi]
+    # only on push of a tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -128,4 +129,4 @@ jobs:
       - name: Build and publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: poetry publish --build --no-interaction
+        run: poetry publish --build --no-interaction --skip-existing
