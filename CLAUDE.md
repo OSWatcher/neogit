@@ -9,7 +9,7 @@ MkDocs site and `README.md`. Update it when conventions or commands change.
 A Git-like tool backed by Neo4j: it builds content-addressed Merkle trees of
 filesystem snapshots, storing the graph (Commit / Branch / Tree / Blob) in Neo4j
 and raw file bytes (keyed by SHA-1) in pluggable object storage — local FS,
-MinIO, or S3 via Apache Libcloud. Python 3.11+, Poetry, neomodel ORM, Dynaconf
+MinIO, or S3 via Apache Libcloud. Python 3.10+, Poetry, neomodel ORM, Dynaconf
 config, docopt CLI.
 
 It is used both as a **CLI** to capture filesystems (e.g. in OSWatcher) and as a

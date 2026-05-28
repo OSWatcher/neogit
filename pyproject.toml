@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 neo4j = "5.19"
 py2neo-history = "2021.2.0"
 docopt = "0.6.2"
@@ -29,6 +29,7 @@ appdirs = "1.4.4"
 rich = "^15.0.0"
 attrs = "^23.2.0"
 neomodel = "5.3.2"
+typing-extensions = "^4.0.0"
 types-PyYAML = "^6.0.0"
 poethepoet = "^0.26.1"
 ipdb = "^0.13.13"
@@ -64,7 +65,7 @@ _flake8 = "flake8 --show-source --statistics ."
 _isort = "isort ."
 lint = ["_flake8", "_isort"]
 type = "mypy -p neogit"
-vermin = "vermin --no-tips --target=3.11 --violations neogit"
+vermin = "vermin --no-tips --target=3.10 --violations neogit"
 ccode = ["fmt", "lint", "type"]
 cov_report = "coverage report"
 _unit_test_task = "coverage run -m pytest -v tests/unit"
