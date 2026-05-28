@@ -47,8 +47,8 @@ flake8 = "6.0.0"
 isort = "5.11.4"
 mypy = "1.7.0"
 vermin = "1.5.1"
-pytest = "7.2.0"
-coverage = "7.0.1"
+pytest = "^8.0"
+coverage = "^7.6"
 # TODO: darglint, flake8-docstrings
 types-docopt = "^0.6.11"
 appdirs-stubs = "^0.1.0"
@@ -153,8 +153,4 @@ filterwarnings = [
     "ignore:Relying on Driver's destructor to close the session:DeprecationWarning:neo4j",
     # neomodel datetime warnings
     "ignore:datetime.datetime.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:neomodel",
-    # pytest AST warnings (not our code)
-    "ignore:ast.Str is deprecated:DeprecationWarning:_pytest",
-    "ignore:Attribute s is deprecated:DeprecationWarning:_pytest",
-    "ignore:ast.NameConstant is deprecated:DeprecationWarning:_pytest",
 ]
