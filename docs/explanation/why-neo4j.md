@@ -31,4 +31,4 @@ We considered it. A relational model could express the same data, but a few thin
 
 - The natural unit of inquiry is a **path through the graph** (branch → commit → tree → subtree → blob). Recursive CTEs do this in SQL; first-class pattern matching does it in Cypher.
 - Most "interesting" queries involve **arbitrary-depth walks**, which is exactly where graph engines shine.
-- The downstream consumers ([OSWatcher](https://github.com/OSWatcher), [grapheos-plugins](https://github.com/OSWatcher/grapheos-plugins)) attach their own analysis nodes (`PluginRun`, symbol tables, syscall traces) to neogit's commits — and they want those to be just more edges in the same graph, not a parallel schema.
+- The downstream consumers (e.g. [OSWatcher](https://github.com/OSWatcher)) attach their own analysis nodes (`PluginRun`, symbol tables, syscall traces) to neogit's commits — and they want those to be just more edges in the same graph, not a parallel schema.

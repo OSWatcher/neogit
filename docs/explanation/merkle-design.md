@@ -8,9 +8,17 @@ Neogit's Merkle tree has three kinds of node. The canonical serializations live
 in `neogit/core/merkle/filesystem.py` (Blob, Tree) and `neogit/merkle/hasher.py`
 (Commit). The contract is: same inputs, same hash, always.
 
-### Blob — `SHA-1(file_bytes)`
+### Blob — `SHA-1(content)`
 
-Leaves. The identity is just the SHA-1 of the raw file content.
+Leaves. The identity is the SHA-1 of the node's content, where "content"
+depends on the file kind (`FSMerkleVisitor.visit_FSFileNode`):
+
+- **Regular file** — the raw file bytes.
+- **Symlink** — the link target string from `os.readlink()`, *not* the bytes of
+  whatever it points at. The symlink's own target is what is captured and hashed.
+- **Anything else** (sockets, FIFOs, devices, or a file that raises `OSError`
+  when read — e.g. an unreadable FUSE/reparse entry) — hashed as empty content
+  (`b""`).
 
 ### Tree — `SHA-1(sorted child entries)`
 

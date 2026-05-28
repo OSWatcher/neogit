@@ -35,4 +35,4 @@ This documentation follows the [Divio framework](https://documentation.divio.com
 
 ## Where it's used
 
-Neogit powers the storage layer of the [OSWatcher](https://github.com/OSWatcher) ecosystem, including [grapheos-plugins](https://github.com/OSWatcher/grapheos-plugins), which builds filetype detection, symbol extraction, and syscall-trace plugins on top of neogit's `Commit` / `PluginRun` graph.
+Neogit powers the storage layer of the [OSWatcher](https://github.com/OSWatcher) ecosystem, where downstream projects build filetype detection, symbol extraction, and syscall-trace plugins on top of neogit's `Commit` / `PluginRun` graph.

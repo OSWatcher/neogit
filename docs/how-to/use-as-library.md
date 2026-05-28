@@ -1,6 +1,6 @@
 # Embed neogit as a library
 
-Neogit's CLI is a thin shell over a Python API you can call directly. This is how downstream projects like [grapheos-plugins](https://github.com/OSWatcher/grapheos-plugins) build on top of the same graph.
+Neogit's CLI is a thin shell over a Python API you can call directly. This is how downstream projects build on top of the same graph.
 
 ## Install
 
@@ -61,7 +61,7 @@ rows, _ = cypher_query_with_backoff(
 
 ## Attach your own nodes
 
-Downstream projects can attach domain nodes to neogit's `Commit` — for example, a `PluginRun` node that records when an analyzer ran against a specific commit. See `neogit.model.neo.PluginRun` for the shape, and grapheos-plugins' `plugins/types.py` for a real-world consumer.
+Downstream projects can attach domain nodes to neogit's `Commit` — for example, a `PluginRun` node that records when an analyzer ran against a specific commit. See `neogit.model.neo.PluginRun` for the shape.
 
 ## Reuse the test fixtures
 

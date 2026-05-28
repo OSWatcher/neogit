@@ -12,7 +12,7 @@ This split makes filesystem state **queryable as a graph** (Cypher over commits,
 ## Where it's used
 
 - **CLI tool** — capture and diff filesystem snapshots from the command line
-- **Python library** — embed the Merkle model and Neo4j layer in your own pipeline. For example, [OSWatcher](https://github.com/OSWatcher) uses neogit as the storage foundation, and [grapheos-plugins](https://github.com/OSWatcher/grapheos-plugins) builds analysis plugins (filetype detection, symbol extraction, syscall tracing, …) on top of the `Commit` / `PluginRun` graph
+- **Python library** — embed the Merkle model and Neo4j layer in your own pipeline. For example, [OSWatcher](https://github.com/OSWatcher) uses neogit as the storage foundation, and downstream projects build analysis plugins (filetype detection, symbol extraction, syscall tracing, …) on top of the `Commit` / `PluginRun` graph
 
 ## Quickstart
 
@@ -41,9 +41,9 @@ neogit commit <name> -r <path>                 # snapshot a directory on the def
 neogit branch <name> <commit_hash>             # create a branch pointing at a commit hash
 ```
 
-> **Note:** the `branch <branch>` sub-argument of `commit` and the `diff` subcommand
-> are present in the docopt usage but not yet wired through to the service layer —
-> see [docs/reference/cli.md](docs/reference/cli.md) for the current status.
+> **Note:** the `diff` subcommand is present in the docopt usage but not yet wired
+> through to the service layer — see [docs/reference/cli.md](docs/reference/cli.md)
+> for the current status.
 
 See [docs/reference/cli.md](docs/reference/cli.md) for the full reference.
 

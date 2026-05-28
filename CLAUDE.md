@@ -13,8 +13,8 @@ MinIO, or S3 via Apache Libcloud. Python 3.11+, Poetry, neomodel ORM, Dynaconf
 config, docopt CLI.
 
 It is used both as a **CLI** to capture filesystems (e.g. in OSWatcher) and as a
-**library** that downstream projects (e.g. grapheos-plugins) extend with their
-own graph nodes attached to a `Commit`.
+**library** that downstream projects extend with their own graph nodes attached
+to a `Commit`.
 
 ## Essential commands
 
