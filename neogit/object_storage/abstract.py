@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 """Defines the interface to the Object Storage"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

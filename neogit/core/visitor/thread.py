@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import current_thread

@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 """This module takes care of uploading objects to the object storage"""
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
