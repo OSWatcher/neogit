@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import Iterator, Optional, Set

@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 from functools import lru_cache
 from pathlib import PurePath
 from typing import Dict, Generator, Tuple, Union

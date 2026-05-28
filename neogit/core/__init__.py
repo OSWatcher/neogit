@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 """The core package regroups all central components and functions of Neogit,
 while remaining independant of any external database or framework.
 

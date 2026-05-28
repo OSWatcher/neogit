@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import Iterator, List, Optional, Union
 
 from neo4j import Result, Session, Transaction

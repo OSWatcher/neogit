@@ -1,3 +1,6 @@
+# Copyright 2021-2026 Mathieu Tarral
+# SPDX-License-Identifier: Apache-2.0
+
 """Implements a Visitor which handles Neo4j transaction upload and the Object Storage upload"""
 from queue import Queue
 from typing import Union
