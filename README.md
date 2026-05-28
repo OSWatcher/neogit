@@ -88,4 +88,4 @@ See [docs/how-to/contributing.md](docs/how-to/contributing.md) for the full dev 
 
 ## License
 
-License **TBD** — this repository is not yet licensed for redistribution. A formal license will be added in a follow-up; until then, please open an issue if you want to use or redistribute the code so we can discuss terms.
+Licensed under the [Apache License 2.0](LICENSE). You're free to use, modify, and distribute neogit, including commercially, provided you preserve the copyright and license notices (see [NOTICE](NOTICE)).
