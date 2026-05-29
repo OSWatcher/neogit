@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from neogit.diff import diff_trees
 from neogit.model import DiffStatus
 from neogit.model.neo import Commit
@@ -130,3 +132,32 @@ class TestDiffTreesRecursive:
         assert DiffStatus.DEL in statuses
         assert DiffStatus.NEW in statuses
         assert any(d.path == Path("/x/inside.txt") and d.status == DiffStatus.NEW for d in diffs)
+
+
+class TestNeogitDiff:
+    def test_unknown_ref_raises_valueerror(self, neogit_init, tmp_path):
+        root = _make_fs(tmp_path / "c", {"a.txt": "a"})
+        good = neogit_init.commit("c", root)
+        with pytest.raises(ValueError, match="deadbeef"):
+            list(neogit_init.diff("deadbeef", good))
+        with pytest.raises(ValueError, match="deadbeef"):
+            list(neogit_init.diff(good, "deadbeef"))
+
+    def test_diff_recursive_by_default(self, neogit_init, tmp_path):
+        old = _make_fs(tmp_path / "old", {"keep.txt": "k"})
+        new = _make_fs(tmp_path / "new", {"keep.txt": "k", "sub/a.txt": "a"})
+        old_h = neogit_init.commit("old", old)
+        new_h = neogit_init.commit("new", new)
+        paths = {d.path for d in neogit_init.diff(old_h, new_h)}
+        assert Path("/sub") in paths
+        assert Path("/sub/a.txt") in paths  # expanded because recursive defaults True
+
+    def test_diff_flat_file_change(self, neogit_init, tmp_path):
+        old = _make_fs(tmp_path / "old", {"a.txt": "1"})
+        new = _make_fs(tmp_path / "new", {"a.txt": "2"})
+        old_h = neogit_init.commit("old", old)
+        new_h = neogit_init.commit("new", new)
+        diffs = list(neogit_init.diff(old_h, new_h))
+        assert len(diffs) == 1
+        assert diffs[0].path == Path("/a.txt")
+        assert diffs[0].status == DiffStatus.MOD
