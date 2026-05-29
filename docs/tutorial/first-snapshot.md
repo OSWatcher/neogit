@@ -4,7 +4,7 @@ In this tutorial you'll clone neogit, spin up the supporting services, and take 
 
 ## What you'll need
 
-- Python 3.11 or newer
+- Python 3.10 or newer
 - [Poetry](https://python-poetry.org/docs/#installation)
 - Docker (for Neo4j and MinIO)
 

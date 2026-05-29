@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 neo4j = "5.19"
 py2neo-history = "2021.2.0"
 docopt = "0.6.2"
@@ -29,6 +29,7 @@ appdirs = "1.4.4"
 rich = "^15.0.0"
 attrs = "^23.2.0"
 neomodel = "5.3.2"
+typing-extensions = "^4.0.0"
 types-PyYAML = "^6.0.0"
 poethepoet = "^0.26.1"
 ipdb = "^0.13.13"
@@ -46,8 +47,8 @@ flake8 = "6.0.0"
 isort = "5.11.4"
 mypy = "1.7.0"
 vermin = "1.5.1"
-pytest = "7.2.0"
-coverage = "7.0.1"
+pytest = "^8.0"
+coverage = "^7.6"
 # TODO: darglint, flake8-docstrings
 types-docopt = "^0.6.11"
 appdirs-stubs = "^0.1.0"
@@ -64,7 +65,7 @@ _flake8 = "flake8 --show-source --statistics ."
 _isort = "isort ."
 lint = ["_flake8", "_isort"]
 type = "mypy -p neogit"
-vermin = "vermin --no-tips --target=3.11 --violations neogit"
+vermin = "vermin --no-tips --target=3.10 --violations neogit"
 ccode = ["fmt", "lint", "type"]
 cov_report = "coverage report"
 _unit_test_task = "coverage run -m pytest -v tests/unit"
@@ -152,8 +153,4 @@ filterwarnings = [
     "ignore:Relying on Driver's destructor to close the session:DeprecationWarning:neo4j",
     # neomodel datetime warnings
     "ignore:datetime.datetime.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:neomodel",
-    # pytest AST warnings (not our code)
-    "ignore:ast.Str is deprecated:DeprecationWarning:_pytest",
-    "ignore:Attribute s is deprecated:DeprecationWarning:_pytest",
-    "ignore:ast.NameConstant is deprecated:DeprecationWarning:_pytest",
 ]

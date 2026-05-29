@@ -6,12 +6,13 @@ from contextlib import AbstractContextManager, ExitStack, contextmanager
 from logging.config import dictConfig
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Self, Tuple
+from typing import Optional, Tuple
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import coloredlogs
 import yaml
 from attrs import Factory, define, field
+from typing_extensions import Self
 
 DEFAULT_CLASS_LOGGER = Factory(
     lambda self: logging.getLogger(f"{self.__module__}.{self.__class__.__name__}"),

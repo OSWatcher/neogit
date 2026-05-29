@@ -29,10 +29,11 @@ jobs:
 
   unit_test:
     strategy:
+      fail-fast: false
       matrix:
         # TODO: add windows-latest and ditch Makefile
         os: [ubuntu-latest]
-        python_version: ['3.11']
+        python_version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -48,8 +49,9 @@ jobs:
   integration_test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python: ['3.11']
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 

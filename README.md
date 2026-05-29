@@ -16,7 +16,7 @@ This split makes filesystem state **queryable as a graph** (Cypher over commits,
 
 ## Quickstart
 
-Requirements: Python 3.11+, Poetry, Docker.
+Requirements: Python 3.10+, Poetry, Docker.
 
 ```bash
 git clone https://github.com/OSWatcher/neogit.git

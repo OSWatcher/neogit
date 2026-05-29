@@ -10,10 +10,11 @@ Taken from https://github.com/nodejs/node/blob/master/tools/inspector_protocol/j
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from queue import Queue
-from typing import Callable, Generator, Optional, Self
+from typing import Callable, Generator, Optional
 
 from attrs import define, field
 from attrs.validators import instance_of
+from typing_extensions import Self
 
 from neogit.core.model import Node
 from neogit.utils import DEFAULT_CLASS_LOGGER, BetterContextManager
