@@ -45,6 +45,12 @@ WITH d WHERE d IS NOT NULL
 RETURN d
 """
 
+# One-sided traversal: every descendant (Tree and Blob) of a subtree, with its path.
+_SUBTREE_QUERY = """
+MATCH path = (t:Tree {hash: $hash})-[:HAS_CHILD_TREE|HAS_CHILD_BLOB*]->(n)
+RETURN [r IN relationships(path) | r.name] AS parts, labels(n) AS labels, n.hash AS hash
+"""
+
 
 def diff_trees(
     session: Union[Session, Transaction],
@@ -53,8 +59,6 @@ def diff_trees(
     root: Path = ROOT_PATH,
     recursive: bool = False,
 ) -> Iterator[FSDiffObject]:
-    # NOTE: `recursive` is accepted for API stability but is a no-op here;
-    # subtree expansion/recursion is wired in a follow-up change.
     # stop if both trees are identical
     if old_tree_sha1sum == new_tree_sha1sum:
         return
@@ -68,9 +72,48 @@ def diff_trees(
         if status == "NEW":
             is_dir = d["reltype"] == "HAS_CHILD_TREE"
             yield FSDiffObject(DiffStatus.NEW, is_dir, path, None, d["new_hash"])
+            if is_dir and recursive:
+                yield from _iter_subtree(session, d["new_hash"], path, DiffStatus.NEW)
         elif status == "DEL":
             is_dir = d["reltype"] == "HAS_CHILD_TREE"
             yield FSDiffObject(DiffStatus.DEL, is_dir, path, d["old_hash"], None)
+            if is_dir and recursive:
+                yield from _iter_subtree(session, d["old_hash"], path, DiffStatus.DEL)
         else:  # MOD
-            is_dir = d["new_reltype"] == "HAS_CHILD_TREE"
-            yield FSDiffObject(DiffStatus.MOD, is_dir, path, d["old_hash"], d["new_hash"])
+            old_reltype = d["old_reltype"]
+            new_reltype = d["new_reltype"]
+            if old_reltype == new_reltype:
+                is_dir = new_reltype == "HAS_CHILD_TREE"
+                yield FSDiffObject(DiffStatus.MOD, is_dir, path, d["old_hash"], d["new_hash"])
+                if is_dir and recursive:
+                    yield from diff_trees(session, d["old_hash"], d["new_hash"], path, recursive)
+            else:
+                # Type change (file <-> directory): emit a delete of the old node and a
+                # create of the new one, expanding whichever side is a directory.
+                # TODO: a dedicated DiffStatus.TYP could represent this more precisely.
+                old_is_dir = old_reltype == "HAS_CHILD_TREE"
+                yield FSDiffObject(DiffStatus.DEL, old_is_dir, path, d["old_hash"], None)
+                if old_is_dir and recursive:
+                    yield from _iter_subtree(session, d["old_hash"], path, DiffStatus.DEL)
+                new_is_dir = new_reltype == "HAS_CHILD_TREE"
+                yield FSDiffObject(DiffStatus.NEW, new_is_dir, path, None, d["new_hash"])
+                if new_is_dir and recursive:
+                    yield from _iter_subtree(session, d["new_hash"], path, DiffStatus.NEW)
+
+
+def _iter_subtree(
+    session: Union[Session, Transaction],
+    tree_sha1sum: str,
+    base_path: Path,
+    status: DiffStatus,
+) -> Iterator[FSDiffObject]:
+    """Yield every descendant of a subtree as NEW or DEL (used for added/removed dirs)."""
+    records: List[Record] = list(session.run(_SUBTREE_QUERY, parameters={"hash": tree_sha1sum}))
+    for record in records:
+        parts = [cypher_unescape(p) for p in record["parts"]]
+        node_path = base_path.joinpath(*parts)
+        is_dir = "Tree" in record["labels"]
+        if status == DiffStatus.NEW:
+            yield FSDiffObject(DiffStatus.NEW, is_dir, node_path, None, record["hash"])
+        else:
+            yield FSDiffObject(DiffStatus.DEL, is_dir, node_path, record["hash"], None)
