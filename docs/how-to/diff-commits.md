@@ -42,6 +42,26 @@ for change in git.diff(old_hash, new_hash):
 `Neogit.diff()` returns an iterator of `FSDiffObject`; pass `recursive=False` to get
 only the top-level entries.
 
+## Try it on your own git repository
+
+A neat way to see neogit in action is to replay a real git project's history and
+check that `neogit diff` reproduces `git diff`. The end-to-end test
+`tests/e2e/test_diff.py` does exactly that — point it at any repository with
+`--repo` (it needs running Neo4j + MinIO containers):
+
+```bash
+poetry run pytest tests/e2e/test_diff.py::test_real_repo \
+    -k "FakeObjectStorage and workers-1" \
+    --persistdb --repo=/path/to/your/repo --repo-commits=30
+```
+
+Each consecutive pair of (oldest-first) commits is an **independent test**, labelled
+with the commit's short hash and summary, so the report reads like a replay of the
+project's history. Every pair archives both trees, captures them with neogit, and
+asserts that every add/delete/modify git reports is reproduced by neogit. Without
+`--repo`, `test_real_repo` is skipped; the always-on `test_synthetic_repo` exercises
+the same logic on a small built-in repository.
+
 ## See also
 
 - [Explanation / Merkle design](../explanation/merkle-design.md) — why content-addressed diffs are cheap
