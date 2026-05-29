@@ -133,6 +133,43 @@ class TestDiffTreesRecursive:
         assert DiffStatus.NEW in statuses
         assert any(d.path == Path("/x/inside.txt") and d.status == DiffStatus.NEW for d in diffs)
 
+    def test_added_empty_directory_visible(self, neogit_init, tmp_path):
+        # A directory with no blobs must still surface (neogit tracks dirs; git can't).
+        old_root = _make_fs(tmp_path / "old", {"keep.txt": "k"})
+        new_root = _make_fs(tmp_path / "new", {"keep.txt": "k"}, empty_dirs=("emptydir",))
+        old_t = _commit_tree_hash(neogit_init, old_root, "old")
+        new_t = _commit_tree_hash(neogit_init, new_root, "new")
+        with neogit_init._graph_driver.session() as session:
+            diffs = list(diff_trees(session, old_t, new_t, recursive=True))
+        by_path = {d.path: d for d in diffs}
+        assert by_path[Path("/emptydir")].status == DiffStatus.NEW
+        assert by_path[Path("/emptydir")].is_dir is True
+
+    def test_mod_directory_add_and_remove_children(self, neogit_init, tmp_path):
+        # A modified directory that gains one child and loses another in one diff.
+        old_root = _make_fs(tmp_path / "old", {"sub/gone.txt": "g", "sub/keep.txt": "k"})
+        new_root = _make_fs(tmp_path / "new", {"sub/added.txt": "a", "sub/keep.txt": "k"})
+        old_t = _commit_tree_hash(neogit_init, old_root, "old")
+        new_t = _commit_tree_hash(neogit_init, new_root, "new")
+        with neogit_init._graph_driver.session() as session:
+            diffs = list(diff_trees(session, old_t, new_t, recursive=True))
+        by_path = {d.path: d.status for d in diffs}
+        assert by_path[Path("/sub")] == DiffStatus.MOD
+        assert by_path[Path("/sub/added.txt")] == DiffStatus.NEW
+        assert by_path[Path("/sub/gone.txt")] == DiffStatus.DEL
+        assert Path("/sub/keep.txt") not in by_path
+
+    def test_special_char_filename(self, neogit_init, tmp_path):
+        # cypher_unescape is applied to every path part; exercise an unusual name.
+        old_root = _make_fs(tmp_path / "old", {"keep.txt": "k"})
+        new_root = _make_fs(tmp_path / "new", {"keep.txt": "k", "weird name (1).txt": "w"})
+        old_t = _commit_tree_hash(neogit_init, old_root, "old")
+        new_t = _commit_tree_hash(neogit_init, new_root, "new")
+        with neogit_init._graph_driver.session() as session:
+            diffs = list(diff_trees(session, old_t, new_t, recursive=True))
+        by_path = {d.path: d.status for d in diffs}
+        assert by_path[Path("/weird name (1).txt")] == DiffStatus.NEW
+
 
 class TestNeogitDiff:
     def test_unknown_ref_raises_valueerror(self, neogit_init, tmp_path):
