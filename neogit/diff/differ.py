@@ -11,6 +11,40 @@ from neogit.utils import cypher_unescape
 
 ROOT_PATH = Path("/")
 
+# Single-level diff of two Trees, keyed by the relationship `name` (path-aware).
+# Anchoring both trees with MATCH {hash} makes it robust to empty trees; no APOC required.
+_SINGLE_LEVEL_QUERY = """
+MATCH (old:Tree {hash: $old})
+MATCH (new:Tree {hash: $new})
+
+OPTIONAL MATCH (new)-[r_new]->(c_new)
+WHERE NOT EXISTS((old)-[{name: r_new.name}]->())
+WITH old, new, collect(CASE WHEN c_new IS NOT NULL
+     THEN {status: 'NEW', name: r_new.name, reltype: type(r_new),
+           old_hash: null, new_hash: c_new.hash}
+     END) AS created
+
+OPTIONAL MATCH (old)-[r_del]->(c_del)
+WHERE NOT EXISTS((new)-[{name: r_del.name}]->())
+WITH old, new, created, collect(CASE WHEN c_del IS NOT NULL
+     THEN {status: 'DEL', name: r_del.name, reltype: type(r_del),
+           old_hash: c_del.hash, new_hash: null}
+     END) AS deleted
+
+OPTIONAL MATCH (old)-[r_o]->(c_o)
+OPTIONAL MATCH (new)-[r_n {name: r_o.name}]->(c_n)
+WHERE c_n IS NOT NULL AND c_o.hash <> c_n.hash
+WITH created, deleted, collect(CASE WHEN c_o IS NOT NULL AND c_n IS NOT NULL
+     THEN {status: 'MOD', name: r_o.name,
+           old_reltype: type(r_o), new_reltype: type(r_n),
+           old_hash: c_o.hash, new_hash: c_n.hash}
+     END) AS changed
+
+UNWIND created + deleted + changed AS d
+WITH d WHERE d IS NOT NULL
+RETURN d
+"""
+
 
 def diff_trees(
     session: Union[Session, Transaction],
@@ -19,55 +53,24 @@ def diff_trees(
     root: Path = ROOT_PATH,
     recursive: bool = False,
 ) -> Iterator[FSDiffObject]:
+    # NOTE: `recursive` is accepted for API stability but is a no-op here;
+    # subtree expansion/recursion is wired in a follow-up change.
     # stop if both trees are identical
     if old_tree_sha1sum == new_tree_sha1sum:
         return
-    # query their children
-    query = """
-    MATCH (new_tree:Tree {hash: $new_tree_sha1})-[r_new:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(new_child)
-    WITH apoc.map.fromLists(collect(r_new.name), collect([type(r_new), new_child.hash])) as new
-    MATCH (old_tree:Tree {hash: $old_tree_sha1})-[r_old:HAS_CHILD_TREE|HAS_CHILD_BLOB]->(old_child)
-    RETURN new, apoc.map.fromLists(collect(r_old.name), collect([type(r_old), old_child.hash])) as old
-    """
-    cursor: Result = session.run(
-        query, parameters={"new_tree_sha1": new_tree_sha1sum, "old_tree_sha1": old_tree_sha1sum}
-    )
+    cursor: Result = session.run(_SINGLE_LEVEL_QUERY, parameters={"old": old_tree_sha1sum, "new": new_tree_sha1sum})
+    # materialize before issuing further queries on the same session
     records: List[Record] = list(cursor)
-    if not records:
-        return
-    record: Record = records[0]
-    new_children = record["new"]
-    old_children = record["old"]
-
-    # created children
-    for c in new_children.keys() - old_children.keys():
-        reltype, sha1sum = new_children[c]
-        is_dir = True if reltype == "HAS_CHILD_TREE" else False
-        new_path = root / cypher_unescape(c)
-        diff_object = FSDiffObject(DiffStatus.NEW, is_dir, new_path, None, sha1sum)
-        yield diff_object
-    # deleted
-    for c in old_children.keys() - new_children.keys():
-        reltype, sha1sum = old_children[c]
-        sha1sum = old_children[c][1]
-        is_dir = True if reltype == "HAS_CHILD_TREE" else False
-        new_path = root / cypher_unescape(c)
-        diff_object = FSDiffObject(DiffStatus.DEL, is_dir, new_path, sha1sum, None)
-        yield diff_object
-    # modified ?
-    for c in new_children.keys() & old_children.keys():
-        new_path = root / cypher_unescape(c)
-        old_reltype, old_sha1sum = old_children[c]
-        new_reltype, new_sha1sum = new_children[c]
-        if new_reltype != old_reltype:
-            # type change
-            raise NotImplementedError("Type change diff is not implemented")
-            # diff_object = FSDiffObject(DiffStatus.TYP, new_path)
-            # yield diff_object
-        else:
-            is_dir = True if new_reltype == "HAS_CHILD_TREE" else False
-            if old_sha1sum != new_sha1sum:
-                diff_object = FSDiffObject(DiffStatus.MOD, is_dir, new_path, old_sha1sum, new_sha1sum)
-                yield diff_object
-                if new_reltype == "HAS_CHILD_TREE" and recursive:
-                    yield from diff_trees(session, old_sha1sum, new_sha1sum, new_path, recursive)
+    for record in records:
+        d = record["d"]
+        path = root / cypher_unescape(d["name"])
+        status = d["status"]
+        if status == "NEW":
+            is_dir = d["reltype"] == "HAS_CHILD_TREE"
+            yield FSDiffObject(DiffStatus.NEW, is_dir, path, None, d["new_hash"])
+        elif status == "DEL":
+            is_dir = d["reltype"] == "HAS_CHILD_TREE"
+            yield FSDiffObject(DiffStatus.DEL, is_dir, path, d["old_hash"], None)
+        else:  # MOD
+            is_dir = d["new_reltype"] == "HAS_CHILD_TREE"
+            yield FSDiffObject(DiffStatus.MOD, is_dir, path, d["old_hash"], d["new_hash"])
