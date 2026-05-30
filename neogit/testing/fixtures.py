@@ -408,7 +408,7 @@ def fakefs_one_empty_file(fs):
 @fixture(
     scope="function",
     params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
-    ids=lambda val: f"workers-{val:02d}",
+    ids=lambda val: f"workers-{val:02d}",  # noqa: E231  # py3.12 f-string false positive
 )
 def max_workers(request):
     nb_workers = request.param
@@ -418,7 +418,7 @@ def max_workers(request):
 @fixture(
     scope="class",
     params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
-    ids=lambda val: f"workers-{val:02d}",
+    ids=lambda val: f"workers-{val:02d}",  # noqa: E231  # py3.12 f-string false positive
 )
 def max_workers_per_class(request):
     nb_workers = request.param
