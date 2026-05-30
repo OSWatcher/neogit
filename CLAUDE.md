@@ -21,15 +21,19 @@ to a `Commit`.
 Everything runs through `poe` (poethepoet):
 
 ```bash
+# The neogit CLI — the primary interface
+neogit init                          # create Neo4j constraints + storage bucket
+neogit commit <name> -r <path>       # snapshot a directory tree into a commit
+neogit commit <name> branch <branch> -r <path>
+neogit branch <name> <commit-hash>   # branch from a commit SHA-1 (not its name)
+neogit diff <ref1> <ref2>            # git name-status diff between two commit hashes
+
 # Setup
 poetry install                  # core deps
 poetry install --with docs      # + docs toolchain (optional group)
 poetry run poe create_dbs       # create Neo4j + MinIO test containers
 poetry run poe start_dbs        # start existing containers
 poetry run poe destroy_dbs      # remove containers
-
-# Quality — run before every commit
-poetry run poe ccode            # fmt + lint + type (black, flake8/isort, mypy)
 
 # Tests
 poetry run poe unit_test        # fast, FakeObjectStorage, no Docker
@@ -39,15 +43,10 @@ poetry run pytest -v tests/unit/test_x.py::test_y   # a single test
 pytest --persistdb              # keep containers between runs
 pytest --externdb               # use external DBs (CI)
 
-# Docs (MkDocs Material)
-poetry run poe docs_serve       # live preview
+# Secondary tooling — quality gate (run ccode before every commit) and docs
+poetry run poe ccode            # fmt + lint + type (black, flake8/isort, mypy)
+poetry run poe docs_serve       # live preview (MkDocs Material)
 poetry run poe docs_build       # strict build (must pass)
-
-# Run the CLI
-neogit init                     # create Neo4j constraints + storage bucket
-neogit commit <name> -r <path>
-neogit commit <name> branch <branch> -r <path>
-neogit branch <name> <commit-hash>   # resolves by SHA-1 hash, not name
 ```
 
 ## Conventions — follow these
@@ -110,7 +109,8 @@ config needed). Full table: `docs/reference/configuration.md`.
   error, reset with `poetry run poe destroy_dbs && poetry run poe create_dbs`.
   Persistent container names: `neogit_neo4j_testdb`, `neogit_minio_testdb`.
   Neo4j browser: http://localhost:7474 · MinIO console: http://localhost:9001.
-- `neogit diff <ref1> <ref2>` is declared in the CLI usage but `Neogit.diff()`
-  is not implemented yet — the command currently raises. Don't assume it works.
+- `neogit diff <ref1> <ref2>` (implemented in `neogit/diff/` + `Neogit.diff()`)
+  shows **file-level** changes only — directory entries are suppressed — in git
+  `--name-status` style. Both refs are commit SHA-1 hashes, not names.
 - A `Commit`'s identity hash is `name + date + tree_sha1` (see `merkle/hasher.py`);
   `name` is **not** unique, only `hash`/`sha1sum` are.
