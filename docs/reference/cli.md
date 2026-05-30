@@ -40,12 +40,16 @@ Create a new branch named `<name>` pointing at `<commit>`, where `<commit>` is t
 
 ### `neogit diff <ref1> <ref2>`
 
-!!! warning "Planned — not yet implemented"
+Resolves each ref (a commit SHA-1 hash) to its tree and walks both Merkle trees.
 
-    The `diff` subcommand is declared in the docopt usage block but `Neogit.diff()`
-    does not exist yet; invoking it raises `AttributeError`. See
-    [How-to / Diff two commits](../how-to/diff-commits.md) for a Cypher workaround
-    and the intended design.
+Output is git `--name-status` style — one line per changed **file**: a status
+letter, two spaces, then the path. `A` = added, `M` = modified, `D` = deleted,
+`T` = type change. The letter is colored when stdout is a terminal
+(green / yellow / red / cyan); when the output is piped or redirected, color is
+stripped and you get plain, greppable lines like `M  /fs/jffs2/acl.c`.
+Directory entries are not shown — only the files inside them.
+
+See [How-to / Diff two commits](../how-to/diff-commits.md) for examples.
 
 ## Exit behavior
 
