@@ -15,8 +15,9 @@ from neomodel import db
 from neogit.config import ObjectConfig, settings
 from neogit.console import DEFAULT_ADAPTER, RichConsoleAdapter
 from neogit.core.model import FSDirectoryNode
+from neogit.diff import diff_trees
 from neogit.merkle import NeoMerkleTreeBuilder
-from neogit.model import FSSearchResult, FSSearchType
+from neogit.model import FSDiffObject, FSSearchResult, FSSearchType
 from neogit.model.neo import Branch as NeoBranch
 from neogit.model.neo import Commit as NeoCommit
 from neogit.object_storage import ContainerAlreadyExists, LibcloudObjectStorage, TSObjectStorage
@@ -194,6 +195,29 @@ class Neogit:
                 branch.tracks.replace(commit)
             else:
                 raise ValueError(f"Branch {branch_name} already exists")
+
+    def diff(self, ref1: str, ref2: str, recursive: bool = True) -> Iterator[FSDiffObject]:
+        """Diff two commits given by their SHA-1 hash.
+
+        ref1 is the old/base commit, ref2 the new commit. Yields one
+        FSDiffObject per changed path. Raises ValueError if a ref does not
+        resolve to a commit that owns a filesystem. Because this is a
+        generator, that ValueError is raised on first iteration, not on call.
+        """
+        with self._graph_driver.session() as session:
+            old_tree = self._resolve_tree_hash(ref1)
+            new_tree = self._resolve_tree_hash(ref2)
+            yield from diff_trees(session, old_tree, new_tree, recursive=recursive)
+
+    def _resolve_tree_hash(self, ref: str) -> str:
+        try:
+            commit = NeoCommit.nodes.get(hash=ref)
+        except NeoCommit.DoesNotExist:
+            raise ValueError(f"No commit with hash {ref!r}") from None
+        tree = commit.filesystem.single()
+        if tree is None:
+            raise ValueError(f"Commit {ref!r} owns no filesystem tree")
+        return tree.hash
 
     def get_object_size(self, obj_sha1: str) -> int:
         container_name = settings.object.container_name

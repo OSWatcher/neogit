@@ -23,8 +23,10 @@ from importlib.metadata import version
 from pathlib import Path
 
 from docopt import docopt
+from rich.console import Console
 
 from neogit.config import ObjectConfig, settings
+from neogit.diff.render import render_diff_line
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 from neogit.utils import setup_logging
@@ -75,6 +77,11 @@ def handle_cmdline():
     if args["diff"]:
         ref1 = args["<ref1>"]
         ref2 = args["<ref2>"]
+        console = Console()
         for diff_obj in git.diff(ref1, ref2):
-            print(diff_obj)
+            # Show file-level changes only; directory entries are noise — their
+            # changed files are emitted separately by the recursive diff.
+            if diff_obj.is_dir:
+                continue
+            console.print(render_diff_line(diff_obj))
         return

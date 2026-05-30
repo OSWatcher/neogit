@@ -8,6 +8,11 @@ copyright: >
   Copyright &copy; 2021&ndash;2026 Mathieu Tarral &mdash;
   licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
 
+# superpowers/ holds working brainstorming specs and implementation plans,
+# not published site content — keep them out of the (strict) build.
+exclude_docs: |
+  superpowers/
+
 theme:
   name: material
   features:

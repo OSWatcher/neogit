@@ -56,6 +56,14 @@ def pytest_configure(config):
 def pytest_addoption(parser):
     parser.addoption("--repo", action="store", default=None, help="root directory to be indexed")
     parser.addoption(
+        "--repo-commits",
+        action="store",
+        type=int,
+        default=20,
+        help="when --repo points at a git repository, the maximum number of (oldest-first) commits to "
+        "cross-check neogit diff against git diff (see tests/e2e/test_diff.py)",
+    )
+    parser.addoption(
         "--persistdb",
         action="store_true",
         default=False,
@@ -80,6 +88,11 @@ def pytest_addoption(parser):
 @fixture
 def arg_repo_root(pytestconfig):
     return pytestconfig.getoption("repo")
+
+
+@fixture
+def arg_repo_commits(pytestconfig):
+    return pytestconfig.getoption("repo_commits")
 
 
 # helpers
@@ -395,7 +408,7 @@ def fakefs_one_empty_file(fs):
 @fixture(
     scope="function",
     params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
-    ids=lambda val: f"workers-{val}",
+    ids=lambda val: f"workers-{val:02d}",  # noqa: E231  # py3.12 f-string false positive
 )
 def max_workers(request):
     nb_workers = request.param
@@ -405,7 +418,7 @@ def max_workers(request):
 @fixture(
     scope="class",
     params=[1, os.cpu_count() or 1, (os.cpu_count() or 1) * 2],
-    ids=lambda val: f"workers-{val}",
+    ids=lambda val: f"workers-{val:02d}",  # noqa: E231  # py3.12 f-string false positive
 )
 def max_workers_per_class(request):
     nb_workers = request.param

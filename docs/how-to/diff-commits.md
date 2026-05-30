@@ -1,42 +1,66 @@
 # Diff two commits
 
-!!! warning "Planned feature — not yet implemented"
-
-    A `neogit diff <ref1> <ref2>` subcommand is declared in the CLI's docopt usage
-    block, but the service layer has no matching `Neogit.diff()` method yet.
-    Invoking `neogit diff` today raises `AttributeError`. This page documents the
-    intended shape so the design is on record; the implementation will follow
-    in a separate PR.
-
-## Intended CLI shape
+Compare the filesystem snapshots of two commits:
 
 ```bash
-neogit diff <ref1> <ref2>
+neogit diff <commit-hash-1> <commit-hash-2>
 ```
 
-`ref1` and `ref2` will be resolvable from either:
+Both refs are **commit SHA-1 hashes** (the value printed by `neogit commit` and
+used by `neogit branch`). The first is the *old* commit, the second the *new* one.
 
-- a **commit hash** (full SHA-1), or
-- a **commit name** (the `<name>` passed to `neogit commit`)
+Each line of output is an `FSDiffObject`:
 
-Planned output: paths grouped by added / removed / modified, relative to the commit root.
+| field | meaning |
+|-------|---------|
+| `status` | `NEW`, `DEL`, or `MOD` |
+| `is_dir` | whether the entry is a directory (`Tree`) or a file (`Blob`) |
+| `path` | absolute path within the snapshot |
+| `old_sha1sum` / `new_sha1sum` | content hashes on each side (`None` where absent) |
 
-## Workaround today: query the graph
+The diff is **recursive by default**: an added or removed directory is expanded to
+all of its descendants, and modified directories are descended into. Because neogit
+stores directories as nodes, empty directories also appear (unlike `git`, which
+cannot track them). A path that switches between file and directory is reported as a
+`DEL` of the old node plus a `NEW` of the new one.
 
-Until `diff` lands, you can compare two commits in Cypher. Each commit owns a
-`Tree`, and the Merkle property guarantees that subtrees with identical content
-share a node — so the diff is "find paths that disagree":
+Internally this walks the two `Tree` graphs keyed by the `HAS_CHILD_TREE` /
+`HAS_CHILD_BLOB` relationship `name`, so it is genuinely path-aware — moved or
+duplicated blobs are not confused. Refs that do not resolve to a commit raise a
+`ValueError`.
 
-```cypher
-// Children present in commit A but not B (added in A, or removed from B)
-MATCH (a:Commit {name: $a})-[:OWNS_FILESYSTEM]->(rootA:Tree),
-      (b:Commit {name: $b})-[:OWNS_FILESYSTEM]->(rootB:Tree)
-MATCH (rootA)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(n)
-WHERE NOT (rootB)-[:HAS_CHILD_BLOB|HAS_CHILD_TREE*]->(n)
-RETURN n
+## Using it as a library
+
+```python
+from neogit.service import Neogit
+
+git = Neogit()
+for change in git.diff(old_hash, new_hash):
+    print(change.status.name, change.path)
 ```
 
-This is what the `diff` implementation will lean on internally.
+`Neogit.diff()` returns an iterator of `FSDiffObject`; pass `recursive=False` to get
+only the top-level entries.
+
+## Try it on your own git repository
+
+A neat way to see neogit in action is to replay a real git project's history and
+check that `neogit diff` reproduces `git diff`. The end-to-end test
+`tests/e2e/test_diff.py` does exactly that — point it at any repository with
+`--repo` (it needs running Neo4j + MinIO containers):
+
+```bash
+poetry run pytest tests/e2e/test_diff.py::test_real_repo \
+    -k "FakeObjectStorage and workers-1" \
+    --persistdb --repo=/path/to/your/repo --repo-commits=30
+```
+
+Each consecutive pair of (oldest-first) commits is an **independent test**, labelled
+with the commit's short hash and summary, so the report reads like a replay of the
+project's history. Every pair archives both trees, captures them with neogit, and
+asserts that every add/delete/modify git reports is reproduced by neogit. Without
+`--repo`, `test_real_repo` is skipped; the always-on `test_synthetic_repo` exercises
+the same logic on a small built-in repository.
 
 ## See also
 
