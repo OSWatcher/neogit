@@ -1,10 +1,12 @@
 """Unit tests for the CLI argument routing in neogit.entrypoint.cmdline."""
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from neogit.entrypoint import cmdline
+from neogit.model import DiffStatus, FSDiffObject
 
 
 @pytest.fixture
@@ -34,3 +36,21 @@ def test_commit_without_branch_passes_none_branch_name(patched_cmdline, monkeypa
 
     _, kwargs = patched_cmdline.commit.call_args
     assert kwargs.get("branch_name") is None
+
+
+def test_diff_prints_file_lines_and_skips_dirs(patched_cmdline, monkeypatch, capsys):
+    patched_cmdline.diff.return_value = [
+        FSDiffObject(DiffStatus.MOD, True, Path("/fs/nls"), "o", "n"),
+        FSDiffObject(DiffStatus.MOD, False, Path("/fs/nls/Kconfig"), "o", "n"),
+        FSDiffObject(DiffStatus.NEW, False, Path("/fs/new.c"), None, "n"),
+    ]
+    monkeypatch.setattr(sys, "argv", ["neogit", "diff", "aaa", "bbb"])
+
+    cmdline.handle_cmdline()
+
+    patched_cmdline.diff.assert_called_once_with("aaa", "bbb")
+    out = capsys.readouterr().out
+    # Directory entry suppressed; only the two files appear, status-first.
+    assert "/fs/nls\n" not in out
+    assert "M  /fs/nls/Kconfig" in out
+    assert "A  /fs/new.c" in out
