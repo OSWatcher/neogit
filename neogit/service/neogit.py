@@ -196,6 +196,20 @@ class Neogit:
             else:
                 raise ValueError(f"Branch {branch_name} already exists")
 
+    def log(self, branch_name: Optional[str] = None) -> List[NeoCommit]:
+        """Return a branch's commits, newest-first.
+
+        Resolves ``branch_name`` (defaults to ``settings.branch``) and walks its
+        HAS_PREVIOUS chain via ``Branch.iter_commits``. Raises ValueError if the
+        branch does not exist in the database.
+        """
+        branch_name = branch_name or settings.branch
+        try:
+            branch = NeoBranch.nodes.get(name=branch_name)
+        except NeoBranch.DoesNotExist:
+            raise ValueError(f"No branch {branch_name!r} in the database") from None
+        return list(branch.iter_commits())
+
     def diff(self, ref1: str, ref2: str, recursive: bool = True) -> Iterator[FSDiffObject]:
         """Diff two commits given by their SHA-1 hash.
 
