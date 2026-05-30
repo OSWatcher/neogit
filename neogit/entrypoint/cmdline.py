@@ -8,6 +8,7 @@ Usage:
   neogit [options] commit <name> [branch <branch>] [--unique] [--before=<commit>]
   neogit [options] branch <name> <commit>
   neogit [options] diff <ref1> <ref2>
+  neogit [options] log [<branch>]
 
 Options:
   -h --help             Show this screen.
@@ -27,6 +28,7 @@ from rich.console import Console
 
 from neogit.config import ObjectConfig, settings
 from neogit.diff.render import render_diff_line
+from neogit.log.render import render_log_tree
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
 from neogit.utils import setup_logging
@@ -84,4 +86,11 @@ def handle_cmdline():
             if diff_obj.is_dir:
                 continue
             console.print(render_diff_line(diff_obj))
+        return
+    if args["log"]:
+        branch_name = args["<branch>"]
+        console = Console()
+        # Pass the raw branch_name to the service (it applies its own default for
+        # library callers); resolve to settings.branch only for the display label.
+        console.print(render_log_tree(branch_name or settings.branch, git.log(branch_name)))
         return

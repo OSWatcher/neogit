@@ -54,3 +54,19 @@ def test_diff_prints_file_lines_and_skips_dirs(patched_cmdline, monkeypatch, cap
     assert "/fs/nls\n" not in out
     assert "M  /fs/nls/Kconfig" in out
     assert "A  /fs/new.c" in out
+
+
+def test_log_without_branch_passes_none(patched_cmdline, monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["neogit", "log"])
+
+    cmdline.handle_cmdline()
+
+    patched_cmdline.log.assert_called_once_with(None)
+
+
+def test_log_with_branch_forwards_branch_name(patched_cmdline, monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["neogit", "log", "win11"])
+
+    cmdline.handle_cmdline()
+
+    patched_cmdline.log.assert_called_once_with("win11")
