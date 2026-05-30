@@ -18,6 +18,10 @@ loggers:
     level: WARNING
   urllib3.connectionpool:
     level: WARNING
+  charset_normalizer:
+    level: WARNING
   # silence pipeline since it's noisy
   neogit.merkle.pipeline.MerklePipeline:
+    level: WARNING
+  neogit.merkle.uploader.ObjectUploader:
     level: WARNING
