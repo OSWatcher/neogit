@@ -8,10 +8,14 @@ Add neogit to your `pyproject.toml`:
 
 ```toml
 [tool.poetry.dependencies]
-neogit = { git = "https://github.com/OSWatcher/neogit.git", tag = "v0.13.1" }
+neogit = "^0.14.0"
 ```
 
-(Once neogit is published to PyPI, this will become a plain version pin.)
+If you want to try it before editing `pyproject.toml`, install it directly:
+
+```bash
+pip install neogit
+```
 
 ## Take a snapshot from Python
 
