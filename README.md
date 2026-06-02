@@ -1,5 +1,11 @@
 # neogit
 
+[![PyPI](https://img.shields.io/pypi/v/neogit.svg)](https://pypi.org/project/neogit/)
+[![Python versions](https://img.shields.io/pypi/pyversions/neogit.svg)](https://pypi.org/project/neogit/)
+[![CI](https://github.com/OSWatcher/neogit/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/OSWatcher/neogit/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://oswatcher.github.io/neogit/)
+[![License](https://img.shields.io/github/license/OSWatcher/neogit.svg)](LICENSE)
+
 > A Git-like tool for filesystems, backed by a Neo4j graph and pluggable object storage.
 
 Neogit takes content-addressed Merkle-tree snapshots of a directory tree and stores them in two places:
@@ -9,6 +15,8 @@ Neogit takes content-addressed Merkle-tree snapshots of a directory tree and sto
 
 This split makes filesystem state **queryable as a graph** (Cypher over commits, diff trees, walk history) while keeping file contents in cheap blob storage.
 
+![Neo4j Browser showing a neogit Merkle tree with Branch, Commit, Tree, and Blob nodes](docs/assets/neo4j-merkle-tree.png)
+
 ## Where it's used
 
 - **CLI tool** — capture and diff filesystem snapshots from the command line
@@ -16,15 +24,27 @@ This split makes filesystem state **queryable as a graph** (Cypher over commits,
 
 ## Quickstart
 
-Requirements: Python 3.10+, Poetry, Docker.
+Requirements: Python 3.10+, Docker, and Git. Neogit uses local object storage by
+default, so the minimal setup only needs Neo4j.
 
 ```bash
-git clone https://github.com/OSWatcher/neogit.git
-cd neogit
-poetry install
-poetry run poe create_dbs        # spins up Neo4j + MinIO test containers
-poetry run neogit init           # creates Neo4j constraints
-poetry run neogit commit hello -r .
+pipx install neogit
+# or: python -m pip install neogit
+
+# Start a local Neo4j database for the demo. Auth disabled is for local testing only.
+docker run --rm --name neogit-neo4j \
+  -p 7474:7474 -p 7687:7687 \
+  -e NEO4J_AUTH=none \
+  neo4j:5.26
+```
+
+In another terminal, snapshot a real project checkout:
+
+```bash
+git clone --depth 1 https://github.com/psf/requests.git neogit-demo-root
+
+neogit init
+neogit commit first-snapshot -r ./neogit-demo-root
 ```
 
 Open the Neo4j browser at <http://localhost:7474> and run:
@@ -38,12 +58,9 @@ MATCH (c:Commit)-[r]->(t:Tree) RETURN c, r, t LIMIT 25
 ```bash
 neogit init                                    # initialize database constraints
 neogit commit <name> -r <path>                 # snapshot a directory on the default branch
+neogit diff <old_hash> <new_hash>              # compare two filesystem snapshots
 neogit branch <name> <commit_hash>             # create a branch pointing at a commit hash
 ```
-
-> **Note:** the `diff` subcommand is present in the docopt usage but not yet wired
-> through to the service layer — see [docs/reference/cli.md](docs/reference/cli.md)
-> for the current status.
 
 See [docs/reference/cli.md](docs/reference/cli.md) for the full reference.
 
@@ -58,7 +75,7 @@ git.init()
 commit_hash = git.commit("snapshot-1", Path("/path/to/capture"))
 ```
 
-The graph model (`Commit`, `Branch`, `Tree`, `Blob`, `PluginRun`) is exposed under `neogit.model` for downstream tools that want to attach their own nodes — see [docs/explanation/data-model.md](docs/explanation/data-model.md).
+The graph model (`Commit`, `Branch`, `Tree`, `Blob`, `PluginRun`) is exposed under `neogit.model` for downstream tools that want to attach their own nodes — see [docs/reference/data-model.md](docs/reference/data-model.md).
 
 ## Documentation
 

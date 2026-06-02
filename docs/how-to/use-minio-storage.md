@@ -16,8 +16,8 @@ export NEOGIT_OBJECT__SECURE=false
 Then run `neogit init` against the new backend (this creates the bucket if needed) and you're set:
 
 ```bash
-poetry run neogit init
-poetry run neogit commit hello -r .
+neogit init
+neogit commit hello -r .
 ```
 
 ## Switch to AWS S3
