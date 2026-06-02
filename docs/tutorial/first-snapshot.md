@@ -8,7 +8,7 @@ In this tutorial you'll install neogit from PyPI, start a local Neo4j database, 
 - [pipx](https://pipx.pypa.io/stable/)
 - Docker (for Neo4j)
 
-## 1. Get the code
+## 1. Install neogit
 
 ```bash
 pipx install neogit
@@ -68,7 +68,7 @@ By default neogit stores file contents in local object storage, so you do not ne
 Touch a file, then snapshot again:
 
 ```bash
-echo "hello" >> README.md
+echo "hello" >> ./neogit-demo-root/README.md
 neogit commit my-second-snapshot -r ./neogit-demo-root
 ```
 
