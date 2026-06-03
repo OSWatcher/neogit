@@ -11,11 +11,12 @@ when piped. Only non-secret connection details are included.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from dynaconf import LazySettings
 from rich.console import Group, RenderableType
 from rich.markup import escape
+from rich.panel import Panel
 from rich.text import Text
 
 
@@ -42,14 +43,29 @@ def build_init_summary(settings: LazySettings) -> InitSummary:
 
 
 def render_init_summary(summary: InitSummary) -> RenderableType:
-    """Return a Rich renderable summarizing the initialized backends."""
-    store = f"[bold]Object store[/] {escape(summary.provider)}"
-    if summary.location:
-        store += f"  ([dim]{escape(summary.location)}[/])"
-    return Group(
-        Text.from_markup(f"[bold]Neo4j[/]        {escape(summary.neo4j_url)}"),
-        Text.from_markup(store),
-        Text(""),
-        Text.from_markup("[green]✓[/] Graph constraints ready"),
-        Text.from_markup(f"[green]✓[/] Object container ready: {escape(summary.container_name)}"),
+    """Return one Rich panel per backend (Neo4j, object storage).
+
+    Each panel groups a backend's connection detail with its readiness line, so
+    the output reads as two self-contained blocks. Panels size to their content
+    and the title carries the provider/name.
+    """
+    neo4j_panel = Panel(
+        Group(
+            Text(summary.neo4j_url),
+            Text.from_markup("[green]✓[/] Graph constraints ready"),
+        ),
+        title="Neo4j",
+        title_align="left",
+        expand=False,
     )
+    store_body: List[Text] = []
+    if summary.location:
+        store_body.append(Text(summary.location))
+    store_body.append(Text.from_markup(f"[green]✓[/] Container ready: {escape(summary.container_name)}"))
+    store_panel = Panel(
+        Group(*store_body),
+        title=f"Object storage ([bold]{escape(summary.provider)}[/])",
+        title_align="left",
+        expand=False,
+    )
+    return Group(neo4j_panel, store_panel)

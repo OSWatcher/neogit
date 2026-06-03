@@ -41,11 +41,13 @@ def test_build_minio_uses_host_as_location():
 
 def test_render_local_contains_url_provider_path_and_ready_lines():
     out = _render_plain(build_init_summary(_fake_settings("local", key="/data/neogit")))
+    assert "Neo4j" in out
     assert "bolt://localhost:7687" in out
+    assert "Object storage" in out
     assert "local" in out
     assert "/data/neogit" in out
     assert "Graph constraints ready" in out
-    assert "Object container ready: neogit" in out
+    assert "Container ready: neogit" in out
 
 
 def test_render_minio_contains_host():
@@ -54,10 +56,12 @@ def test_render_minio_contains_host():
     assert "127.0.0.1" in out
 
 
-def test_render_omits_parenthetical_when_location_is_none():
+def test_render_omits_location_line_when_location_is_none():
     out = _render_plain(build_init_summary(_fake_settings("s3", host=None)))
     assert "s3" in out
-    assert "(" not in out.split("Object store")[1].split("\n")[0]
+    assert "Container ready: neogit" in out
+    # No location line means we never print a stray "None".
+    assert "None" not in out
 
 
 def test_build_local_coerces_path_key_to_str():
