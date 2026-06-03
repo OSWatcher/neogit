@@ -92,7 +92,6 @@ class Neogit:
                     session.run(
                         f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{unique_prop} IS UNIQUE"  # noqa: E231,E501
                     )
-        self._log.info("Graph: created unique constraints")
         # init object storage container
         container_name = settings.object.container_name
         try:
@@ -100,7 +99,6 @@ class Neogit:
             self._object_driver.create_container(container_name)
         except ContainerAlreadyExists:
             pass
-        self._log.info("Object: created container: '%s'", container_name)
         return build_init_summary(settings)
 
     @measure_time
