@@ -15,11 +15,11 @@ Neogit takes content-addressed Merkle-tree snapshots of a directory tree and sto
 
 This split makes filesystem state **queryable as a graph** (Cypher over commits, diff trees, walk history) while keeping file contents in cheap blob storage.
 
-See it in action — snapshotting two real Debian container filesystems (bullseye → bookworm), hashing and uploading ~5,700 files with live progress, then a full file-level diff of the upgrade:
+## Demo
+
+Snapshotting two real Debian container filesystems (bullseye → bookworm) — hashing and uploading ~5,700 files with live progress, then a full file-level diff of the upgrade:
 
 ![neogit commit --gui snapshotting two Debian container filesystems and diffing the upgrade](docs/assets/neogit-commit-demo.gif)
-
-> Reproduce it yourself: [Snapshot a container filesystem](docs/how-to/snapshot-a-container-filesystem.md).
 
 …and the resulting Merkle graph in the Neo4j Browser:
 
