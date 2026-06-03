@@ -19,6 +19,8 @@ See it in action — snapshotting two real Debian container filesystems (bullsey
 
 ![neogit commit --gui snapshotting two Debian container filesystems and diffing the upgrade](docs/assets/neogit-commit-demo.gif)
 
+> Reproduce it yourself: [Snapshot a container filesystem](docs/how-to/snapshot-a-container-filesystem.md).
+
 …and the resulting Merkle graph in the Neo4j Browser:
 
 ![Neo4j Browser showing a neogit Merkle tree with Branch, Commit, Tree, and Blob nodes](docs/assets/neo4j-merkle-tree.png)
