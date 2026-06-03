@@ -52,11 +52,11 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
 
         # a spinner-style progress whose single task names the folder currently
         # being hashed (updated per-folder, not per-file, so it doesn't flicker).
-        # The "Hashing" label is the enclosing panel title (see _render_folder),
-        # so the line itself is just the spinner + folder path.
+        # This is the *only* place the folder is shown — the tree below renders
+        # just the files (hidden root) — so the name isn't duplicated.
         self._hash_progress = Progress(
             SpinnerColumn(),
-            TextColumn("{task.description}"),
+            TextColumn("📁 {task.description}"),
         )
         self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
 
@@ -117,8 +117,7 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
 
     def _render_folder(self) -> None:
         """Rebuild the folder pane from current state (call under ``_lock``)."""
-        label = self._folder.folder if self._folder.folder is not None else "…"
-        tree = render_folder_tree(label, self._folder.hidden, self._folder.recent)
+        tree = render_folder_tree(self._folder.hidden, self._folder.recent)
         body = Group(self._hash_progress, tree)
         self._layout["folder"].update(Panel(body, title="Hashing", padding=(0, 1)))
 

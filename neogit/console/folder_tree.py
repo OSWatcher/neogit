@@ -33,9 +33,9 @@ class FolderState:
 
 
 # Folder-pane chrome that doesn't hold filenames: the panel's top and bottom
-# borders (2), the spinner line (1), the "📁 folder" tree root (1), and one row
-# reserved for the "… (N more)" node.
-_PANE_OVERHEAD = 5
+# borders (2), the spinner line that names the folder (1), and one row reserved
+# for the "… (N more)" node. The tree's own root is hidden, so it costs nothing.
+_PANE_OVERHEAD = 4
 
 
 def visible_file_rows(screen_height: int, stats_rows: int) -> int:
@@ -66,15 +66,16 @@ def fold_file(state: FolderState, folder: str, filename: str, max_visible: int) 
     return FolderState(folder=folder, hidden=hidden, recent=recent)
 
 
-def render_folder_tree(folder_label: str, hidden: int, recent: Sequence[str]) -> Tree:
-    """Render the folder and its merkelized files as a Rich ``Tree``.
+def render_folder_tree(hidden: int, recent: Sequence[str]) -> Tree:
+    """Render the merkelized files of the current folder as a Rich ``Tree``.
 
-    Each file is shown with a ✓ marker; when ``hidden`` is positive a leading
-    ``… (N more)`` node stands in for the evicted older files. ``folder_label``
-    and filenames are markup-escaped so ``[`` characters in paths are not parsed
-    as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff/render.py``).
+    The folder itself is named once on the adapter's spinner line, so the tree's
+    root is hidden and it shows only the files. Each file gets a ✓ marker; when
+    ``hidden`` is positive a leading ``… (N more)`` node stands in for the
+    evicted older files. Filenames are markup-escaped so ``[`` characters are not
+    parsed as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff/render.py``).
     """
-    tree = Tree(f"📁 {escape(folder_label)}")
+    tree = Tree("", hide_root=True)
     if hidden > 0:
         tree.add(f"… ({hidden} more)")
     for name in recent:

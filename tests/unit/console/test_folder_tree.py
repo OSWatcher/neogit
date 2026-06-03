@@ -6,34 +6,35 @@ from rich.markup import escape
 from neogit.console.folder_tree import FolderState, fold_file, render_folder_tree, visible_file_rows
 
 # --- render_folder_tree -----------------------------------------------------
-
-
-def test_label_shows_folder_path():
-    tree = render_folder_tree("/neogit/console", hidden=0, recent=[])
-    assert tree.label == "📁 /neogit/console"
+# The folder name is shown once on the adapter's spinner line; the tree renders
+# only the files (its root is hidden), so render takes no folder label.
 
 
 def test_each_file_is_a_checked_child():
-    tree = render_folder_tree("/neogit/console", hidden=0, recent=["abstract.py", "empty.py"])
+    tree = render_folder_tree(hidden=0, recent=["abstract.py", "empty.py"])
     assert [child.label for child in tree.children] == ["✓ abstract.py", "✓ empty.py"]
 
 
+def test_root_is_hidden_so_the_folder_is_not_duplicated():
+    tree = render_folder_tree(hidden=0, recent=["a.py"])
+    assert tree.hide_root is True
+
+
 def test_more_node_shown_when_hidden_is_positive():
-    tree = render_folder_tree("/big", hidden=15, recent=["f18.py", "f19.py"])
+    tree = render_folder_tree(hidden=15, recent=["f18.py", "f19.py"])
     labels = [child.label for child in tree.children]
     assert labels == ["… (15 more)", "✓ f18.py", "✓ f19.py"]
 
 
 def test_no_more_node_when_nothing_hidden():
-    tree = render_folder_tree("/exact", hidden=0, recent=["f0.py", "f1.py"])
+    tree = render_folder_tree(hidden=0, recent=["f0.py", "f1.py"])
     labels = [child.label for child in tree.children]
     assert labels == ["✓ f0.py", "✓ f1.py"]
 
 
-def test_folder_label_and_names_are_markup_escaped():
-    # Brackets are valid in Unix paths and would otherwise be parsed as Rich tags.
-    tree = render_folder_tree("/a[b]", hidden=0, recent=["x[1].py"])
-    assert tree.label == f"📁 {escape('/a[b]')}"
+def test_file_names_are_markup_escaped():
+    # Brackets are valid in Unix names and would otherwise be parsed as Rich tags.
+    tree = render_folder_tree(hidden=0, recent=["x[1].py"])
     assert tree.children[0].label == f"✓ {escape('x[1].py')}"
 
 
@@ -62,17 +63,17 @@ def test_recent_capacity_follows_terminal_height():
     cap = visible_file_rows(screen_height=60, stats_rows=3)
     for i in range(200):
         state = fold_file(state, "/big", f"f{i}.py", cap)
-    assert len(state.recent) == cap == 52
+    assert len(state.recent) == cap == 53
 
 
 # --- visible_file_rows ------------------------------------------------------
 
 
 def test_visible_file_rows_uses_available_height():
-    # body = height - stats_rows; minus panel borders (2), spinner (1),
-    # tree root (1), and one reserved row for the "… (N more)" node.
-    assert visible_file_rows(screen_height=60, stats_rows=3) == 52
-    assert visible_file_rows(screen_height=10, stats_rows=3) == 2
+    # body = height - stats_rows; minus panel borders (2), the spinner line (1),
+    # and one reserved row for the "… (N more)" node.
+    assert visible_file_rows(screen_height=60, stats_rows=3) == 53
+    assert visible_file_rows(screen_height=10, stats_rows=3) == 3
 
 
 def test_visible_file_rows_never_below_one():
