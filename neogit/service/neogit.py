@@ -16,6 +16,7 @@ from neogit.config import ObjectConfig, settings
 from neogit.console import DEFAULT_ADAPTER, RichConsoleAdapter
 from neogit.core.model import FSDirectoryNode
 from neogit.diff import diff_trees
+from neogit.init.render import InitSummary, build_init_summary
 from neogit.merkle import NeoMerkleTreeBuilder
 from neogit.model import FSDiffObject, FSSearchResult, FSSearchType
 from neogit.model.neo import Branch as NeoBranch
@@ -75,7 +76,7 @@ class Neogit:
         self._object_driver_ts = object_driver_ts
         self._object_driver = self._object_driver_ts.instance
 
-    def init(self):
+    def init(self) -> InitSummary:
         """Initialize a neogit repository by creating indexes and constraints"""
         with self._graph_driver.session() as session:
             constraints = {
@@ -100,6 +101,7 @@ class Neogit:
         except ContainerAlreadyExists:
             pass
         self._log.info("Object: created container: '%s'", container_name)
+        return build_init_summary(settings)
 
     @measure_time
     def commit(
