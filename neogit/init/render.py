@@ -32,7 +32,7 @@ class InitSummary:
 def build_init_summary(settings: LazySettings) -> InitSummary:
     """Read the active settings into an InitSummary (no secrets included)."""
     provider = settings.object.provider
-    location = settings.object.key if provider == "local" else settings.object.host
+    location = str(settings.object.key) if provider == "local" else settings.object.host
     return InitSummary(
         neo4j_url=settings.neo4j.url,
         provider=provider,
@@ -45,7 +45,7 @@ def render_init_summary(summary: InitSummary) -> RenderableType:
     """Return a Rich renderable summarizing the initialized backends."""
     store = f"[bold]Object store[/] {escape(summary.provider)}"
     if summary.location:
-        store += f"  ([dim]{escape(str(summary.location))}[/])"
+        store += f"  ([dim]{escape(summary.location)}[/])"
     return Group(
         Text.from_markup(f"[bold]Neo4j[/]        {escape(summary.neo4j_url)}"),
         Text.from_markup(store),

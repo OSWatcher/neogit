@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import io
+from pathlib import Path
 from types import SimpleNamespace
 
 from rich.console import Console
@@ -57,3 +58,15 @@ def test_render_omits_parenthetical_when_location_is_none():
     out = _render_plain(build_init_summary(_fake_settings("s3", host=None)))
     assert "s3" in out
     assert "(" not in out.split("Object store")[1].split("\n")[0]
+
+
+def test_build_local_coerces_path_key_to_str():
+    summary = build_init_summary(_fake_settings("local", key=Path("/data/neogit")))
+    assert summary.location == "/data/neogit"
+    assert isinstance(summary.location, str)
+
+
+def test_markup_in_container_name_is_escaped():
+    summary = build_init_summary(_fake_settings("local", key="/data/neogit", container_name="[red]neogit[/]"))
+    out = _render_plain(summary)
+    assert "[red]neogit[/]" in out
