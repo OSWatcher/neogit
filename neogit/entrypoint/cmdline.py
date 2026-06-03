@@ -28,6 +28,7 @@ from rich.console import Console
 
 from neogit.config import ObjectConfig, settings
 from neogit.diff.render import render_diff_line
+from neogit.init.render import render_init_summary
 from neogit.log.render import render_log_tree
 from neogit.object_storage import LibcloudObjectStorage, TSObjectStorage
 from neogit.service import Neogit
@@ -65,7 +66,9 @@ def handle_cmdline():
     tsobj = TSObjectStorage(LibcloudObjectStorage, obj_config)
     git = Neogit(tsobj, gui_enabled, args["--debug"])
     if args["init"]:
-        return git.init()
+        console = Console()
+        console.print(render_init_summary(git.init()))
+        return
     if args["commit"]:
         commit_name = args["<name>"]
         branch_name = args["<branch>"]
