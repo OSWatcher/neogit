@@ -32,6 +32,22 @@ class FolderState:
     recent: Tuple[str, ...] = field(default=())
 
 
+# Folder-pane chrome that doesn't hold filenames: the panel's top and bottom
+# borders (2), the spinner line (1), the "📁 folder" tree root (1), and one row
+# reserved for the "… (N more)" node.
+_PANE_OVERHEAD = 5
+
+
+def visible_file_rows(screen_height: int, stats_rows: int) -> int:
+    """How many file rows fit in the folder pane for a given terminal height.
+
+    The Stats panel takes ``stats_rows`` at the top; the folder pane fills the
+    rest, minus its own chrome (``_PANE_OVERHEAD``). Always at least 1 so a tiny
+    terminal still shows the most recent file.
+    """
+    return max(screen_height - stats_rows - _PANE_OVERHEAD, 1)
+
+
 def fold_file(state: FolderState, folder: str, filename: str, max_visible: int) -> FolderState:
     """Fold a freshly hashed file into ``state``, returning a new state.
 

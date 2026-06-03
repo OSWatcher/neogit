@@ -3,7 +3,7 @@
 
 from rich.markup import escape
 
-from neogit.console.folder_tree import FolderState, fold_file, render_folder_tree
+from neogit.console.folder_tree import FolderState, fold_file, render_folder_tree, visible_file_rows
 
 # --- render_folder_tree -----------------------------------------------------
 
@@ -54,6 +54,29 @@ def test_new_folder_resets_state():
     prev = FolderState(folder="/dir", hidden=3, recent=("a.py", "b.py"))
     state = fold_file(prev, "/other", "c.py", max_visible=12)
     assert state == FolderState(folder="/other", hidden=0, recent=("c.py",))
+
+
+def test_recent_capacity_follows_terminal_height():
+    # On a tall terminal the file list grows to fill the pane, not a fixed cap.
+    state = FolderState()
+    cap = visible_file_rows(screen_height=60, stats_rows=3)
+    for i in range(200):
+        state = fold_file(state, "/big", f"f{i}.py", cap)
+    assert len(state.recent) == cap == 52
+
+
+# --- visible_file_rows ------------------------------------------------------
+
+
+def test_visible_file_rows_uses_available_height():
+    # body = height - stats_rows; minus panel borders (2), spinner (1),
+    # tree root (1), and one reserved row for the "… (N more)" node.
+    assert visible_file_rows(screen_height=60, stats_rows=3) == 52
+    assert visible_file_rows(screen_height=10, stats_rows=3) == 2
+
+
+def test_visible_file_rows_never_below_one():
+    assert visible_file_rows(screen_height=4, stats_rows=3) == 1
 
 
 def test_recent_is_bounded_and_hidden_counts_dropped_files():
