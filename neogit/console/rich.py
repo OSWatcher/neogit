@@ -6,23 +6,24 @@ from pathlib import Path
 from threading import Lock
 from typing import Dict, Optional
 
-from rich.console import Group
+from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     FileSizeColumn,
     Progress,
-    SpinnerColumn,
     TaskID,
     TextColumn,
     TotalFileSizeColumn,
     TransferSpeedColumn,
 )
+from rich.spinner import Spinner
 from rich.table import Column
 from rich.text import Text
 
 from .abstract import AbstractConsoleAdapter
+from .folder_tree import FolderState, fold_file, render_folder_tree, visible_file_rows
 
 
 class RichConsoleAdapter(AbstractConsoleAdapter):
@@ -35,6 +36,11 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
     at the commit root, like git).
     """
 
+    # Height of the Stats row at the top of the layout (panel border + 1 line).
+    # The folder pane fills the rest; how many files it shows is derived from
+    # the terminal height (see _visible_capacity), so the list grows to fit.
+    STATS_ROWS = 3
+
     def __init__(self, root: Path, max_workers: Optional[int] = None) -> None:
         self._lock = Lock()
         self._root = root
@@ -42,16 +48,20 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         # matches the actual upload pool size.
         self._n_workers = max_workers if max_workers is not None else min(32, (os.cpu_count() or 1) + 4)
 
-        # top: a spinner-style progress with a single task acting as the
-        # "currently hashing X" indicator
-        self._hash_progress = Progress(
-            SpinnerColumn(),
-            TextColumn("Hashing {task.description}"),
-        )
-        self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
+        # a live spinner that heads the folder tree: it names the folder
+        # currently being hashed (updated per-folder, not per-file, so it
+        # doesn't flicker) on the same line as the spinner glyph. A Text label
+        # is rendered literally, so "[" in a path is not parsed as Rich markup.
+        self._spinner = Spinner("dots", text=Text("📁 …"))
 
-        # middle: a single-line counters Text rendered inside a Panel
-        self._counters = Text()
+        # folder pane state: the directory whose files are currently being
+        # hashed, and the (bounded) names hashed in it so far (see folder_tree.py)
+        self._folder = FolderState()
+
+        # middle: a single-line counters Text rendered inside a Panel. Keep it
+        # to one line (ellipsize rather than wrap) so the fixed-height Stats row
+        # never clips a wrapped line on a narrow terminal.
+        self._counters = Text(no_wrap=True, overflow="ellipsis")
         self._files = 0
         self._dirs = 0
         self._trees = 0
@@ -79,13 +89,30 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             task_id = self._upload_progress.add_task("(idle)", total=None, worker_id=wid)
             self._worker_to_task[wid] = task_id
 
-        # assemble the live layout
-        layout = Group(
-            self._hash_progress,
-            Panel(self._counters, title="Stats", padding=(0, 1)),
-            Panel(self._upload_progress, title="Uploaders", padding=(0, 1)),
+        # assemble the live layout as a single root Layout so each region is
+        # sized to exactly the screen (a Layout nested in a Group overflows and
+        # crops the panel borders). Stats is a fixed row on top; below it the
+        # folder pane (left) sits beside the Uploaders panel (right).
+        self._layout = Layout()
+        self._layout.split_column(
+            Layout(Panel(self._counters, title="Stats", padding=(0, 1)), name="stats", size=self.STATS_ROWS),
+            Layout(name="body"),
         )
-        self._live = Live(layout, refresh_per_second=10)
+        self._layout["body"].split_row(
+            Layout(name="folder"),
+            Layout(Panel(self._upload_progress, title="Uploaders", padding=(0, 1)), name="uploaders"),
+        )
+        self._live = Live(self._layout, refresh_per_second=10)
+        self._render_folder()
+
+    def _visible_capacity(self) -> int:
+        """How many file rows the folder pane can show at the current size."""
+        return visible_file_rows(self._live.console.size.height, self.STATS_ROWS)
+
+    def _render_folder(self) -> None:
+        """Rebuild the folder pane from current state (call under ``_lock``)."""
+        tree = render_folder_tree(self._spinner, self._folder.hidden, self._folder.recent)
+        self._layout["folder"].update(Panel(tree, title="Hashing", padding=(0, 1)))
 
     def _format_path(self, path: Path) -> str:
         """Render an absolute filesystem path as if rooted at ``self._root``."""
@@ -125,7 +152,13 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         with self._lock:
             self._files += 1
             self._render_counters()
-            self._hash_progress.update(self._hash_task, description=self._format_path(path))
+            folder = self._format_path(path.parent)
+            changed = folder != self._folder.folder
+            self._folder = fold_file(self._folder, folder, path.name, self._visible_capacity())
+            if changed:
+                # Text(...) is literal, so "[" in the path isn't parsed as markup
+                self._spinner.update(text=Text(f"📁 {folder}"))
+            self._render_folder()
 
     def on_dir_merkelized(self, path: Path) -> None:
         with self._lock:
