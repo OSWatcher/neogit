@@ -51,10 +51,12 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._n_workers = max_workers if max_workers is not None else min(32, (os.cpu_count() or 1) + 4)
 
         # a spinner-style progress whose single task names the folder currently
-        # being hashed (updated per-folder, not per-file, so it doesn't flicker)
+        # being hashed (updated per-folder, not per-file, so it doesn't flicker).
+        # The "Hashing" label is the enclosing panel title (see _render_folder),
+        # so the line itself is just the spinner + folder path.
         self._hash_progress = Progress(
             SpinnerColumn(),
-            TextColumn("Hashing {task.description}"),
+            TextColumn("{task.description}"),
         )
         self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
 
