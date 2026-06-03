@@ -28,7 +28,7 @@ Snapshotting two real Debian container filesystems (bullseye → bookworm) — h
 ## Where it's used
 
 - **CLI tool** — capture and diff filesystem snapshots from the command line
-- **Python library** — embed the Merkle model and Neo4j layer in your own pipeline. For example, [OSWatcher](https://github.com/OSWatcher) uses neogit as the storage foundation, and downstream projects build analysis plugins (filetype detection, symbol extraction, syscall tracing, …) on top of the `Commit` / `PluginRun` graph
+- **Python library** — neogit captures the filesystem; your pipeline enriches the graph. Embed it to hang your own content-addressed sub-Merkle-trees off a `Blob` — anything you can hash — so your analysis dedups and diffs for free, exactly like the file bytes do. [OSWatcher](https://oswatcher.github.io/frontend/), for example, attaches extracted symbols, parsed structs, and Windows registry hives to neogit's `Commit` graph
 
 ## Quickstart
 
