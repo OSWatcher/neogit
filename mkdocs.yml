@@ -64,6 +64,7 @@ nav:
   - Tutorial:
       - Your first snapshot: tutorial/first-snapshot.md
   - How-to guides:
+      - Snapshot a container filesystem: how-to/snapshot-a-container-filesystem.md
       - Use MinIO or S3 storage: how-to/use-minio-storage.md
       - Embed neogit as a library: how-to/use-as-library.md
       - Diff two commits: how-to/diff-commits.md
