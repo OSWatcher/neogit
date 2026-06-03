@@ -1,45 +1,66 @@
 # Copyright 2021-2026 Mathieu Tarral
 # SPDX-License-Identifier: Apache-2.0
 
-"""Pure rendering helper for the ``neogit commit --gui`` folder pane.
+"""Pure state + rendering helpers for the ``neogit commit --gui`` folder pane.
 
-Given the current folder label and the names of files hashed in it, build a
-Rich ``Tree`` showing the folder and its merkelized files. Kept free of any
-mutable state, threads, or ``Live`` so it can be unit-tested in isolation.
+The pane shows the directory whose files are currently being hashed and the
+files merkelized in it so far. ``FolderState`` keeps that state **bounded** —
+only the most recent ``max_visible`` filenames are retained, with the rest
+counted in ``hidden`` — so a directory with thousands of entries costs O(1) per
+update instead of growing an unbounded list. ``render_folder_tree`` turns a
+state into a Rich ``Tree``. Both are free of mutable state, threads, and
+``Live`` so they can be unit-tested in isolation.
 """
 
-from typing import List, Optional, Sequence, Tuple
+from dataclasses import dataclass, field
+from typing import Optional, Sequence, Tuple
 
+from rich.markup import escape
 from rich.tree import Tree
 
 
-def next_folder_state(
-    cur_folder: Optional[str], cur_files: Sequence[str], folder: str, filename: str
-) -> Tuple[str, List[str]]:
-    """Fold a freshly hashed file into the pane's (folder, files) state.
+@dataclass(frozen=True)
+class FolderState:
+    """Bounded view of the folder currently being hashed.
 
-    When ``folder`` differs from ``cur_folder`` the depth-first walk has moved
-    on, so start a new list; otherwise append to the running one. Pure: callers
-    own the mutable state and the locking.
+    ``recent`` holds at most ``max_visible`` filenames (the newest); ``hidden``
+    counts how many older files dropped out of that window.
     """
-    if folder != cur_folder:
-        return folder, [filename]
-    return folder, [*cur_files, filename]
+
+    folder: Optional[str] = None
+    hidden: int = 0
+    recent: Tuple[str, ...] = field(default=())
 
 
-def render_folder_tree(folder_label: str, filenames: Sequence[str], max_visible: int) -> Tree:
-    """Render ``folder_label`` and its ``filenames`` as a Rich ``Tree``.
+def fold_file(state: FolderState, folder: str, filename: str, max_visible: int) -> FolderState:
+    """Fold a freshly hashed file into ``state``, returning a new state.
 
-    Each file is shown with a ✓ (merkelized) marker. When more than
-    ``max_visible`` files are present, only the most recent ``max_visible`` are
-    shown, preceded by a ``… (N more)`` node so a huge directory cannot overflow
-    the panel.
+    A change of ``folder`` means the depth-first walk moved on, so start fresh;
+    otherwise append, evicting the oldest name (and counting it in ``hidden``)
+    once more than ``max_visible`` are retained.
     """
-    tree = Tree(f"📁 {folder_label}")
-    hidden = len(filenames) - max_visible
+    if folder != state.folder:
+        return FolderState(folder=folder, hidden=0, recent=(filename,))
+    recent = (*state.recent, filename)
+    hidden = state.hidden
+    if len(recent) > max_visible:
+        overflow = len(recent) - max_visible
+        hidden += overflow
+        recent = recent[overflow:]
+    return FolderState(folder=folder, hidden=hidden, recent=recent)
+
+
+def render_folder_tree(folder_label: str, hidden: int, recent: Sequence[str]) -> Tree:
+    """Render the folder and its merkelized files as a Rich ``Tree``.
+
+    Each file is shown with a ✓ marker; when ``hidden`` is positive a leading
+    ``… (N more)`` node stands in for the evicted older files. ``folder_label``
+    and filenames are markup-escaped so ``[`` characters in paths are not parsed
+    as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff``).
+    """
+    tree = Tree(f"📁 {escape(folder_label)}")
     if hidden > 0:
         tree.add(f"… ({hidden} more)")
-        filenames = filenames[-max_visible:]
-    for name in filenames:
-        tree.add(f"✓ {name}")
+    for name in recent:
+        tree.add(f"✓ {escape(name)}")
     return tree

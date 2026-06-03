@@ -4,11 +4,12 @@
 import os
 from pathlib import Path
 from threading import Lock
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from rich.console import Group
 from rich.layout import Layout
 from rich.live import Live
+from rich.markup import escape
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -24,7 +25,7 @@ from rich.table import Column
 from rich.text import Text
 
 from .abstract import AbstractConsoleAdapter
-from .folder_tree import next_folder_state, render_folder_tree
+from .folder_tree import FolderState, fold_file, render_folder_tree
 
 
 class RichConsoleAdapter(AbstractConsoleAdapter):
@@ -58,9 +59,8 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
 
         # folder pane state: the directory whose files are currently being
-        # hashed, and the names hashed in it so far (see folder_tree.py)
-        self._cur_folder: Optional[str] = None
-        self._cur_files: List[str] = []
+        # hashed, and the (bounded) names hashed in it so far (see folder_tree.py)
+        self._folder = FolderState()
 
         # middle: a single-line counters Text rendered inside a Panel
         self._counters = Text()
@@ -91,26 +91,27 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             task_id = self._upload_progress.add_task("(idle)", total=None, worker_id=wid)
             self._worker_to_task[wid] = task_id
 
-        # assemble the live layout: Stats line on top, then a folder pane
-        # (left) beside the Uploaders panel (right)
-        self._layout = Layout()
-        self._layout.split_column(
-            Layout(Panel(self._counters, title="Stats", padding=(0, 1)), name="stats", size=3),
-            Layout(name="body"),
-        )
-        self._layout["body"].split_row(
+        # assemble the live layout: the Stats panel auto-sizes on top (so its
+        # counters can wrap instead of being clipped on narrow terminals), with
+        # a folder pane (left) beside the Uploaders panel (right) filling the
+        # rest. A fixed-height Layout row would truncate a wrapped Stats line.
+        self._body = Layout()
+        self._body.split_row(
             Layout(name="folder"),
             Layout(Panel(self._upload_progress, title="Uploaders", padding=(0, 1)), name="uploaders"),
         )
         self._render_folder()
-        self._live = Live(self._layout, refresh_per_second=10)
+        self._live = Live(
+            Group(Panel(self._counters, title="Stats", padding=(0, 1)), self._body),
+            refresh_per_second=10,
+        )
 
     def _render_folder(self) -> None:
         """Rebuild the folder pane from current state (call under ``_lock``)."""
-        label = self._cur_folder if self._cur_folder is not None else "…"
-        tree = render_folder_tree(label, self._cur_files, self.MAX_VISIBLE_FILES)
+        label = self._folder.folder if self._folder.folder is not None else "…"
+        tree = render_folder_tree(label, self._folder.hidden, self._folder.recent)
         body = Group(self._hash_progress, tree)
-        self._layout["folder"].update(Panel(body, title="Hashing", padding=(0, 1)))
+        self._body["folder"].update(Panel(body, title="Hashing", padding=(0, 1)))
 
     def _format_path(self, path: Path) -> str:
         """Render an absolute filesystem path as if rooted at ``self._root``."""
@@ -151,10 +152,11 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             self._files += 1
             self._render_counters()
             folder = self._format_path(path.parent)
-            changed = folder != self._cur_folder
-            self._cur_folder, self._cur_files = next_folder_state(self._cur_folder, self._cur_files, folder, path.name)
+            changed = folder != self._folder.folder
+            self._folder = fold_file(self._folder, folder, path.name, self.MAX_VISIBLE_FILES)
             if changed:
-                self._hash_progress.update(self._hash_task, description=folder)
+                # escape so ``[`` in the path isn't parsed as Rich markup
+                self._hash_progress.update(self._hash_task, description=escape(folder))
             self._render_folder()
 
     def on_dir_merkelized(self, path: Path) -> None:
