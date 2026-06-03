@@ -103,7 +103,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
-          body_path: ${{ github.workspace }}/.github/RELEASE.md
+          generate_release_notes: true
 
   publish_pypi:
     needs: [dev, unit_test, integration_test, build_image]
