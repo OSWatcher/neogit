@@ -6,35 +6,36 @@ from rich.markup import escape
 from neogit.console.folder_tree import FolderState, fold_file, render_folder_tree, visible_file_rows
 
 # --- render_folder_tree -----------------------------------------------------
-# The folder name is shown once on the adapter's spinner line; the tree renders
-# only the files (its root is hidden), so render takes no folder label.
+# The given root label (the adapter passes a live spinner + "📁 folder") heads
+# the tree; the files hang under it as connected children.
+
+
+def test_root_label_is_the_given_renderable_with_visible_connectors():
+    tree = render_folder_tree("📁 /neogit/console", hidden=0, recent=["a.py"])
+    assert tree.label == "📁 /neogit/console"
+    assert tree.hide_root is False
 
 
 def test_each_file_is_a_checked_child():
-    tree = render_folder_tree(hidden=0, recent=["abstract.py", "empty.py"])
+    tree = render_folder_tree("root", hidden=0, recent=["abstract.py", "empty.py"])
     assert [child.label for child in tree.children] == ["✓ abstract.py", "✓ empty.py"]
 
 
-def test_root_is_hidden_so_the_folder_is_not_duplicated():
-    tree = render_folder_tree(hidden=0, recent=["a.py"])
-    assert tree.hide_root is True
-
-
 def test_more_node_shown_when_hidden_is_positive():
-    tree = render_folder_tree(hidden=15, recent=["f18.py", "f19.py"])
+    tree = render_folder_tree("root", hidden=15, recent=["f18.py", "f19.py"])
     labels = [child.label for child in tree.children]
     assert labels == ["… (15 more)", "✓ f18.py", "✓ f19.py"]
 
 
 def test_no_more_node_when_nothing_hidden():
-    tree = render_folder_tree(hidden=0, recent=["f0.py", "f1.py"])
+    tree = render_folder_tree("root", hidden=0, recent=["f0.py", "f1.py"])
     labels = [child.label for child in tree.children]
     assert labels == ["✓ f0.py", "✓ f1.py"]
 
 
 def test_file_names_are_markup_escaped():
     # Brackets are valid in Unix names and would otherwise be parsed as Rich tags.
-    tree = render_folder_tree(hidden=0, recent=["x[1].py"])
+    tree = render_folder_tree("root", hidden=0, recent=["x[1].py"])
     assert tree.children[0].label == f"✓ {escape('x[1].py')}"
 
 

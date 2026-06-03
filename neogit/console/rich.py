@@ -6,21 +6,19 @@ from pathlib import Path
 from threading import Lock
 from typing import Dict, Optional
 
-from rich.console import Group
 from rich.layout import Layout
 from rich.live import Live
-from rich.markup import escape
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     FileSizeColumn,
     Progress,
-    SpinnerColumn,
     TaskID,
     TextColumn,
     TotalFileSizeColumn,
     TransferSpeedColumn,
 )
+from rich.spinner import Spinner
 from rich.table import Column
 from rich.text import Text
 
@@ -50,15 +48,11 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
         # matches the actual upload pool size.
         self._n_workers = max_workers if max_workers is not None else min(32, (os.cpu_count() or 1) + 4)
 
-        # a spinner-style progress whose single task names the folder currently
-        # being hashed (updated per-folder, not per-file, so it doesn't flicker).
-        # This is the *only* place the folder is shown — the tree below renders
-        # just the files (hidden root) — so the name isn't duplicated.
-        self._hash_progress = Progress(
-            SpinnerColumn(),
-            TextColumn("📁 {task.description}"),
-        )
-        self._hash_task: TaskID = self._hash_progress.add_task("…", total=None)
+        # a live spinner that heads the folder tree: it names the folder
+        # currently being hashed (updated per-folder, not per-file, so it
+        # doesn't flicker) on the same line as the spinner glyph. A Text label
+        # is rendered literally, so "[" in a path is not parsed as Rich markup.
+        self._spinner = Spinner("dots", text=Text("📁 …"))
 
         # folder pane state: the directory whose files are currently being
         # hashed, and the (bounded) names hashed in it so far (see folder_tree.py)
@@ -117,9 +111,8 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
 
     def _render_folder(self) -> None:
         """Rebuild the folder pane from current state (call under ``_lock``)."""
-        tree = render_folder_tree(self._folder.hidden, self._folder.recent)
-        body = Group(self._hash_progress, tree)
-        self._layout["folder"].update(Panel(body, title="Hashing", padding=(0, 1)))
+        tree = render_folder_tree(self._spinner, self._folder.hidden, self._folder.recent)
+        self._layout["folder"].update(Panel(tree, title="Hashing", padding=(0, 1)))
 
     def _format_path(self, path: Path) -> str:
         """Render an absolute filesystem path as if rooted at ``self._root``."""
@@ -163,8 +156,8 @@ class RichConsoleAdapter(AbstractConsoleAdapter):
             changed = folder != self._folder.folder
             self._folder = fold_file(self._folder, folder, path.name, self._visible_capacity())
             if changed:
-                # escape so ``[`` in the path isn't parsed as Rich markup
-                self._hash_progress.update(self._hash_task, description=escape(folder))
+                # Text(...) is literal, so "[" in the path isn't parsed as markup
+                self._spinner.update(text=Text(f"📁 {folder}"))
             self._render_folder()
 
     def on_dir_merkelized(self, path: Path) -> None:

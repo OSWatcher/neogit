@@ -15,6 +15,7 @@ state into a Rich ``Tree``. Both are free of mutable state, threads, and
 from dataclasses import dataclass, field
 from typing import Optional, Sequence, Tuple
 
+from rich.console import RenderableType
 from rich.markup import escape
 from rich.tree import Tree
 
@@ -66,16 +67,17 @@ def fold_file(state: FolderState, folder: str, filename: str, max_visible: int) 
     return FolderState(folder=folder, hidden=hidden, recent=recent)
 
 
-def render_folder_tree(hidden: int, recent: Sequence[str]) -> Tree:
-    """Render the merkelized files of the current folder as a Rich ``Tree``.
+def render_folder_tree(root_label: RenderableType, hidden: int, recent: Sequence[str]) -> Tree:
+    """Render the current folder and its merkelized files as a Rich ``Tree``.
 
-    The folder itself is named once on the adapter's spinner line, so the tree's
-    root is hidden and it shows only the files. Each file gets a ✓ marker; when
-    ``hidden`` is positive a leading ``… (N more)`` node stands in for the
+    ``root_label`` heads the tree — the adapter passes a live spinner combined
+    with "📁 folder" so the folder is named once, on the same line as the
+    spinner. The files hang under it as connected children, each with a ✓ marker;
+    when ``hidden`` is positive a leading ``… (N more)`` node stands in for the
     evicted older files. Filenames are markup-escaped so ``[`` characters are not
     parsed as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff/render.py``).
     """
-    tree = Tree("", hide_root=True)
+    tree = Tree(root_label)
     if hidden > 0:
         tree.add(f"… ({hidden} more)")
     for name in recent:
