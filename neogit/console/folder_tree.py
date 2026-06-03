@@ -56,7 +56,7 @@ def render_folder_tree(folder_label: str, hidden: int, recent: Sequence[str]) ->
     Each file is shown with a ✓ marker; when ``hidden`` is positive a leading
     ``… (N more)`` node stands in for the evicted older files. ``folder_label``
     and filenames are markup-escaped so ``[`` characters in paths are not parsed
-    as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff``).
+    as Rich tags (matching ``neogit/log/render.py`` and ``neogit/diff/render.py``).
     """
     tree = Tree(f"📁 {escape(folder_label)}")
     if hidden > 0:
