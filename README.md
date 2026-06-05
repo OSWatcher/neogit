@@ -10,14 +10,24 @@
 
 Neogit takes content-addressed Merkle-tree snapshots of a directory tree and stores them in two places:
 
-- **Neo4j** — the graph: commits, branches, trees, blobs, and their relationships
-- **Object storage** — the bytes: file contents addressed by their SHA-1 (local filesystem, MinIO, or S3 via [Apache Libcloud](https://libcloud.apache.org/))
+- **Neo4j** stores the graph: commits, branches, trees, blobs, and their relationships
+- **Object storage** holds the bytes: file contents addressed by their SHA-1 (local filesystem, MinIO, or S3 via [Apache Libcloud](https://libcloud.apache.org/))
 
 This split makes filesystem state **queryable as a graph** (Cypher over commits, diff trees, walk history) while keeping file contents in cheap blob storage.
 
+## Why neogit?
+
+Git already content-addresses snapshots and deduplicates them, but it only lets you *walk* that history, never *query* it. The object graph is navigable only forward: a commit points to its files, never the reverse. neogit puts the same objects in a Neo4j graph, so history becomes something you can **query** and, crucially, **enrich**. Hang your own hashable characteristics (symbols, structs, registry values, syscalls) off the graph and ask questions across *all* of history:
+
+- **Evolution**: how a file or characteristic changed across snapshots over time.
+- **Provenance**: given one characteristic, *every* commit that ever contained it.
+- **Commonality**: corpus-wide aggregates, like the most common or most stable characteristics across an OS's entire history.
+
+The last two are where Git can't follow: its object graph is forward-only, so *"which commits contain object X?"* has no native answer, whereas in a graph it's a single traversal. See **[Why neogit?](docs/explanation/why-neogit.md)** for the details.
+
 ## Demo
 
-Snapshotting two real Debian container filesystems (bullseye → bookworm) — hashing and uploading ~5,700 files with live progress, then a full file-level diff of the upgrade:
+Snapshotting two real Debian container filesystems (bullseye → bookworm): hashing and uploading ~5,700 files with live progress, then a full file-level diff of the upgrade:
 
 ![neogit commit --gui snapshotting two Debian container filesystems and diffing the upgrade](docs/assets/neogit-commit-demo.gif)
 
@@ -27,8 +37,8 @@ Snapshotting two real Debian container filesystems (bullseye → bookworm) — h
 
 ## Where it's used
 
-- **CLI tool** — capture and diff filesystem snapshots from the command line
-- **Python library** — neogit captures the filesystem; your pipeline enriches the graph. Embed it to hang your own content-addressed sub-Merkle-trees off a `Blob` — anything you can hash — so your analysis dedups and diffs for free, exactly like the file bytes do. [OSWatcher](https://oswatcher.github.io/frontend/), for example, attaches extracted symbols, parsed structs, and Windows registry hives to neogit's `Commit` graph
+- **CLI tool**: capture and diff filesystem snapshots from the command line
+- **Python library**: neogit captures the filesystem; your pipeline enriches the graph. Embed it to hang your own content-addressed sub-Merkle-trees off a `Blob` (anything you can hash) so your analysis dedups and diffs for free, exactly like the file bytes do. [OSWatcher](https://oswatcher.github.io/frontend/), for example, attaches extracted symbols, parsed structs, and Windows registry hives to neogit's `Commit` graph
 
 ## Quickstart
 
@@ -83,16 +93,16 @@ git.init()
 commit_hash = git.commit("snapshot-1", Path("/path/to/capture"))
 ```
 
-The graph model (`Commit`, `Branch`, `Tree`, `Blob`, `PluginRun`) is exposed under `neogit.model` for downstream tools that want to attach their own nodes — see [docs/reference/data-model.md](docs/reference/data-model.md).
+The graph model (`Commit`, `Branch`, `Tree`, `Blob`, `PluginRun`) is exposed under `neogit.model` for downstream tools that want to attach their own nodes; see [docs/reference/data-model.md](docs/reference/data-model.md).
 
 ## Documentation
 
 Full documentation lives under [`docs/`](docs/) and follows the [Divio framework](https://documentation.divio.com/):
 
-- **[Tutorial](docs/tutorial/first-snapshot.md)** — your first snapshot in 5 minutes
-- **[How-to guides](docs/how-to/)** — recipes for specific tasks (MinIO, S3, diffs, embedding the library)
-- **[Reference](docs/reference/)** — CLI flags, config keys, data model
-- **[Explanation](docs/explanation/)** — design rationale, Merkle layout, why Neo4j
+- **[Tutorial](docs/tutorial/first-snapshot.md)**: your first snapshot in 5 minutes
+- **[How-to guides](docs/how-to/)**: recipes for specific tasks (MinIO, S3, diffs, embedding the library)
+- **[Reference](docs/reference/)**: CLI flags, config keys, data model
+- **[Explanation](docs/explanation/)**: design rationale, Merkle layout, why Neo4j
 
 To preview the docs locally:
 
