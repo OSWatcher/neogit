@@ -74,6 +74,7 @@ nav:
       - Configuration: reference/configuration.md
       - Data model: reference/data-model.md
   - Explanation:
+      - Why neogit?: explanation/why-neogit.md
       - Architecture overview: explanation/architecture.md
       - Why Neo4j?: explanation/why-neo4j.md
       - Merkle tree design: explanation/merkle-design.md

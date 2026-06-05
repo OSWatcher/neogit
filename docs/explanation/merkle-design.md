@@ -8,19 +8,19 @@ Neogit's Merkle tree has three kinds of node. The canonical serializations live
 in `neogit/core/merkle/filesystem.py` (Blob, Tree) and `neogit/merkle/hasher.py`
 (Commit). The contract is: same inputs, same hash, always.
 
-### Blob — `SHA-1(content)`
+### Blob: `SHA-1(content)`
 
 Leaves. The identity is the SHA-1 of the node's content, where "content"
 depends on the file kind (`FSMerkleVisitor.visit_FSFileNode`):
 
-- **Regular file** — the raw file bytes.
-- **Symlink** — the link target string from `os.readlink()`, *not* the bytes of
+- **Regular file**: the raw file bytes.
+- **Symlink**: the link target string from `os.readlink()`, *not* the bytes of
   whatever it points at. The symlink's own target is what is captured and hashed.
 - **Anything else** (sockets, FIFOs, devices, or a file that raises `OSError`
-  when read — e.g. an unreadable FUSE/reparse entry) — hashed as empty content
+  when read, such as an unreadable FUSE/reparse entry): hashed as empty content
   (`b""`).
 
-### Tree — `SHA-1(sorted child entries)`
+### Tree: `SHA-1(sorted child entries)`
 
 A directory. `FSMerkleVisitor.visit_FSDirectoryNode` walks the directory's
 children, sorted **directories first, then by name**, and for each child feeds
@@ -34,11 +34,11 @@ for child in sorted(children, key=lambda c: (not c.is_dir, c.name)):
 tree_hash = h.hexdigest()
 ```
 
-Note that the entry contains only `name` and `child_hash` — there is no
+Note that the entry contains only `name` and `child_hash`; there is no
 explicit "kind" byte. The hash is unambiguous because each directory commits
 to its sorted, newline-delimited child list.
 
-### Commit — `SHA-1(name + date + tree_sha1)`
+### Commit: `SHA-1(name + date + tree_sha1)`
 
 A snapshot. From `hasher.py`:
 
@@ -48,7 +48,7 @@ COMMIT_STRING = "\n{name}{date}{tree_sha1}\n"
 
 Note what is **not** in the commit hash: the description, the previous-commit
 pointer, the branch. Two commits with the same name, same date, and the same
-root tree therefore hash identically — and Neo4j's uniqueness constraint on
+root tree therefore hash identically, and Neo4j's uniqueness constraint on
 `Commit.hash` deduplicates them. If you need the description or the history
 edge to participate in identity, that's a deliberate change to the canonical
 form.
@@ -65,7 +65,7 @@ Consider a 50,000-file source tree, snapshotted twice with one file changed.
 - ≤ depth-of-changed-file new `Tree` nodes (every ancestor directory)
 - 1 new `Commit`
 
-Everything else is reused — no new database rows, no new object-store uploads. A "snapshot" of a barely-changed tree costs roughly *log(N)* writes, not *N*.
+Everything else is reused: no new database rows, no new object-store uploads. A "snapshot" of a barely-changed tree costs roughly *log(N)* writes, not *N*.
 
 For OSWatcher's whole-OS captures, where consecutive snapshots differ in dozens of files out of millions, this matters by orders of magnitude.
 
@@ -84,4 +84,4 @@ Most of the tree usually hashes-equal at the top, so diffs touch O(changed paths
 - **No re-chunking of large files.** A 4 GB ISO that flips one byte gets re-uploaded in full. Real Git mitigates this with delta packs; neogit doesn't (yet).
 - **No content-defined chunking.** Each blob is one file. Fine for typical OS captures; weaker for huge binaries.
 
-These are extension points, not architectural limits — the object-storage layer already abstracts the byte plane, so an alternative chunking strategy could slot in without touching the graph.
+These are extension points, not architectural limits: the object-storage layer already abstracts the byte plane, so an alternative chunking strategy could slot in without touching the graph.
