@@ -4,13 +4,9 @@ neogit turns filesystem history into a **content-addressed temporal graph**. Tha
 doing a lot of work, so this page unpacks it, then shows the three kinds of question the graph
 makes cheap, two of which Git cannot answer at all.
 
-## A content-addressed temporal graph (not a "temporal database")
+## A content-addressed temporal graph
 
-It's tempting to call neogit a *temporal database*, but that term already means something
-specific: SQL:2011 valid-time / transaction-time, row-level versioning, "what did this record
-look like *as of* date X." neogit is not that.
-
-neogit borrows Git's model instead:
+neogit borrows Git's model:
 
 - **Content-addressed.** Every file, directory, and commit is identified by the hash of its
   own content. Identical content is the same node everywhere, so deduplication is free and
