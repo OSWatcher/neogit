@@ -40,47 +40,28 @@ model never knew about.
 The classic version-control question: walk a characteristic backwards through history and see
 when it appeared and how it changed. This is what `neogit diff` and OSWatcher's "git log"
 feature surface, for example how `_EPROCESS.Flags2` (a Windows kernel struct field) evolved
-build to build, or every SHA-1 of `/Windows/System32/OpenSSH/ssh.exe` since it first shipped.
+build to build, or every SHA-1 of `/Windows/System32/OpenSSH/ssh.exe` since it first shipped
+([demo](https://x.com/mtarral/status/2036594336058560971)).
 
 Git can do *this* one too, via diff. The next two are where it can't follow.
 
 ### 2. Provenance: where has this characteristic ever appeared?
 
 Given one object, find **every commit that contained it**. With content-addressing this is a
-reverse traversal, the free inverted index Git has no equivalent for:
-
-```cypher
-// Which commits contain a file with this content hash?
-MATCH (c:Commit)-[:OWNS_FILESYSTEM]->(:Tree)
-      -[:HAS_CHILD_TREE|HAS_CHILD_BLOB*]->(b:Blob {sha1sum: $sha1})
-RETURN DISTINCT c.name, c.date
-ORDER BY c.date
-```
-
-Because enrichment nodes live in the same graph, the *same shape* answers
-"which operating systems ever shipped this exact symbol / struct / registry value?" You just
-start the traversal from the enriched node instead of a `Blob`.
+reverse traversal, the free inverted index Git has no equivalent for. Because enrichment nodes
+live in the same graph, the same query answers "which operating systems ever shipped this exact
+symbol, struct, or registry value?" You just start the traversal from the enriched node instead
+of a `Blob`.
 
 ### 3. Commonality: what is common or stable across all of history?
 
 Aggregate across the whole corpus, not just two snapshots. Pairwise intersection/difference
 (what `neogit diff` does) is the *n = 2* special case; the graph also answers corpus-wide
-questions in a few lines of Cypher:
-
-```cypher
-// Top 20 most widely-shared files across every captured snapshot
-MATCH (c:Commit)-[:OWNS_FILESYSTEM]->(:Tree)
-      -[:HAS_CHILD_TREE|HAS_CHILD_BLOB*]->(b:Blob)
-WITH b.sha1sum AS content, count(DISTINCT c) AS seen_in_commits
-RETURN content, seen_in_commits
-ORDER BY seen_in_commits DESC
-LIMIT 20
-```
-
+questions like *"the 20 most widely-shared files across every captured snapshot."*
 "Most *stable*" is the same idea with the time axis folded in: a characteristic whose content
 hash is unchanged across the most consecutive releases. *"Top 20 most stable kernel structs
-across Windows history"* is a one-screen Cypher query, and has no Git equivalent, because Git
-can't enumerate membership across history without scanning all of it.
+across Windows history"* is a single query, and has no Git equivalent, because Git can't
+enumerate membership across history without scanning all of it.
 
 ## Why a graph, and not Git plus a script?
 
