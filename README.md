@@ -38,7 +38,7 @@ Snapshotting two real Debian container filesystems (bullseye → bookworm): hash
 ## Where it's used
 
 - **CLI tool**: capture and diff filesystem snapshots from the command line
-- **Python library**: neogit captures the filesystem; your pipeline enriches the graph. Embed it to hang your own content-addressed sub-Merkle-trees off a `Blob` (anything you can hash) so your analysis dedups and diffs for free, exactly like the file bytes do. [OSWatcher](https://oswatcher.github.io/frontend/), for example, attaches extracted symbols, parsed structs, and Windows registry hives to neogit's `Commit` graph
+- **Python library**: neogit captures the filesystem; your pipeline enriches the graph. Embed it to hang your own content-addressed sub-Merkle-trees off a `Blob` (anything you can hash) so your analysis dedups and diffs for free, exactly like the file bytes do. [OSWatcher](https://github.com/OSWatcher/oswatcher), for example, attaches extracted symbols, parsed structs, and Windows registry hives to neogit's `Commit` graph
 
 ## Quickstart
 
